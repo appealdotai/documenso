@@ -29,6 +29,13 @@ export type RenderFieldElementOptions = {
   scale: number;
   color?: TRecipientColor;
   translations: Record<FieldType, string> | null;
+  /**
+   * Translated placeholders shown inside an empty field while signing.
+   * Used to override the editor-side field type name (e.g. show "Enter Text"
+   * instead of "Text" on the recipient signing surface). Only consulted when
+   * `mode === 'sign'`.
+   */
+  signPlaceholders?: Partial<Record<FieldType, string>> | null;
 };
 
 /**

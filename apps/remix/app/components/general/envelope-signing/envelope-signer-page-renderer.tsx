@@ -12,7 +12,7 @@ import { ZFullFieldSchema } from '@documenso/lib/types/field';
 import { createSpinner } from '@documenso/lib/universal/field-renderer/field-generic-items';
 import { renderField } from '@documenso/lib/universal/field-renderer/render-field';
 import { isFieldUnsignedAndRequired } from '@documenso/lib/utils/advanced-fields-helpers';
-import { getClientSideFieldTranslations } from '@documenso/lib/utils/fields';
+import { getClientSideFieldSignPlaceholders, getClientSideFieldTranslations } from '@documenso/lib/utils/fields';
 import { extractInitials } from '@documenso/lib/utils/recipient-formatter';
 import type { TSignEnvelopeFieldValue } from '@documenso/trpc/server/envelope-router/sign-envelope-field.types';
 import { EnvelopeRecipientFieldTooltip } from '@documenso/ui/components/document/envelope-recipient-field-tooltip';
@@ -162,6 +162,7 @@ export const EnvelopeSignerPageRenderer = ({ pageData }: { pageData: PageRenderD
         signature: unparsedField.signature,
       },
       translations: getClientSideFieldTranslations(i18n),
+      signPlaceholders: getClientSideFieldSignPlaceholders(i18n),
       pageWidth: unscaledViewport.width,
       pageHeight: unscaledViewport.height,
       color,
