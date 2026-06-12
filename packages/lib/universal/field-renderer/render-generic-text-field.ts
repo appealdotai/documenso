@@ -1,3 +1,4 @@
+import { FieldType } from '@prisma/client';
 import Konva from 'konva';
 
 import { DEFAULT_STANDARD_FONT_SIZE } from '../../constants/pdf';
@@ -23,7 +24,7 @@ import { calculateFieldPosition } from './field-renderer';
 const DEFAULT_TEXT_X_PADDING = 6;
 
 const upsertFieldText = (field: FieldToRender, options: RenderFieldElementOptions) => {
-  const { pageWidth, pageHeight, mode = 'edit', pageLayer, translations } = options;
+  const { pageWidth, pageHeight, mode = 'edit', pageLayer, translations, signPlaceholders } = options;
 
   const { fieldX, fieldY, fieldWidth, fieldHeight } = calculateFieldPosition(field, pageWidth, pageHeight);
 
@@ -53,6 +54,14 @@ const upsertFieldText = (field: FieldToRender, options: RenderFieldElementOption
   let textVerticalAlign: 'top' | 'middle' | 'bottom' = FIELD_DEFAULT_GENERIC_VERTICAL_ALIGN;
   let textLineHeight = FIELD_DEFAULT_LINE_HEIGHT;
   let textLetterSpacing = FIELD_DEFAULT_LETTER_SPACING;
+
+  // On the recipient signing surface, ignore the editor-side label/field-type
+  // name for TEXT and NUMBER and instead show a generic "Enter Text" /
+  // "Enter Number" prompt. Inserted values and prefilled read-only values
+  // handled by the override blocks below still render.
+  if (mode === 'sign' && (field.type === FieldType.TEXT || field.type === FieldType.NUMBER)) {
+    textToRender = signPlaceholders?.[field.type] ?? '';
+  }
 
   // Render default values for text/number if provided for editing mode.
   if (mode === 'edit' && (fieldMeta?.type === 'text' || fieldMeta?.type === 'number')) {

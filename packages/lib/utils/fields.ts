@@ -132,3 +132,16 @@ export const getClientSideFieldTranslations = ({ t }: I18n): Record<FieldType, s
     [FieldType.EMAIL]: t(msg`Email`),
   };
 };
+
+/**
+ * Placeholders shown inside an empty field on the recipient signing surface.
+ *
+ * Only the types we want to override on signing need entries here; others fall
+ * back to the editor-side translation from `getClientSideFieldTranslations`.
+ */
+export const getClientSideFieldSignPlaceholders = ({ t }: I18n): Partial<Record<FieldType, string>> => {
+  return {
+    [FieldType.TEXT]: t(msg`Enter Text`),
+    [FieldType.NUMBER]: t(msg`Enter Number`),
+  };
+};

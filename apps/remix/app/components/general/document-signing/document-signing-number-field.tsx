@@ -217,13 +217,6 @@ export const DocumentSigningNumberField = ({ field, onSignField, onUnsignField }
     }
   }, []);
 
-  let fieldDisplayName = 'Number';
-
-  if (parsedFieldMeta?.label) {
-    fieldDisplayName =
-      parsedFieldMeta.label.length > 20 ? parsedFieldMeta.label.substring(0, 20) + '...' : parsedFieldMeta.label;
-  }
-
   const userInputHasErrors = Object.values(errors).some((error) => error.length > 0);
 
   return (
@@ -236,7 +229,11 @@ export const DocumentSigningNumberField = ({ field, onSignField, onUnsignField }
     >
       {isLoading && <DocumentSigningFieldsLoader />}
 
-      {!field.inserted && <DocumentSigningFieldsUninserted>{fieldDisplayName}</DocumentSigningFieldsUninserted>}
+      {!field.inserted && (
+        <DocumentSigningFieldsUninserted>
+          <Trans>Enter Number</Trans>
+        </DocumentSigningFieldsUninserted>
+      )}
 
       {field.inserted && (
         <DocumentSigningFieldsInserted textAlign={parsedFieldMeta?.textAlign}>
