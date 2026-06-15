@@ -3,9 +3,9 @@ name: 'Continuous Integration'
 on:
   workflow_call:
   push:
-    branches: ['main']
+    branches: ['main', 'development']
   pull_request:
-    branches: ['main']
+    branches: ['main', 'development']
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
@@ -97,7 +97,7 @@ jobs:
     name: Deploy gate
     runs-on: ubuntu-latest
     needs: [typecheck, lint, unit_tests, build_app, build_docker]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: contains(fromJSON('["refs/heads/main", "refs/heads/development"]'), github.ref) && github.event_name == 'push'
     steps:
       - name: All checks passed
         run: echo "All checks passed. Railway deploy is unblocked."
