@@ -243,7 +243,9 @@ export const DocumentSigningNumberField = ({ field, onSignField, onUnsignField }
 
       <Dialog open={showNumberModal} onOpenChange={setShowNumberModal}>
         <DialogContent>
-          <DialogTitle>{parsedFieldMeta?.label ? parsedFieldMeta?.label : <Trans>Number</Trans>}</DialogTitle>
+          <DialogTitle>
+            <Trans>Enter Number</Trans>
+          </DialogTitle>
 
           <div>
             <Input
