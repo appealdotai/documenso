@@ -31,6 +31,7 @@ import { match } from 'ts-pattern';
 
 import { useEmbedSigningContext } from '~/components/embed/embed-signing-context';
 import { handleCheckboxFieldClick } from '~/utils/field-signing/checkbox-field';
+import { handleDateFieldClick } from '~/utils/field-signing/date-field';
 import { handleDropdownFieldClick } from '~/utils/field-signing/dropdown-field';
 import { handleEmailFieldClick } from '~/utils/field-signing/email-field';
 import { handleInitialsFieldClick } from '~/utils/field-signing/initial-field';
@@ -365,14 +366,19 @@ export const EnvelopeSignerPageRenderer = ({ pageData }: { pageData: PageRenderD
          * DATE FIELD.
          */
         .with({ type: FieldType.DATE }, (field) => {
-          fieldGroup.add(loadingSpinnerGroup);
-
-          void signField(field.id, {
-            type: FieldType.DATE,
-            value: !field.inserted,
-          }).finally(() => {
-            loadingSpinnerGroup.destroy();
-          });
+          void handleDateFieldClick({
+            field,
+            dateFormat: envelope.documentMeta.dateFormat ?? undefined,
+          })
+            .then(async (payload) => {
+              if (payload) {
+                fieldGroup.add(loadingSpinnerGroup);
+                await signField(field.id, payload);
+              }
+            })
+            .finally(() => {
+              loadingSpinnerGroup.destroy();
+            });
         })
         /**
          * SIGNATURE FIELD.

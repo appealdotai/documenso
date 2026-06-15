@@ -86,10 +86,20 @@ export const extractFieldInsertionValues = ({
         };
       }
 
+      const dateFormat = documentMeta.dateFormat ?? DEFAULT_DOCUMENT_DATE_FORMAT;
+      const timezone = documentMeta.timezone ?? DEFAULT_DOCUMENT_TIME_ZONE;
+
+      const parsedDate = DateTime.fromISO(fieldValue.value, { zone: timezone });
+
+      if (parsedDate.isValid) {
+        return {
+          customText: parsedDate.toFormat(dateFormat),
+          inserted: true,
+        };
+      }
+
       return {
-        customText: DateTime.now()
-          .setZone(documentMeta.timezone ?? DEFAULT_DOCUMENT_TIME_ZONE)
-          .toFormat(documentMeta.dateFormat ?? DEFAULT_DOCUMENT_DATE_FORMAT),
+        customText: DateTime.now().setZone(timezone).toFormat(dateFormat),
         inserted: true,
       };
     })
