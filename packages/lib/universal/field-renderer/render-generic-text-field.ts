@@ -76,7 +76,18 @@ const upsertFieldText = (field: FieldToRender, options: RenderFieldElementOption
     }
   }
 
-  // Render default values for text/number if provided for editing mode.
+  // On the recipient signing surface, show prefilled date value or format placeholder.
+  if (mode === 'sign' && field.type === FieldType.DATE && !field.inserted) {
+    if (fieldMeta?.type === 'date' && fieldMeta.value) {
+      isLabel = false;
+      textToRender = fieldMeta.value;
+      textAlign = fieldMeta.textAlign || FIELD_DEFAULT_GENERIC_ALIGN;
+    } else {
+      textToRender = signPlaceholders?.[field.type] ?? fieldTypeName;
+    }
+  }
+
+  // Render default values for text/number/date if provided for editing mode.
   if (mode === 'edit' && (fieldMeta?.type === 'text' || fieldMeta?.type === 'number')) {
     const value = fieldMeta?.type === 'text' ? fieldMeta.text : fieldMeta.value;
 
@@ -91,6 +102,12 @@ const upsertFieldText = (field: FieldToRender, options: RenderFieldElementOption
     }
   }
 
+  if (mode === 'edit' && fieldMeta?.type === 'date' && fieldMeta.value) {
+    isLabel = false;
+    textToRender = fieldMeta.value;
+    textAlign = fieldMeta.textAlign || FIELD_DEFAULT_GENERIC_ALIGN;
+  }
+
   // Default to blank for export mode since we want to ensure we don't show
   // any placeholder text or labels unless actually it's inserted.
   if (mode === 'export') {
@@ -98,17 +115,22 @@ const upsertFieldText = (field: FieldToRender, options: RenderFieldElementOption
   }
 
   // Fallback render readonly fields if prefilled value exists.
-  if (field?.fieldMeta?.readOnly && (fieldMeta?.type === 'text' || fieldMeta?.type === 'number')) {
+  if (
+    field?.fieldMeta?.readOnly &&
+    (fieldMeta?.type === 'text' || fieldMeta?.type === 'number' || fieldMeta?.type === 'date')
+  ) {
     const value = fieldMeta?.type === 'text' ? fieldMeta.text : fieldMeta.value;
 
     if (value) {
       isLabel = false;
       textToRender = value;
-
-      textVerticalAlign = fieldMeta.verticalAlign || FIELD_DEFAULT_GENERIC_VERTICAL_ALIGN;
       textAlign = fieldMeta.textAlign || FIELD_DEFAULT_GENERIC_ALIGN;
-      textLetterSpacing = fieldMeta.letterSpacing || FIELD_DEFAULT_LETTER_SPACING;
-      textLineHeight = fieldMeta.lineHeight || FIELD_DEFAULT_LINE_HEIGHT;
+
+      if (fieldMeta.type === 'text' || fieldMeta.type === 'number') {
+        textVerticalAlign = fieldMeta.verticalAlign || FIELD_DEFAULT_GENERIC_VERTICAL_ALIGN;
+        textLetterSpacing = fieldMeta.letterSpacing || FIELD_DEFAULT_LETTER_SPACING;
+        textLineHeight = fieldMeta.lineHeight || FIELD_DEFAULT_LINE_HEIGHT;
+      }
     }
   }
 
