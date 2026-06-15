@@ -57,17 +57,20 @@ const upsertFieldText = (field: FieldToRender, options: RenderFieldElementOption
 
   // On the recipient signing surface, show editor-prefilled values or the generic prompt.
   if (mode === 'sign' && (field.type === FieldType.TEXT || field.type === FieldType.NUMBER) && !field.inserted) {
-    const prefilledValue =
-      fieldMeta?.type === 'text' ? fieldMeta.text : fieldMeta?.type === 'number' ? fieldMeta.value : undefined;
+    if (fieldMeta?.type === 'text' || fieldMeta?.type === 'number') {
+      const prefilledValue = fieldMeta.type === 'text' ? fieldMeta.text : fieldMeta.value;
 
-    if (prefilledValue) {
-      isLabel = false;
-      textToRender = prefilledValue;
+      if (prefilledValue) {
+        isLabel = false;
+        textToRender = prefilledValue;
 
-      textVerticalAlign = fieldMeta.verticalAlign || FIELD_DEFAULT_GENERIC_VERTICAL_ALIGN;
-      textAlign = fieldMeta.textAlign || FIELD_DEFAULT_GENERIC_ALIGN;
-      textLetterSpacing = fieldMeta.letterSpacing || FIELD_DEFAULT_LETTER_SPACING;
-      textLineHeight = fieldMeta.lineHeight || FIELD_DEFAULT_LINE_HEIGHT;
+        textVerticalAlign = fieldMeta.verticalAlign || FIELD_DEFAULT_GENERIC_VERTICAL_ALIGN;
+        textAlign = fieldMeta.textAlign || FIELD_DEFAULT_GENERIC_ALIGN;
+        textLetterSpacing = fieldMeta.letterSpacing || FIELD_DEFAULT_LETTER_SPACING;
+        textLineHeight = fieldMeta.lineHeight || FIELD_DEFAULT_LINE_HEIGHT;
+      } else {
+        textToRender = signPlaceholders?.[field.type] ?? '';
+      }
     } else {
       textToRender = signPlaceholders?.[field.type] ?? '';
     }
