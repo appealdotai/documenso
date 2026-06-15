@@ -217,12 +217,6 @@ export const DocumentSigningTextField = ({ field, onSignField, onUnsignField }: 
     }
   }, []);
 
-  const parsedField = field.fieldMeta ? ZTextFieldMeta.parse(field.fieldMeta) : undefined;
-
-  const labelDisplay = parsedField?.label;
-  const textDisplay = parsedField?.text;
-
-  const fieldDisplayName = labelDisplay ? labelDisplay : textDisplay;
   const charactersRemaining = (parsedFieldMeta?.characterLimit ?? 0) - (localText.length ?? 0);
 
   return (
@@ -230,7 +224,9 @@ export const DocumentSigningTextField = ({ field, onSignField, onUnsignField }: 
       {isLoading && <DocumentSigningFieldsLoader />}
 
       {!field.inserted && (
-        <DocumentSigningFieldsUninserted>{fieldDisplayName || <Trans>Text</Trans>}</DocumentSigningFieldsUninserted>
+        <DocumentSigningFieldsUninserted>
+          <Trans>Enter Text</Trans>
+        </DocumentSigningFieldsUninserted>
       )}
 
       {field.inserted && (

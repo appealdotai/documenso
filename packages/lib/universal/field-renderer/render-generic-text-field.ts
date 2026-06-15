@@ -1,3 +1,4 @@
+import { FieldType } from '@prisma/client';
 import Konva from 'konva';
 
 import { DEFAULT_STANDARD_FONT_SIZE } from '../../constants/pdf';
@@ -23,7 +24,7 @@ import { calculateFieldPosition } from './field-renderer';
 const DEFAULT_TEXT_X_PADDING = 6;
 
 const upsertFieldText = (field: FieldToRender, options: RenderFieldElementOptions) => {
-  const { pageWidth, pageHeight, mode = 'edit', pageLayer, translations } = options;
+  const { pageWidth, pageHeight, mode = 'edit', pageLayer, translations, signPlaceholders } = options;
 
   const { fieldX, fieldY, fieldWidth, fieldHeight } = calculateFieldPosition(field, pageWidth, pageHeight);
 
@@ -53,6 +54,27 @@ const upsertFieldText = (field: FieldToRender, options: RenderFieldElementOption
   let textVerticalAlign: 'top' | 'middle' | 'bottom' = FIELD_DEFAULT_GENERIC_VERTICAL_ALIGN;
   let textLineHeight = FIELD_DEFAULT_LINE_HEIGHT;
   let textLetterSpacing = FIELD_DEFAULT_LETTER_SPACING;
+
+  // On the recipient signing surface, show editor-prefilled values or the generic prompt.
+  if (mode === 'sign' && (field.type === FieldType.TEXT || field.type === FieldType.NUMBER) && !field.inserted) {
+    if (fieldMeta?.type === 'text' || fieldMeta?.type === 'number') {
+      const prefilledValue = fieldMeta.type === 'text' ? fieldMeta.text : fieldMeta.value;
+
+      if (prefilledValue) {
+        isLabel = false;
+        textToRender = prefilledValue;
+
+        textVerticalAlign = fieldMeta.verticalAlign || FIELD_DEFAULT_GENERIC_VERTICAL_ALIGN;
+        textAlign = fieldMeta.textAlign || FIELD_DEFAULT_GENERIC_ALIGN;
+        textLetterSpacing = fieldMeta.letterSpacing || FIELD_DEFAULT_LETTER_SPACING;
+        textLineHeight = fieldMeta.lineHeight || FIELD_DEFAULT_LINE_HEIGHT;
+      } else {
+        textToRender = signPlaceholders?.[field.type] ?? '';
+      }
+    } else {
+      textToRender = signPlaceholders?.[field.type] ?? '';
+    }
+  }
 
   // Render default values for text/number if provided for editing mode.
   if (mode === 'edit' && (fieldMeta?.type === 'text' || fieldMeta?.type === 'number')) {

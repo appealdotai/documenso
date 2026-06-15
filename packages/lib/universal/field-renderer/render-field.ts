@@ -48,6 +48,11 @@ type RenderFieldOptions = {
 
   translations: Record<FieldType, string> | null;
 
+  /**
+   * See `RenderFieldElementOptions.signPlaceholders`.
+   */
+  signPlaceholders?: Partial<Record<FieldType, string>> | null;
+
   mode: FieldRenderMode;
 
   scale: number;
@@ -57,6 +62,7 @@ type RenderFieldOptions = {
 export const renderField = ({
   field,
   translations,
+  signPlaceholders,
   pageLayer,
   pageWidth,
   pageHeight,
@@ -70,6 +76,7 @@ export const renderField = ({
     pageWidth,
     pageHeight,
     translations,
+    signPlaceholders,
     mode,
     color,
     editable,
