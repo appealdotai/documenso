@@ -55,12 +55,22 @@ const upsertFieldText = (field: FieldToRender, options: RenderFieldElementOption
   let textLineHeight = FIELD_DEFAULT_LINE_HEIGHT;
   let textLetterSpacing = FIELD_DEFAULT_LETTER_SPACING;
 
-  // On the recipient signing surface, ignore the editor-side label/field-type
-  // name for TEXT and NUMBER and instead show a generic "Enter Text" /
-  // "Enter Number" prompt. Inserted values and prefilled read-only values
-  // handled by the override blocks below still render.
-  if (mode === 'sign' && (field.type === FieldType.TEXT || field.type === FieldType.NUMBER)) {
-    textToRender = signPlaceholders?.[field.type] ?? '';
+  // On the recipient signing surface, show editor-prefilled values or the generic prompt.
+  if (mode === 'sign' && (field.type === FieldType.TEXT || field.type === FieldType.NUMBER) && !field.inserted) {
+    const prefilledValue =
+      fieldMeta?.type === 'text' ? fieldMeta.text : fieldMeta?.type === 'number' ? fieldMeta.value : undefined;
+
+    if (prefilledValue) {
+      isLabel = false;
+      textToRender = prefilledValue;
+
+      textVerticalAlign = fieldMeta.verticalAlign || FIELD_DEFAULT_GENERIC_VERTICAL_ALIGN;
+      textAlign = fieldMeta.textAlign || FIELD_DEFAULT_GENERIC_ALIGN;
+      textLetterSpacing = fieldMeta.letterSpacing || FIELD_DEFAULT_LETTER_SPACING;
+      textLineHeight = fieldMeta.lineHeight || FIELD_DEFAULT_LINE_HEIGHT;
+    } else {
+      textToRender = signPlaceholders?.[field.type] ?? '';
+    }
   }
 
   // Render default values for text/number if provided for editing mode.
