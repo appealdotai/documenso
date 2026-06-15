@@ -1,0 +1,54 @@
+name: Staging Schedule
+
+on:
+  schedule:
+    - cron: '30 0 * * 1-5' # 8:30 AM GMT+8 Mon–Fri → START
+    - cron: '0 10 * * 1-5' # 6:00 PM GMT+8 Mon–Fri → STOP
+  workflow_dispatch:
+    inputs:
+      action:
+        description: Start or stop staging
+        required: true
+        type: choice
+        options:
+          - start
+          - stop
+
+jobs:
+  toggle-staging:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Start staging (8:30 AM GMT+8)
+        if: >-
+          github.event.schedule == '30 0 * * 1-5' ||
+          (github.event_name == 'workflow_dispatch' && inputs.action == 'start')
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_ENV_ID: ${{ secrets.RAILWAY_ENV_ID }}
+          RAILWAY_SERVICE_ID: ${{ secrets.RAILWAY_SERVICE_ID }}
+        run: |
+          curl --fail-with-body -X POST https://backboard.railway.app/graphql/v2 \
+            -H "Authorization: Bearer ${RAILWAY_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n \
+              --arg environmentId "$RAILWAY_ENV_ID" \
+              --arg serviceId "$RAILWAY_SERVICE_ID" \
+              '{query: "mutation { serviceInstanceUpdate(environmentId: \($environmentId), serviceId: \($serviceId), input: { numReplicas: 1 }) }"}')"
+
+      - name: Stop staging (6:00 PM GMT+8)
+        if: >-
+          github.event.schedule == '0 10 * * 1-5' ||
+          (github.event_name == 'workflow_dispatch' && inputs.action == 'stop')
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_ENV_ID: ${{ secrets.RAILWAY_ENV_ID }}
+          RAILWAY_SERVICE_ID: ${{ secrets.RAILWAY_SERVICE_ID }}
+        run: |
+          curl --fail-with-body -X POST https://backboard.railway.app/graphql/v2 \
+            -H "Authorization: Bearer ${RAILWAY_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n \
+              --arg environmentId "$RAILWAY_ENV_ID" \
+              --arg serviceId "$RAILWAY_SERVICE_ID" \
+              '{query: "mutation { serviceInstanceUpdate(environmentId: \($environmentId), serviceId: \($serviceId), input: { numReplicas: 0 }) }"}')"
