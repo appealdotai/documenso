@@ -21,20 +21,12 @@ export const handleTextFieldClick = async (
     });
   }
 
-  if (field.inserted) {
-    return {
-      type: FieldType.TEXT,
-      value: null,
-    };
-  }
+  const defaultValue = field.customText || text || field.fieldMeta?.text || '';
 
-  let textToInsert = text;
-
-  if (!textToInsert) {
-    textToInsert = await SignFieldTextDialog.call({
-      fieldMeta: field.fieldMeta,
-    });
-  }
+  const textToInsert = await SignFieldTextDialog.call({
+    fieldMeta: field.fieldMeta,
+    defaultValue,
+  });
 
   if (!textToInsert) {
     return null;
