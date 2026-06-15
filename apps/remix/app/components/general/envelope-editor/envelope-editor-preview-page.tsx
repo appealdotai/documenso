@@ -95,10 +95,15 @@ export const EnvelopeEditorPreviewPage = () => {
             };
           })
           .with({ type: FieldType.DATE }, () => {
+            const fieldMetaValue =
+              field.fieldMeta && typeof field.fieldMeta === 'object' && 'value' in field.fieldMeta
+                ? (field.fieldMeta as { value?: string }).value
+                : undefined;
+
             const date = extractFieldInsertionValues({
               fieldValue: {
                 type: FieldType.DATE,
-                value: true,
+                value: fieldMetaValue || new Date().toISOString().split('T')[0],
               },
               field,
               documentMeta: envelope.documentMeta,

@@ -7,6 +7,7 @@ import { ZFieldMetaSchema } from '../types/field-meta';
 export const ADVANCED_FIELD_TYPES_WITH_OPTIONAL_SETTING: FieldType[] = [
   FieldType.NUMBER,
   FieldType.TEXT,
+  FieldType.DATE,
   FieldType.DROPDOWN,
   FieldType.RADIO,
   FieldType.CHECKBOX,

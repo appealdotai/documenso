@@ -143,5 +143,6 @@ export const getClientSideFieldSignPlaceholders = ({ t }: I18n): Partial<Record<
   return {
     [FieldType.TEXT]: t(msg`Enter Text`),
     [FieldType.NUMBER]: t(msg`Enter Number`),
+    [FieldType.DATE]: t(msg`Select Date`),
   };
 };
