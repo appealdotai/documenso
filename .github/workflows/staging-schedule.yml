@@ -4,6 +4,15 @@ on:
   schedule:
     - cron: '30 0 * * 1-5' # 8:30 AM GMT+8 Mon–Fri → START
     - cron: '0 10 * * 1-5' # 6:00 PM GMT+8 Mon–Fri → STOP
+  workflow_dispatch:
+    inputs:
+      action:
+        description: Start or stop staging
+        required: true
+        type: choice
+        options:
+          - start
+          - stop
 
 jobs:
   toggle-staging:
@@ -11,7 +20,9 @@ jobs:
 
     steps:
       - name: Start staging (8:30 AM GMT+8)
-        if: github.event.schedule == '30 0 * * 1-5'
+        if: >-
+          github.event.schedule == '30 0 * * 1-5' ||
+          (github.event_name == 'workflow_dispatch' && inputs.action == 'start')
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
           RAILWAY_ENV_ID: ${{ secrets.RAILWAY_ENV_ID }}
@@ -26,7 +37,9 @@ jobs:
               '{query: "mutation { serviceInstanceUpdate(environmentId: \($environmentId), serviceId: \($serviceId), input: { numReplicas: 1 }) }"}')"
 
       - name: Stop staging (6:00 PM GMT+8)
-        if: github.event.schedule == '0 10 * * 1-5'
+        if: >-
+          github.event.schedule == '0 10 * * 1-5' ||
+          (github.event_name == 'workflow_dispatch' && inputs.action == 'stop')
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
           RAILWAY_ENV_ID: ${{ secrets.RAILWAY_ENV_ID }}
