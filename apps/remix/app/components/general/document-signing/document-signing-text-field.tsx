@@ -237,7 +237,9 @@ export const DocumentSigningTextField = ({ field, onSignField, onUnsignField }: 
 
       <Dialog open={showCustomTextModal} onOpenChange={setShowCustomTextModal}>
         <DialogContent>
-          <DialogTitle>{parsedFieldMeta?.label ? parsedFieldMeta?.label : <Trans>Text</Trans>}</DialogTitle>
+          <DialogTitle>
+            <Trans>Enter Text</Trans>
+          </DialogTitle>
 
           <div>
             <Textarea
