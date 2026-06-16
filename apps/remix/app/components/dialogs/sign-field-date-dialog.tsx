@@ -46,7 +46,9 @@ export const SignFieldDateDialog = createCallable<SignFieldDateDialogProps, stri
       <Dialog open={true} onOpenChange={(value) => (!value ? call.end(null) : null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{fieldMeta?.label || <Trans>Select Date</Trans>}</DialogTitle>
+            <DialogTitle>
+              <Trans>Select Date</Trans>
+            </DialogTitle>
 
             <DialogDescription className="mt-4">
               {fieldMeta?.placeholder || <Trans>Please select a date</Trans>}

@@ -44,7 +44,9 @@ export const SignFieldTextDialog = createCallable<SignFieldTextDialogProps, stri
       <Dialog open={true} onOpenChange={(value) => (!value ? call.end(null) : null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{fieldMeta?.label || <Trans>Enter Text</Trans>}</DialogTitle>
+            <DialogTitle>
+              <Trans>Enter Text</Trans>
+            </DialogTitle>
 
             <DialogDescription className="mt-4">
               <Trans>Please enter a value</Trans>
