@@ -143,7 +143,7 @@ export const getEnvelopeForDirectTemplateSigning = async ({
       ...recipient,
       directToken: envelope.directLink?.token || '',
       fields: recipient.fields.map((field) => {
-        const autoInsertValue = extractFieldAutoInsertValues(field, recipient);
+        const autoInsertValue = extractFieldAutoInsertValues(field, recipient, envelope.documentMeta);
 
         if (!autoInsertValue) {
           return field;

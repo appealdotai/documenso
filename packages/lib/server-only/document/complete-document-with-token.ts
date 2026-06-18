@@ -2,7 +2,7 @@ import { DEFAULT_DOCUMENT_DATE_FORMAT } from '@documenso/lib/constants/date-form
 import { DEFAULT_DOCUMENT_TIME_ZONE } from '@documenso/lib/constants/time-zones';
 import { DOCUMENT_AUDIT_LOG_TYPE, RECIPIENT_DIFF_TYPE } from '@documenso/lib/types/document-audit-logs';
 import type { RequestMetadata } from '@documenso/lib/universal/extract-request-metadata';
-import { fieldsContainUnsignedRequiredField } from '@documenso/lib/utils/advanced-fields-helpers';
+import { fieldsContainUnsignedRequiredField, isRequiredField } from '@documenso/lib/utils/advanced-fields-helpers';
 import { createDocumentAuditLogData } from '@documenso/lib/utils/document-audit-logs';
 import { prisma } from '@documenso/prisma';
 import {
@@ -180,7 +180,9 @@ export const completeDocumentWithToken = async ({
   });
 
   // This should be scoped to the current recipient.
-  const uninsertedDateFields = fields.filter((field) => field.type === FieldType.DATE && !field.inserted);
+  const uninsertedDateFields = fields.filter(
+    (field) => field.type === FieldType.DATE && !field.inserted && isRequiredField(field),
+  );
 
   let recipientName = recipient.name;
   let recipientEmail = recipient.email;

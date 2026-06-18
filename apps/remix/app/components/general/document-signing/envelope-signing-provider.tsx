@@ -77,14 +77,11 @@ export interface EnvelopeSigningProviderProps {
 /**
  * Inject prefilled date fields for the current recipient.
  *
- * The dates are filled in correctly when the recipient "completes" the document.
+ * Only prefills date fields that are marked as readOnly by the editor.
+ * Editable date fields with a preset value will show the value but remain editable.
  */
 const prefillDateFields = (data: EnvelopeForSigningResponse): EnvelopeForSigningResponse => {
   const { timezone, dateFormat } = data.envelope.documentMeta;
-
-  const formattedDate = DateTime.now()
-    .setZone(timezone ?? DEFAULT_DOCUMENT_TIME_ZONE)
-    .toFormat(dateFormat ?? DEFAULT_DOCUMENT_DATE_FORMAT);
 
   const prefillField = <T extends { type: FieldType; inserted: boolean; customText: string; fieldMeta: unknown }>(
     field: T,
@@ -93,12 +90,28 @@ const prefillDateFields = (data: EnvelopeForSigningResponse): EnvelopeForSigning
       return field;
     }
 
+    const meta = typeof field.fieldMeta === 'object' && field.fieldMeta !== null ? field.fieldMeta : {};
+    const fieldReadOnly = 'readOnly' in meta && meta.readOnly === true;
+    const fieldValue = 'value' in meta && typeof meta.value === 'string' ? meta.value : '';
+
+    if (!fieldReadOnly) {
+      return field;
+    }
+
+    const formattedDate = fieldValue
+      ? DateTime.fromISO(fieldValue)
+          .setZone(timezone ?? DEFAULT_DOCUMENT_TIME_ZONE)
+          .toFormat(dateFormat ?? DEFAULT_DOCUMENT_DATE_FORMAT)
+      : DateTime.now()
+          .setZone(timezone ?? DEFAULT_DOCUMENT_TIME_ZONE)
+          .toFormat(dateFormat ?? DEFAULT_DOCUMENT_DATE_FORMAT);
+
     return {
       ...field,
       customText: formattedDate,
       inserted: true,
       fieldMeta: {
-        ...(typeof field.fieldMeta === 'object' ? field.fieldMeta : {}),
+        ...meta,
         readOnly: true,
       },
     };
