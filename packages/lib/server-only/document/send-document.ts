@@ -15,14 +15,17 @@ import {
   SigningStatus,
   WebhookTriggerEvents,
 } from '@prisma/client';
-
+import { DateTime } from 'luxon';
 import { validateCheckboxLength } from '../../advanced-fields-validation/validate-checkbox';
+import { DEFAULT_DOCUMENT_DATE_FORMAT } from '../../constants/date-formats';
 import { DIRECT_TEMPLATE_RECIPIENT_EMAIL } from '../../constants/direct-templates';
+import { DEFAULT_DOCUMENT_TIME_ZONE } from '../../constants/time-zones';
 import { AppError, AppErrorCode } from '../../errors/app-error';
 import { jobs } from '../../jobs/client';
 import { extractDerivedDocumentEmailSettings } from '../../types/document-email';
 import {
   ZCheckboxFieldMeta,
+  ZDateFieldMeta,
   ZDropdownFieldMeta,
   ZFieldAndMetaSchema,
   ZNumberFieldMeta,
@@ -216,7 +219,7 @@ export const sendDocument = async ({ id, userId, teamId, sendEmail, requestMetad
         });
       }
 
-      const fieldToAutoInsert = extractFieldAutoInsertValues(unknownField, recipient);
+      const fieldToAutoInsert = extractFieldAutoInsertValues(unknownField, recipient, envelope.documentMeta);
 
       // Only auto-insert fields if the recipient has not been sent the document yet.
       if (fieldToAutoInsert && recipient.sendStatus !== SendStatus.SENT) {
@@ -384,6 +387,7 @@ const injectFormValuesIntoDocument = async (
 export const extractFieldAutoInsertValues = (
   unknownField: Field,
   recipient: Pick<Recipient, 'email'>,
+  documentMeta?: { dateFormat?: string | null; timezone?: string | null } | null,
 ): { fieldId: number; customText: string } | null => {
   const parsedField = ZFieldAndMetaSchema.safeParse(unknownField);
 
@@ -429,6 +433,24 @@ export const extractFieldAutoInsertValues = (
         fieldId,
         customText: value,
       };
+    }
+  }
+
+  // Auto insert date fields that are readOnly with a value set.
+  if (field.type === FieldType.DATE) {
+    const { readOnly, value } = ZDateFieldMeta.parse(field.fieldMeta);
+
+    if (readOnly && value) {
+      const dateFormat = documentMeta?.dateFormat ?? DEFAULT_DOCUMENT_DATE_FORMAT;
+      const timezone = documentMeta?.timezone ?? DEFAULT_DOCUMENT_TIME_ZONE;
+      const parsedDate = DateTime.fromISO(value, { zone: timezone });
+
+      if (parsedDate.isValid) {
+        return {
+          fieldId,
+          customText: parsedDate.toFormat(dateFormat),
+        };
+      }
     }
   }
 
