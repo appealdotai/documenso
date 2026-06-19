@@ -76,6 +76,7 @@ const upsertFieldText = (field: FieldToRender, options: RenderFieldElementOption
     }
   }
 
+  // Render default values for text/number if provided for editing mode.
   // On the recipient signing surface, show prefilled date value or format placeholder.
   if (mode === 'sign' && field.type === FieldType.DATE && !field.inserted) {
     if (fieldMeta?.type === 'date' && fieldMeta.value) {
