@@ -408,8 +408,9 @@ const runAllFieldTypesFlow = async (surface: TEnvelopeEditorSurface): Promise<TA
   await root.locator('[data-testid="field-form-validationLength"]').click();
   await root.getByRole('option', { name: '1', exact: true }).click();
 
-  // 10. Dropdown: place and configure two options, set default value.
+  // 10. Dropdown: place and configure label, two options, and default value.
   await placeFieldOnPdf(root, 'Dropdown', { x: 120, y: 500 });
+  await root.locator('[data-testid="field-form-label"]').fill('Color');
 
   // First option already has "Option 1". Change it to "Red".
   await root.locator('[data-testid="field-form-values-0-value"]').fill('Red');
@@ -537,6 +538,7 @@ const assertAllFieldTypesPersistedInDatabase = async ({
 
   // DROPDOWN
   expect(meta(FieldType.DROPDOWN).type).toBe('dropdown');
+  expect(meta(FieldType.DROPDOWN).label).toBe('Color');
   expect(meta(FieldType.DROPDOWN).defaultValue).toBe('Red');
   const dropdownValues = meta(FieldType.DROPDOWN).values as Array<{ value: string }>;
   expect(dropdownValues).toHaveLength(2);

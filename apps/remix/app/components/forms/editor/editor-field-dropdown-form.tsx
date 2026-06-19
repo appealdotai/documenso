@@ -13,11 +13,13 @@ import { z } from 'zod';
 
 import {
   EditorGenericFontSizeField,
+  EditorGenericLabelField,
   EditorGenericReadOnlyField,
   EditorGenericRequiredField,
 } from './editor-field-generic-field-forms';
 
 const ZDropdownFieldFormSchema = z.object({
+  label: z.string().optional(),
   defaultValue: z.string().optional(),
   values: z
     .object({
@@ -76,6 +78,7 @@ export const EditorFieldDropdownForm = ({
     resolver: zodResolver(ZDropdownFieldFormSchema),
     mode: 'onChange',
     defaultValues: {
+      label: value.label || '',
       defaultValue: value.defaultValue,
       values: value.values || [{ value: t`Option 1` }],
       required: value.required || false,
@@ -142,6 +145,8 @@ export const EditorFieldDropdownForm = ({
       <form>
         <fieldset className="flex flex-col gap-2">
           <EditorGenericFontSizeField formControl={form.control} />
+
+          <EditorGenericLabelField formControl={form.control} />
 
           {/* Todo: Envelopes This is buggy. */}
           <FormField
