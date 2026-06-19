@@ -327,9 +327,10 @@ const runAllFieldTypesFlow = async (surface: TEnvelopeEditorSurface): Promise<TA
   // Place and configure each field type immediately after placement.
   // After placeFieldOnPdf, the sidebar shows the field's config form (field is selected in React state).
 
-  // 1. Signature: place and set fontSize to 24.
+  // 1. Signature: place and set fontSize to 24 and label.
   await placeFieldOnPdf(root, 'Signature', { x: 120, y: 50 });
   await root.locator('[data-testid="field-form-fontSize"]').fill('24');
+  await root.locator('[data-testid="field-form-label"]').fill('Sign here');
 
   // 2. Email: place and set textAlign to center.
   await placeFieldOnPdf(root, 'Email', { x: 120, y: 100 });
@@ -474,6 +475,8 @@ const assertAllFieldTypesPersistedInDatabase = async ({
   // SIGNATURE
   expect(meta(FieldType.SIGNATURE).type).toBe('signature');
   expect(meta(FieldType.SIGNATURE).fontSize).toBe(24);
+  expect(meta(FieldType.SIGNATURE).label).toBe('Sign here');
+  expect(meta(FieldType.SIGNATURE).required).toBe(true);
 
   // EMAIL
   expect(meta(FieldType.EMAIL).type).toBe('email');

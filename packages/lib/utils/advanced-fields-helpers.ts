@@ -5,6 +5,7 @@ import { ZFieldMetaSchema } from '../types/field-meta';
 // Currently it seems that the majority of fields have advanced fields for font reasons.
 // This array should only contain fields that have an optional setting in the fieldMeta.
 export const ADVANCED_FIELD_TYPES_WITH_OPTIONAL_SETTING: FieldType[] = [
+  FieldType.SIGNATURE,
   FieldType.NUMBER,
   FieldType.TEXT,
   FieldType.DATE,
@@ -25,7 +26,7 @@ export const isRequiredField = (field: Field) => {
   // Not sure why fieldMeta can be optional for advanced fields, but it is.
   // Therefore we must assume if there is no fieldMeta, then the field is optional.
   if (!field.fieldMeta) {
-    return false;
+    return field.type === FieldType.SIGNATURE;
   }
 
   const parsedData = ZFieldMetaSchema.safeParse(field.fieldMeta);
@@ -33,7 +34,11 @@ export const isRequiredField = (field: Field) => {
   // If it fails, assume the field is optional.
   // This needs to be logged somewhere.
   if (!parsedData.success) {
-    return false;
+    return field.type === FieldType.SIGNATURE;
+  }
+
+  if (field.type === FieldType.SIGNATURE) {
+    return parsedData.data?.required !== false;
   }
 
   return parsedData.data?.required === true;
