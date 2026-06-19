@@ -345,10 +345,11 @@ const runAllFieldTypesFlow = async (surface: TEnvelopeEditorSurface): Promise<TA
   await placeFieldOnPdf(root, 'Initials', { x: 120, y: 200 });
   await root.locator('[data-testid="field-form-fontSize"]').fill('16');
 
-  // 5. Date: place and set textAlign to center.
+  // 5. Date: place and set textAlign to center, required.
   await placeFieldOnPdf(root, 'Date', { x: 120, y: 250 });
   await root.locator('[data-testid="field-form-textAlign"]').click();
   await root.getByRole('option', { name: 'Center' }).click();
+  await root.locator('[data-testid="field-form-required"]').click();
 
   // 6. Text: place and configure label, placeholder, text, characterLimit, required.
   await placeFieldOnPdf(root, 'Text', { x: 120, y: 300 });
@@ -488,6 +489,7 @@ const assertAllFieldTypesPersistedInDatabase = async ({
   // DATE
   expect(meta(FieldType.DATE).type).toBe('date');
   expect(meta(FieldType.DATE).textAlign).toBe('center');
+  expect(meta(FieldType.DATE).required).toBe(true);
 
   // TEXT
   expect(meta(FieldType.TEXT).type).toBe('text');
