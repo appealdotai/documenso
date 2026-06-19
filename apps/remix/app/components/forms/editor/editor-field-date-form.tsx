@@ -22,6 +22,7 @@ import {
   EditorGenericFontSizeField,
   EditorGenericLabelField,
   EditorGenericReadOnlyField,
+  EditorGenericRequiredField,
   EditorGenericTextAlignField,
 } from './editor-field-generic-field-forms';
 
@@ -31,6 +32,7 @@ const ZDateFieldFormSchema = ZDateFieldMeta.pick({
   overflow: true,
   label: true,
   value: true,
+  required: true,
   readOnly: true,
 }).refine(
   (data) => {
@@ -66,6 +68,7 @@ export const EditorFieldDateForm = ({
       overflow: value.overflow || FIELD_DATE_META_DEFAULT_VALUES.overflow,
       label: value.label || '',
       value: value.value || '',
+      required: value.required || false,
       readOnly: value.readOnly || false,
     },
   });
@@ -146,8 +149,10 @@ export const EditorFieldDateForm = ({
           />
 
           <div className="mt-1">
-            <EditorGenericReadOnlyField formControl={form.control} />
+            <EditorGenericRequiredField formControl={form.control} />
           </div>
+
+          <EditorGenericReadOnlyField formControl={form.control} />
         </fieldset>
       </form>
     </Form>
