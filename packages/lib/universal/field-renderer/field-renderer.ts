@@ -16,18 +16,31 @@ export type FieldToRender = Pick<
   height: number;
   positionX: number;
   positionY: number;
+  isValidating?: boolean;
   fieldMeta?: TFieldMetaSchema | null;
   signature?: Pick<Signature, 'signatureImageAsBase64' | 'typedSignature'> | null;
 };
+
+/**
+ * The render type.
+ *
+ * @default 'edit'
+ *
+ * - `edit` - The field is rendered in editor page.
+ * - `sign` - The field is rendered for the signing page.
+ * - `export` - The field is rendered for exporting and sealing into the PDF. No backgrounds, interactive elements, etc.
+ */
+export type FieldRenderMode = 'edit' | 'sign' | 'export';
 
 export type RenderFieldElementOptions = {
   pageLayer: Konva.Layer;
   pageWidth: number;
   pageHeight: number;
-  mode: 'edit' | 'sign' | 'export';
+  mode: FieldRenderMode;
   editable?: boolean;
   scale: number;
   color?: TRecipientColor;
+  fieldCanvasStyle?: FieldCanvasStyle;
   translations: Record<FieldType, string> | null;
   /**
    * Translated placeholders shown inside an empty field while signing.
@@ -36,6 +49,14 @@ export type RenderFieldElementOptions = {
    * `mode === 'sign'`.
    */
   signPlaceholders?: Partial<Record<FieldType, string>> | null;
+};
+
+export type FieldCanvasStyle = {
+  backgroundColor?: string;
+  borderColor?: string;
+  borderRadius?: number;
+  borderWidth?: number;
+  opacity?: number;
 };
 
 /**
