@@ -26,8 +26,6 @@ export const handleTextFieldClick = async (
   const textToInsert = await SignFieldTextDialog.call({
     fieldMeta: field.fieldMeta,
     defaultValue,
-    fieldWidth: Number(field.width),
-    fieldHeight: Number(field.height),
   });
 
   if (!textToInsert) {
