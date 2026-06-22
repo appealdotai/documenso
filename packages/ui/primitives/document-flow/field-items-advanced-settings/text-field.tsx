@@ -32,7 +32,6 @@ export const TextFieldAdvancedSettings = ({
       readOnly,
       required,
       fontSize,
-      type: 'text',
     });
 
     handleErrors(textErrors);

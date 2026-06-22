@@ -120,7 +120,7 @@ export const ZTextFieldMeta = ZBaseFieldMeta.extend({
   lineHeight: ZFieldMetaLineHeight.nullish(),
   letterSpacing: ZFieldMetaLetterSpacing.nullish(),
   verticalAlign: ZFieldMetaVerticalAlign.nullish(),
-  overflow: ZFieldOverflowMode.optional().default(DEFAULT_TEXT_OVERFLOW_MODE),
+  overflow: ZFieldOverflowMode.optional(),
 });
 
 export type TTextFieldMeta = z.infer<typeof ZTextFieldMeta>;
