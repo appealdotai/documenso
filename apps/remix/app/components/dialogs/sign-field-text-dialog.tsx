@@ -15,10 +15,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { msg } from '@lingui/core/macro';
 import { Plural, Trans, useLingui } from '@lingui/react/macro';
 import { createCallable } from 'react-call';
-import { useForm, useWatch } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-
-import { SignFieldTextPreview } from '~/components/dialogs/sign-field-text-preview';
 
 const ZSignFieldTextFormSchema = z.object({
   text: z.string().min(1, { message: msg`Text is required`.id }),
@@ -29,12 +27,10 @@ type TSignFieldTextFormSchema = z.infer<typeof ZSignFieldTextFormSchema>;
 export type SignFieldTextDialogProps = {
   fieldMeta?: TTextFieldMeta;
   defaultValue?: string;
-  fieldWidth: number;
-  fieldHeight: number;
 };
 
 export const SignFieldTextDialog = createCallable<SignFieldTextDialogProps, string | null>(
-  ({ call, fieldMeta, defaultValue = '', fieldWidth, fieldHeight }) => {
+  ({ call, fieldMeta, defaultValue = '' }) => {
     const { t } = useLingui();
 
     const form = useForm<TSignFieldTextFormSchema>({
@@ -42,11 +38,6 @@ export const SignFieldTextDialog = createCallable<SignFieldTextDialogProps, stri
       defaultValues: {
         text: defaultValue,
       },
-    });
-
-    const textValue = useWatch({
-      control: form.control,
-      name: 'text',
     });
 
     return (
@@ -95,13 +86,6 @@ export const SignFieldTextDialog = createCallable<SignFieldTextDialogProps, stri
                         )}
                     </FormItem>
                   )}
-                />
-
-                <SignFieldTextPreview
-                  text={textValue}
-                  fieldMeta={fieldMeta}
-                  fieldWidth={fieldWidth}
-                  fieldHeight={fieldHeight}
                 />
 
                 <DialogFooter>
