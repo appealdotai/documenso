@@ -303,6 +303,52 @@ export const EditorGenericReadOnlyField = ({
   );
 };
 
+export const EditorGenericOverflowField = ({
+  formControl,
+  className,
+}: {
+  formControl: FormControlType;
+  className?: string;
+}) => {
+  const { t } = useLingui();
+
+  return (
+    <FormField
+      control={formControl}
+      name="overflow"
+      render={({ field }) => (
+        <FormItem className={className}>
+          <FormLabel>
+            <Trans>Text Overflow</Trans>
+          </FormLabel>
+          <FormControl>
+            <Select {...field} onValueChange={field.onChange}>
+              <SelectTrigger data-testid="field-form-overflow">
+                <SelectValue placeholder={t`Select overflow behavior`} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="auto">
+                  <Trans>Auto</Trans>
+                </SelectItem>
+                <SelectItem value="horizontal">
+                  <Trans>Horizontal</Trans>
+                </SelectItem>
+                <SelectItem value="vertical">
+                  <Trans>Vertical</Trans>
+                </SelectItem>
+                <SelectItem value="crop">
+                  <Trans>Crop</Trans>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </FormControl>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+  );
+};
+
 export const EditorGenericLabelField = ({
   formControl,
   className,

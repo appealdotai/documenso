@@ -1,8 +1,10 @@
 import type { TTextFieldMeta as TextFieldMeta } from '../types/field-meta';
 
+type TextFieldValidationMeta = Pick<TextFieldMeta, 'characterLimit' | 'readOnly' | 'required' | 'fontSize'>;
+
 export const validateTextField = (
   value: string,
-  fieldMeta: TextFieldMeta,
+  fieldMeta: TextFieldValidationMeta,
   isSigningPage: boolean = false,
 ): string[] => {
   const errors = [];

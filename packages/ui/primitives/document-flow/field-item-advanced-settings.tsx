@@ -5,6 +5,7 @@ import {
   type TDateFieldMeta as DateFieldMeta,
   DEFAULT_DATE_OVERFLOW_MODE,
   DEFAULT_EMAIL_OVERFLOW_MODE,
+  DEFAULT_TEXT_OVERFLOW_MODE,
   type TDropdownFieldMeta as DropdownFieldMeta,
   type TEmailFieldMeta as EmailFieldMeta,
   type TFieldMetaSchema as FieldMeta,
@@ -103,6 +104,7 @@ const getDefaultState = (fieldType: FieldType): FieldMeta => {
         required: false,
         readOnly: false,
         textAlign: 'left',
+        overflow: DEFAULT_TEXT_OVERFLOW_MODE,
       };
     case FieldType.NUMBER:
       return {
