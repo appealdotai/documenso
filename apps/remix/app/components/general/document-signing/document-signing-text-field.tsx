@@ -230,7 +230,7 @@ export const DocumentSigningTextField = ({ field, onSignField, onUnsignField }: 
       )}
 
       {field.inserted && (
-        <DocumentSigningFieldsInserted textAlign={parsedFieldMeta?.textAlign}>
+        <DocumentSigningFieldsInserted textAlign={parsedFieldMeta?.textAlign} overflow={parsedFieldMeta?.overflow}>
           {field.customText}
         </DocumentSigningFieldsInserted>
       )}
