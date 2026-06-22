@@ -327,14 +327,11 @@ export const EditorGenericOverflowField = ({
                 <SelectValue placeholder={t`Select overflow behavior`} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="auto">
-                  <Trans>Auto</Trans>
+                <SelectItem value="vertical">
+                  <Trans>Vertical</Trans>
                 </SelectItem>
                 <SelectItem value="horizontal">
                   <Trans>Horizontal</Trans>
-                </SelectItem>
-                <SelectItem value="vertical">
-                  <Trans>Vertical</Trans>
                 </SelectItem>
                 <SelectItem value="crop">
                   <Trans>Crop</Trans>
