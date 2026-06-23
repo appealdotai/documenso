@@ -3,7 +3,6 @@ import { ZFieldMetaSchema } from '@documenso/lib/types/field-meta';
 import type { FieldWithSignature } from '@documenso/prisma/types/field-with-signature';
 import { FieldRootContainer } from '@documenso/ui/components/field/field';
 import { getRecipientColorStyles } from '@documenso/ui/lib/recipient-colors';
-import { cn } from '@documenso/ui/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@documenso/ui/primitives/tooltip';
 import { Trans } from '@lingui/react/macro';
 import { FieldType } from '@prisma/client';
@@ -150,22 +149,6 @@ export const DocumentSigningFieldContainer = ({
             <TooltipArrow />
           </TooltipContent>
         </Tooltip>
-      )}
-
-      {(field.type === FieldType.RADIO || field.type === FieldType.CHECKBOX) && field.fieldMeta?.label && (
-        <div
-          className={cn(
-            'absolute -top-16 right-0 left-0 rounded-md p-2 text-center text-gray-700 text-xs',
-            {
-              'border border-border bg-foreground/5': !field.inserted,
-            },
-            {
-              'border border-primary bg-documenso-200': field.inserted,
-            },
-          )}
-        >
-          {field.fieldMeta.label}
-        </div>
       )}
 
       {children}
