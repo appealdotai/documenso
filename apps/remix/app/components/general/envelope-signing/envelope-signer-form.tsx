@@ -113,7 +113,7 @@ export default function EnvelopeSignerForm() {
             </Label>
 
             <p className="mt-1 text-muted-foreground text-xs">
-              <Trans>Used as a suggestion when signing individual fields.</Trans>
+              <Trans>Applied when you click an empty signature field. Change per field via the picker.</Trans>
             </p>
 
             <SignaturePadDialog

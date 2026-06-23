@@ -1,6 +1,7 @@
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import {
   collectSignaturePickerOptions,
+  isNewSignatureValue,
   signatureDataToValue,
   type TSignFieldSignatureDialogResult,
 } from '@documenso/lib/utils/signature-picker';
@@ -68,6 +69,14 @@ export const handleSignatureFieldClick = async (
     uploadSignatureEnabled,
     drawSignatureEnabled,
   });
+
+  if (!field.inserted && suggestedSignature) {
+    return {
+      action: 'apply',
+      value: suggestedSignature,
+      isNewSignature: isNewSignatureValue(suggestedSignature, availableOptions),
+    };
+  }
 
   const result = await SignFieldSignatureDialog.call({
     mode: field.inserted ? 'change' : 'unsigned',
