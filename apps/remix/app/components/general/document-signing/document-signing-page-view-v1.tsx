@@ -15,6 +15,8 @@ import type { CompletedField } from '@documenso/lib/types/fields';
 import { isFieldUnsignedAndRequired } from '@documenso/lib/utils/advanced-fields-helpers';
 import { getDocumentDataUrlForPdfViewer } from '@documenso/lib/utils/envelope-download';
 import { validateFieldsInserted } from '@documenso/lib/utils/fields';
+import { isSignatureFieldType } from '@documenso/prisma/guards/is-signature-field';
+import type { FieldWithSignature } from '@documenso/prisma/types/field-with-signature';
 import type { FieldWithSignatureAndFieldMeta } from '@documenso/prisma/types/field-with-signature-and-fieldmeta';
 import type { RecipientWithFields } from '@documenso/prisma/types/recipient-with-fields';
 import { trpc } from '@documenso/trpc/react';
@@ -28,7 +30,7 @@ import { FieldType, RecipientRole } from '@prisma/client';
 import { LucideChevronDown, LucideChevronUp } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { match, P } from 'ts-pattern';
-
+import { SignFieldSignatureDialog } from '~/components/dialogs/sign-field-signature-dialog';
 import { DocumentSigningAttachmentsPopover } from '~/components/general/document-signing/document-signing-attachments-popover';
 import { DocumentSigningAutoSign } from '~/components/general/document-signing/document-signing-auto-sign';
 import { DocumentSigningCheckboxField } from '~/components/general/document-signing/document-signing-checkbox-field';
@@ -98,6 +100,12 @@ export const DocumentSigningPageViewV1 = ({
   const isSubmitting = isPending || isSuccess;
 
   const fieldsRequiringValidation = useMemo(() => fields.filter(isFieldUnsignedAndRequired), [fields]);
+
+  const recipientSignatureFields = useMemo(() => {
+    return fields.filter(
+      (field) => field.recipientId === recipient.id && isSignatureFieldType(field.type),
+    ) as FieldWithSignature[];
+  }, [fields, recipient.id]);
 
   const fieldsValidated = () => {
     validateFieldsInserted(fieldsRequiringValidation);
@@ -177,6 +185,7 @@ export const DocumentSigningPageViewV1 = ({
 
   return (
     <DocumentSigningRecipientProvider recipient={recipient} targetSigner={targetSigner}>
+      <SignFieldSignatureDialog.Root />
       <div className="mx-auto w-full max-w-screen-xl sm:px-6">
         {hasCustomBrandingLogo && (
           <img
@@ -405,6 +414,7 @@ export const DocumentSigningPageViewV1 = ({
                   <DocumentSigningSignatureField
                     key={field.id}
                     field={field}
+                    recipientSignatureFields={recipientSignatureFields}
                     typedSignatureEnabled={documentMeta?.typedSignatureEnabled}
                     uploadSignatureEnabled={documentMeta?.uploadSignatureEnabled}
                     drawSignatureEnabled={documentMeta?.drawSignatureEnabled}

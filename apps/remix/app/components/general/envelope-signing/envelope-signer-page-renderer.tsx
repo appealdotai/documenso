@@ -37,7 +37,8 @@ import { handleEmailFieldClick } from '~/utils/field-signing/email-field';
 import { handleInitialsFieldClick } from '~/utils/field-signing/initial-field';
 import { handleNameFieldClick } from '~/utils/field-signing/name-field';
 import { handleNumberFieldClick } from '~/utils/field-signing/number-field';
-import { handleSignatureFieldClick } from '~/utils/field-signing/signature-field';
+import { handleSignatureFieldClick, signatureDialogResultToFieldValue } from '~/utils/field-signing/signature-field';
+import { runSignatureFieldAction } from '~/utils/field-signing/signature-field-auth';
 import { handleTextFieldClick } from '~/utils/field-signing/text-field';
 
 import { useRequiredDocumentSigningAuthContext } from '../document-signing/document-signing-auth-provider';
@@ -45,6 +46,10 @@ import { useRequiredEnvelopeSigningContext } from '../document-signing/envelope-
 
 type GenericLocalField = TEnvelope['fields'][number] & {
   recipient: Pick<Recipient, 'id' | 'name' | 'email' | 'signingStatus'>;
+};
+
+const getFieldSignatureCacheKey = (field: Field & { signature?: Signature | null }) => {
+  return field.signature?.signatureImageAsBase64 || field.signature?.typedSignature || '';
 };
 
 export const EnvelopeSignerPageRenderer = ({ pageData }: { pageData: PageRenderData }) => {
@@ -67,7 +72,10 @@ export const EnvelopeSignerPageRenderer = ({ pageData }: { pageData: PageRenderD
     fullName: fullNameState,
     setFullName,
     signature: signatureState,
-    setSignature,
+    profileSignature,
+    hasCompletedSignatureActionAuth,
+    markSignatureActionAuthCompleted,
+    recipientActionAuthRequired,
     selectedAssistantRecipientFields,
     selectedAssistantRecipient,
     isDirectTemplate,
@@ -76,13 +84,19 @@ export const EnvelopeSignerPageRenderer = ({ pageData }: { pageData: PageRenderD
   // Note: We're using refs here due to the closure within the signField function.
   const fullName = useRef(fullNameState);
   const email = useRef(emailState);
-  const signature = useRef(signatureState);
+  const signatureSuggestion = useRef(signatureState);
+  const profileSignatureRef = useRef(profileSignature);
+  const hasCompletedSignatureActionAuthRef = useRef(hasCompletedSignatureActionAuth);
+  const recipientFieldsRef = useRef(recipientFields);
 
   useEffect(() => {
     fullName.current = fullNameState;
     email.current = emailState;
-    signature.current = signatureState;
-  }, [fullNameState, emailState, signatureState]);
+    signatureSuggestion.current = signatureState;
+    profileSignatureRef.current = profileSignature;
+    hasCompletedSignatureActionAuthRef.current = hasCompletedSignatureActionAuth;
+    recipientFieldsRef.current = recipientFields;
+  }, [fullNameState, emailState, signatureState, profileSignature, hasCompletedSignatureActionAuth, recipientFields]);
 
   const cachedRenderFields = useRef<Map<number, Field & { signature?: Signature | null }>>(new Map());
   const prevShowPendingFieldTooltip = useRef(showPendingFieldTooltip);
@@ -386,33 +400,36 @@ export const EnvelopeSignerPageRenderer = ({ pageData }: { pageData: PageRenderD
         .with({ type: FieldType.SIGNATURE }, (field) => {
           void handleSignatureFieldClick({
             field,
+            recipientFields: recipientFieldsRef.current,
             fullName: fullName.current,
-            signature: signature.current,
+            suggestedSignature: signatureSuggestion.current,
+            profileSignature: profileSignatureRef.current,
             typedSignatureEnabled: envelope.documentMeta.typedSignatureEnabled,
             uploadSignatureEnabled: envelope.documentMeta.uploadSignatureEnabled,
             drawSignatureEnabled: envelope.documentMeta.drawSignatureEnabled,
           })
-            .then(async (payload) => {
-              if (!payload) {
+            .then(async (result) => {
+              if (!result) {
                 return;
               }
 
               fieldGroup.add(loadingSpinnerGroup);
 
-              if (payload.value) {
-                await executeActionAuthProcedure({
-                  onReauthFormSubmit: async (authOptions) => {
-                    await signField(field.id, payload, authOptions);
+              const payload = signatureDialogResultToFieldValue(result);
 
-                    loadingSpinnerGroup.destroy();
-                  },
-                  actionTarget: field.type,
-                });
-
-                setSignature(payload.value);
-              } else {
-                await signField(field.id, payload);
-              }
+              await runSignatureFieldAction({
+                result,
+                hasAuthedOnceThisSession: hasCompletedSignatureActionAuthRef.current,
+                recipientActionAuthRequired,
+                markSignatureActionAuthCompleted,
+                executeActionAuthProcedure,
+                onApply: async (authOptions) => {
+                  await signField(field.id, payload, authOptions);
+                },
+                onRemove: async (authOptions) => {
+                  await signField(field.id, payload, authOptions);
+                },
+              });
             })
             .finally(() => {
               loadingSpinnerGroup.destroy();
@@ -454,7 +471,8 @@ export const EnvelopeSignerPageRenderer = ({ pageData }: { pageData: PageRenderD
         !isFieldCurrentlyRendered ||
         !existingCachedField ||
         existingCachedField.inserted !== field.inserted ||
-        existingCachedField.customText !== field.customText
+        existingCachedField.customText !== field.customText ||
+        getFieldSignatureCacheKey(existingCachedField) !== getFieldSignatureCacheKey(field)
       ) {
         renderFieldOnLayer(field, fieldCanvasStyleCache);
         cachedRenderFields.current.set(field.id, field);

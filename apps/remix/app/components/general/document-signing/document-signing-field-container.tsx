@@ -37,6 +37,7 @@ export type DocumentSigningFieldContainerProps = {
    */
   onSign?: (documentAuthValue?: TRecipientActionAuth) => Promise<void> | void;
   onRemove?: (fieldType?: string) => Promise<void> | void;
+  onActivateSignedField?: () => Promise<void> | void;
   type?: 'Date' | 'Initials' | 'Email' | 'Name' | 'Signature' | 'Text' | 'Radio' | 'Dropdown' | 'Number' | 'Checkbox';
   tooltipText?: string | null;
 };
@@ -47,6 +48,7 @@ export const DocumentSigningFieldContainer = ({
   onPreSign,
   onSign,
   onRemove,
+  onActivateSignedField,
   children,
   type,
   tooltipText,
@@ -99,8 +101,13 @@ export const DocumentSigningFieldContainer = ({
     });
   };
 
-  const onRemoveSignedFieldClick = async () => {
+  const onSignedFieldClick = async () => {
     if (!field.inserted) {
+      return;
+    }
+
+    if (type === 'Signature' && onActivateSignedField) {
+      await onActivateSignedField();
       return;
     }
 
@@ -139,13 +146,13 @@ export const DocumentSigningFieldContainer = ({
       {type !== 'Checkbox' && field.inserted && !loading && !readOnlyField && (
         <Tooltip delayDuration={0}>
           <TooltipTrigger asChild>
-            <button className="absolute inset-0 z-10" onClick={onRemoveSignedFieldClick}></button>
+            <button className="absolute inset-0 z-10" onClick={onSignedFieldClick}></button>
           </TooltipTrigger>
 
           <TooltipContent className="border-0 bg-orange-300 fill-orange-300 text-orange-900" sideOffset={2}>
             {tooltipText && <p>{tooltipText}</p>}
 
-            <Trans>Remove</Trans>
+            {type === 'Signature' ? <Trans>Change</Trans> : <Trans>Remove</Trans>}
             <TooltipArrow />
           </TooltipContent>
         </Tooltip>
