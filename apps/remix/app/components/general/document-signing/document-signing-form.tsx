@@ -242,8 +242,12 @@ export const DocumentSigningForm = ({
                   {hasSignatureField && (
                     <div>
                       <Label htmlFor="Signature">
-                        <Trans>Signature</Trans>
+                        <Trans>Default signature</Trans>
                       </Label>
+
+                      <p className="mt-1 text-muted-foreground text-xs">
+                        <Trans>Applied when you click an empty signature field. Change per field via the picker.</Trans>
+                      </p>
 
                       <SignaturePadDialog
                         className="mt-2"

@@ -11,6 +11,8 @@ import {
 import type { TTemplate } from '@documenso/lib/types/template';
 import { isFieldUnsignedAndRequired } from '@documenso/lib/utils/advanced-fields-helpers';
 import { sortFieldsByPosition, validateFieldsInserted } from '@documenso/lib/utils/fields';
+import { isSignatureFieldType } from '@documenso/prisma/guards/is-signature-field';
+import type { FieldWithSignature } from '@documenso/prisma/types/field-with-signature';
 import type {
   TRemovedSignedFieldWithTokenMutationSchema,
   TSignFieldWithTokenMutationSchema,
@@ -35,7 +37,7 @@ import { FieldType } from '@prisma/client';
 import { DateTime } from 'luxon';
 import { useEffect, useMemo, useState } from 'react';
 import { match } from 'ts-pattern';
-
+import { SignFieldSignatureDialog } from '~/components/dialogs/sign-field-signature-dialog';
 import { DocumentSigningCheckboxField } from '~/components/general/document-signing/document-signing-checkbox-field';
 import { DocumentSigningCompleteDialog } from '~/components/general/document-signing/document-signing-complete-dialog';
 import { DocumentSigningDateField } from '~/components/general/document-signing/document-signing-date-field';
@@ -138,6 +140,10 @@ export const DirectTemplateSigningForm = ({
 
   const uninsertedFields = useMemo(() => {
     return sortFieldsByPosition(fieldsRequiringValidation);
+  }, [localFields]);
+
+  const recipientSignatureFields = useMemo(() => {
+    return localFields.filter((field) => isSignatureFieldType(field.type)) as FieldWithSignature[];
   }, [localFields]);
 
   const fieldsValidated = () => {
@@ -248,6 +254,7 @@ export const DirectTemplateSigningForm = ({
 
   return (
     <DocumentSigningRecipientProvider recipient={directRecipient}>
+      <SignFieldSignatureDialog.Root />
       <DocumentFlowFormContainerHeader title={flowStep.title} description={flowStep.description} />
 
       <DocumentFlowFormContainerContent>
@@ -264,6 +271,7 @@ export const DirectTemplateSigningForm = ({
                 <DocumentSigningSignatureField
                   key={field.id}
                   field={field}
+                  recipientSignatureFields={recipientSignatureFields}
                   onSignField={onSignField}
                   onUnsignField={onUnsignField}
                   typedSignatureEnabled={template.templateMeta?.typedSignatureEnabled}

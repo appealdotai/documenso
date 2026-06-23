@@ -4,7 +4,9 @@ import { DEFAULT_DOCUMENT_TIME_ZONE } from '@documenso/lib/constants/time-zones'
 import { DO_NOT_INVALIDATE_QUERY_ON_MUTATION } from '@documenso/lib/constants/trpc';
 import type { EnvelopeForSigningResponse } from '@documenso/lib/server-only/envelope/get-envelope-for-recipient-signing';
 import type { TRecipientActionAuth } from '@documenso/lib/types/document-auth';
+import { DocumentAuth } from '@documenso/lib/types/document-auth';
 import { isFieldUnsignedAndRequired, isRequiredField } from '@documenso/lib/utils/advanced-fields-helpers';
+import { extractDocumentAuthMethods } from '@documenso/lib/utils/document-auth';
 import { extractFieldInsertionValues } from '@documenso/lib/utils/envelope-signing';
 import { trpc } from '@documenso/trpc/react';
 import type { TSignEnvelopeFieldValue } from '@documenso/trpc/server/envelope-router/sign-envelope-field.types';
@@ -22,6 +24,10 @@ export type EnvelopeSigningContextValue = {
   setEmail: (_value: string) => void;
   signature: string | null;
   setSignature: (_value: string | null) => void;
+  profileSignature: string | null;
+  hasCompletedSignatureActionAuth: boolean;
+  markSignatureActionAuthCompleted: () => void;
+  recipientActionAuthRequired: boolean;
 
   showPendingFieldTooltip: boolean;
   setShowPendingFieldTooltip: (_value: boolean) => void;
@@ -148,8 +154,18 @@ export const EnvelopeSigningProvider = ({
   const [email, setEmail] = useState(initialEmail || '');
 
   const [showPendingFieldTooltip, setShowPendingFieldTooltip] = useState(false);
+  const [hasCompletedSignatureActionAuth, setHasCompletedSignatureActionAuth] = useState(false);
 
   const isDirectTemplate = envelope.type === EnvelopeType.TEMPLATE;
+
+  const { derivedRecipientActionAuth, recipientActionAuthRequired } = useMemo(
+    () =>
+      extractDocumentAuthMethods({
+        documentAuth: envelope.authOptions,
+        recipientAuth: recipient.authOptions,
+      }),
+    [envelope.authOptions, recipient.authOptions],
+  );
 
   const { mutateAsync: signEnvelopeField } = trpc.envelope.field.sign.useMutation({
     ...DO_NOT_INVALIDATE_QUERY_ON_MUTATION,
@@ -177,35 +193,27 @@ export const EnvelopeSigningProvider = ({
     },
   });
 
-  // Ensure the user signature doesn't show up if it's not allowed.
-  const [signature, setSignature] = useState(
-    (() => {
-      const sig = initialSignature || '';
-      const isBase64 = isBase64Image(sig);
+  const profileSignature = useMemo(() => {
+    const sig = initialSignature || '';
+    const isBase64 = isBase64Image(sig);
 
-      if (
-        !sig &&
-        (envelope.documentMeta.uploadSignatureEnabled || envelope.documentMeta.drawSignatureEnabled) &&
-        envelopeData.recipientSignature?.signatureImageAsBase64
-      ) {
-        return envelopeData.recipientSignature.signatureImageAsBase64;
-      }
+    if (isBase64 && (envelope.documentMeta.uploadSignatureEnabled || envelope.documentMeta.drawSignatureEnabled)) {
+      return sig;
+    }
 
-      if (!sig && envelope.documentMeta.typedSignatureEnabled && envelopeData.recipientSignature?.typedSignature) {
-        return envelopeData.recipientSignature.typedSignature;
-      }
+    if (!isBase64 && sig && envelope.documentMeta.typedSignatureEnabled) {
+      return sig;
+    }
 
-      if (isBase64 && (envelope.documentMeta.uploadSignatureEnabled || envelope.documentMeta.drawSignatureEnabled)) {
-        return sig;
-      }
+    return null;
+  }, [initialSignature, envelope.documentMeta]);
 
-      if (!isBase64 && envelope.documentMeta.typedSignatureEnabled) {
-        return sig;
-      }
+  // Sidebar default suggestion only — not auto-applied to signature fields.
+  const [signature, setSignature] = useState(profileSignature);
 
-      return null;
-    })(),
-  );
+  const markSignatureActionAuthCompleted = () => {
+    setHasCompletedSignatureActionAuth(true);
+  };
 
   /**
    * The fields that are still required to be signed by the actual recipient.
@@ -419,6 +427,13 @@ export const EnvelopeSigningProvider = ({
         setEmail,
         signature,
         setSignature,
+        profileSignature,
+        hasCompletedSignatureActionAuth,
+        markSignatureActionAuthCompleted,
+        recipientActionAuthRequired:
+          recipientActionAuthRequired &&
+          derivedRecipientActionAuth.length > 0 &&
+          !derivedRecipientActionAuth.includes(DocumentAuth.EXPLICIT_NONE),
         envelopeData,
         envelope,
 
