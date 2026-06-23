@@ -1,15 +1,13 @@
 import { DO_NOT_INVALIDATE_QUERY_ON_MUTATION } from '@documenso/lib/constants/trpc';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import type { TRecipientActionAuth } from '@documenso/lib/types/document-auth';
+import { DocumentAuth } from '@documenso/lib/types/document-auth';
 import type { FieldWithSignature } from '@documenso/prisma/types/field-with-signature';
 import { trpc } from '@documenso/trpc/react';
 import type {
   TRemovedSignedFieldWithTokenMutationSchema,
   TSignFieldWithTokenMutationSchema,
 } from '@documenso/trpc/server/field-router/schema';
-import { Button } from '@documenso/ui/primitives/button';
-import { Dialog, DialogContent, DialogFooter, DialogTitle } from '@documenso/ui/primitives/dialog';
-import { SignaturePad } from '@documenso/ui/primitives/signature-pad';
 import { useToast } from '@documenso/ui/primitives/use-toast';
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
@@ -17,9 +15,8 @@ import { Trans } from '@lingui/react/macro';
 import { Loader } from 'lucide-react';
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useRevalidator } from 'react-router';
-
-import { DocumentSigningDisclosure } from '~/components/general/document-signing/document-signing-disclosure';
-
+import { handleSignatureFieldClick, signatureDialogResultToFieldValue } from '~/utils/field-signing/signature-field';
+import { runSignatureFieldAction } from '~/utils/field-signing/signature-field-auth';
 import { useRequiredDocumentSigningAuthContext } from './document-signing-auth-provider';
 import { DocumentSigningFieldContainer } from './document-signing-field-container';
 import { useRequiredDocumentSigningContext } from './document-signing-provider';
@@ -29,6 +26,7 @@ type SignatureFieldState = 'empty' | 'signed-image' | 'signed-text';
 
 export type DocumentSigningSignatureFieldProps = {
   field: FieldWithSignature;
+  recipientSignatureFields: FieldWithSignature[];
   onSignField?: (value: TSignFieldWithTokenMutationSchema) => Promise<void> | void;
   onUnsignField?: (value: TRemovedSignedFieldWithTokenMutationSchema) => Promise<void> | void;
   typedSignatureEnabled?: boolean;
@@ -38,11 +36,12 @@ export type DocumentSigningSignatureFieldProps = {
 
 export const DocumentSigningSignatureField = ({
   field,
+  recipientSignatureFields,
   onSignField,
   onUnsignField,
-  typedSignatureEnabled,
-  uploadSignatureEnabled,
-  drawSignatureEnabled,
+  typedSignatureEnabled = true,
+  uploadSignatureEnabled = true,
+  drawSignatureEnabled = true,
 }: DocumentSigningSignatureFieldProps) => {
   const { _ } = useLingui();
   const { toast } = useToast();
@@ -56,11 +55,16 @@ export const DocumentSigningSignatureField = ({
 
   const {
     fullName,
-    signature: providedSignature,
-    setSignature: setProvidedSignature,
+    signature: suggestedSignature,
+    profileSignature,
+    hasCompletedSignatureActionAuth,
+    markSignatureActionAuthCompleted,
   } = useRequiredDocumentSigningContext();
 
-  const { executeActionAuthProcedure } = useRequiredDocumentSigningAuthContext();
+  const { executeActionAuthProcedure, derivedRecipientActionAuth } = useRequiredDocumentSigningAuthContext();
+
+  const recipientActionAuthRequired =
+    derivedRecipientActionAuth.length > 0 && !derivedRecipientActionAuth.includes(DocumentAuth.EXPLICIT_NONE);
 
   const { mutateAsync: signFieldWithToken, isPending: isSignFieldWithTokenLoading } =
     trpc.field.signFieldWithToken.useMutation(DO_NOT_INVALIDATE_QUERY_ON_MUTATION);
@@ -71,9 +75,6 @@ export const DocumentSigningSignatureField = ({
   const { signature } = field;
 
   const isLoading = isSignFieldWithTokenLoading || isRemoveSignedFieldWithTokenLoading;
-
-  const [showSignatureModal, setShowSignatureModal] = useState(false);
-  const [localSignature, setLocalSignature] = useState<string | null>(null);
 
   const state = useMemo<SignatureFieldState>(() => {
     if (!field.inserted) {
@@ -87,67 +88,91 @@ export const DocumentSigningSignatureField = ({
     return 'signed-text';
   }, [field.inserted, signature?.signatureImageAsBase64]);
 
-  const onPreSign = () => {
-    if (!providedSignature) {
-      setShowSignatureModal(true);
-      return false;
-    }
+  const applySignatureResult = async (authOptions?: TRecipientActionAuth, signatureValue?: string) => {
+    const value = signatureValue;
 
-    return true;
-  };
-  /**
-   * When the user clicks the sign button in the dialog where they enter their signature.
-   */
-  const onDialogSignClick = () => {
-    setShowSignatureModal(false);
-    setProvidedSignature(localSignature);
-
-    if (!localSignature) {
+    if (!value) {
       return;
     }
 
-    void executeActionAuthProcedure({
-      onReauthFormSubmit: async (authOptions) => await onSign(authOptions, localSignature),
-      actionTarget: field.type,
-    });
+    const isTypedSignature = !value.startsWith('data:image');
+
+    if (isTypedSignature && typedSignatureEnabled === false) {
+      toast({
+        title: _(msg`Error`),
+        description: _(msg`Typed signatures are not allowed. Please draw your signature.`),
+        variant: 'destructive',
+      });
+
+      return;
+    }
+
+    const payload: TSignFieldWithTokenMutationSchema = {
+      token: recipient.token,
+      fieldId: field.id,
+      value,
+      isBase64: !isTypedSignature,
+      authOptions,
+    };
+
+    if (onSignField) {
+      await onSignField(payload);
+    } else {
+      await signFieldWithToken(payload);
+    }
+
+    await revalidate();
   };
 
-  const onSign = async (authOptions?: TRecipientActionAuth, signature?: string) => {
+  const removeSignature = async () => {
+    const payload: TRemovedSignedFieldWithTokenMutationSchema = {
+      token: recipient.token,
+      fieldId: field.id,
+    };
+
+    if (onUnsignField) {
+      await onUnsignField(payload);
+      return;
+    }
+
+    await removeSignedFieldWithToken(payload);
+    await revalidate();
+  };
+
+  const openSignatureDialog = async () => {
     try {
-      const value = signature || providedSignature;
+      const result = await handleSignatureFieldClick({
+        field,
+        recipientFields: recipientSignatureFields,
+        fullName,
+        suggestedSignature,
+        profileSignature,
+        typedSignatureEnabled,
+        uploadSignatureEnabled,
+        drawSignatureEnabled,
+      });
 
-      if (!value) {
-        setShowSignatureModal(true);
+      if (!result) {
         return;
       }
 
-      const isTypedSignature = !value.startsWith('data:image');
+      const payload = signatureDialogResultToFieldValue(result);
 
-      if (isTypedSignature && typedSignatureEnabled === false) {
-        toast({
-          title: _(msg`Error`),
-          description: _(msg`Typed signatures are not allowed. Please draw your signature.`),
-          variant: 'destructive',
-        });
-
-        return;
-      }
-
-      const payload: TSignFieldWithTokenMutationSchema = {
-        token: recipient.token,
-        fieldId: field.id,
-        value,
-        isBase64: !isTypedSignature,
-        authOptions,
-      };
-
-      if (onSignField) {
-        await onSignField(payload);
-      } else {
-        await signFieldWithToken(payload);
-      }
-
-      await revalidate();
+      await runSignatureFieldAction({
+        result,
+        hasAuthedOnceThisSession: hasCompletedSignatureActionAuth,
+        recipientActionAuthRequired,
+        markSignatureActionAuthCompleted,
+        executeActionAuthProcedure,
+        onApply: async (authOptions) => {
+          if (payload.value) {
+            await applySignatureResult(authOptions, payload.value);
+          }
+        },
+        onRemove: async () => {
+          await removeSignature();
+        },
+      });
     } catch (err) {
       const error = AppError.parseError(err);
 
@@ -165,30 +190,9 @@ export const DocumentSigningSignatureField = ({
     }
   };
 
-  const onRemove = async () => {
-    try {
-      const payload: TRemovedSignedFieldWithTokenMutationSchema = {
-        token: recipient.token,
-        fieldId: field.id,
-      };
-
-      if (onUnsignField) {
-        await onUnsignField(payload);
-        return;
-      } else {
-        await removeSignedFieldWithToken(payload);
-      }
-
-      await revalidate();
-    } catch (err) {
-      console.error(err);
-
-      toast({
-        title: _(msg`Error`),
-        description: _(msg`An error occurred while removing the signature.`),
-        variant: 'destructive',
-      });
-    }
+  const onPreSign = () => {
+    void openSignatureDialog();
+    return false;
   };
 
   useLayoutEffect(() => {
@@ -227,8 +231,7 @@ export const DocumentSigningSignatureField = ({
     <DocumentSigningFieldContainer
       field={field}
       onPreSign={onPreSign}
-      onSign={onSign}
-      onRemove={onRemove}
+      onActivateSignedField={openSignatureDialog}
       type="Signature"
     >
       {isLoading && (
@@ -262,47 +265,6 @@ export const DocumentSigningSignatureField = ({
           </p>
         </div>
       )}
-
-      <Dialog open={showSignatureModal} onOpenChange={setShowSignatureModal}>
-        <DialogContent>
-          <DialogTitle>
-            <Trans>
-              Sign as {recipient.name} <div className="h-5 text-muted-foreground">({recipient.email})</div>
-            </Trans>
-          </DialogTitle>
-
-          <SignaturePad
-            className="mt-2"
-            fullName={fullName}
-            value={localSignature ?? ''}
-            onChange={({ value }) => setLocalSignature(value)}
-            typedSignatureEnabled={typedSignatureEnabled}
-            uploadSignatureEnabled={uploadSignatureEnabled}
-            drawSignatureEnabled={drawSignatureEnabled}
-          />
-
-          <DocumentSigningDisclosure />
-
-          <DialogFooter>
-            <div className="flex w-full flex-1 flex-nowrap gap-4">
-              <Button
-                type="button"
-                className="flex-1"
-                variant="secondary"
-                onClick={() => {
-                  setShowSignatureModal(false);
-                  setLocalSignature(null);
-                }}
-              >
-                <Trans>Cancel</Trans>
-              </Button>
-              <Button type="button" className="flex-1" disabled={!localSignature} onClick={() => onDialogSignClick()}>
-                <Trans>Sign</Trans>
-              </Button>
-            </div>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </DocumentSigningFieldContainer>
   );
 };

@@ -109,8 +109,12 @@ export default function EnvelopeSignerForm() {
         {hasSignatureField && (
           <div>
             <Label htmlFor="Signature">
-              <Trans>Signature</Trans>
+              <Trans>Default signature</Trans>
             </Label>
+
+            <p className="mt-1 text-muted-foreground text-xs">
+              <Trans>Used as a suggestion when signing individual fields.</Trans>
+            </p>
 
             <SignaturePadDialog
               className="mt-2"
