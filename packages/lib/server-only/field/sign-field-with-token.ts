@@ -115,7 +115,9 @@ export const signFieldWithToken = async ({
     throw new Error(`Recipient ${recipient.id} has already signed`);
   }
 
-  if (field.inserted) {
+  const isSignatureField = field.type === FieldType.SIGNATURE || field.type === FieldType.FREE_SIGNATURE;
+
+  if (field.inserted && !isSignatureField) {
     throw new Error(`Field ${fieldId} has already been inserted`);
   }
 
@@ -186,8 +188,6 @@ export const signFieldWithToken = async ({
       },
     },
   });
-
-  const isSignatureField = field.type === FieldType.SIGNATURE || field.type === FieldType.FREE_SIGNATURE;
 
   let customText = !isSignatureField ? value : undefined;
 

@@ -1,5 +1,5 @@
 import { isBase64Image } from '@documenso/lib/constants/signatures';
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useMemo, useState } from 'react';
 
 export type DocumentSigningContextValue = {
   fullName: string;
@@ -8,6 +8,9 @@ export type DocumentSigningContextValue = {
   setEmail: (_value: string) => void;
   signature: string | null;
   setSignature: (_value: string | null) => void;
+  profileSignature: string | null;
+  hasCompletedSignatureActionAuth: boolean;
+  markSignatureActionAuthCompleted: () => void;
 };
 
 const DocumentSigningContext = createContext<DocumentSigningContextValue | null>(null);
@@ -47,24 +50,28 @@ export const DocumentSigningProvider = ({
 }: DocumentSigningProviderProps) => {
   const [fullName, setFullName] = useState(initialFullName || '');
   const [email, setEmail] = useState(initialEmail || '');
+  const [hasCompletedSignatureActionAuth, setHasCompletedSignatureActionAuth] = useState(false);
 
-  // Ensure the user signature doesn't show up if it's not allowed.
-  const [signature, setSignature] = useState(
-    (() => {
-      const sig = initialSignature || '';
-      const isBase64 = isBase64Image(sig);
+  const profileSignature = useMemo(() => {
+    const sig = initialSignature || '';
+    const isBase64 = isBase64Image(sig);
 
-      if (isBase64 && (uploadSignatureEnabled || drawSignatureEnabled)) {
-        return sig;
-      }
+    if (isBase64 && (uploadSignatureEnabled || drawSignatureEnabled)) {
+      return sig;
+    }
 
-      if (!isBase64 && typedSignatureEnabled) {
-        return sig;
-      }
+    if (!isBase64 && sig && typedSignatureEnabled) {
+      return sig;
+    }
 
-      return null;
-    })(),
-  );
+    return null;
+  }, [drawSignatureEnabled, initialSignature, typedSignatureEnabled, uploadSignatureEnabled]);
+
+  const [signature, setSignature] = useState(profileSignature);
+
+  const markSignatureActionAuthCompleted = () => {
+    setHasCompletedSignatureActionAuth(true);
+  };
 
   return (
     <DocumentSigningContext.Provider
@@ -75,6 +82,9 @@ export const DocumentSigningProvider = ({
         setEmail,
         signature,
         setSignature,
+        profileSignature,
+        hasCompletedSignatureActionAuth,
+        markSignatureActionAuthCompleted,
       }}
     >
       {children}
