@@ -6,6 +6,7 @@ import { decryptSecondaryData } from '@documenso/lib/server-only/crypto/decrypt'
 import { getDocumentCertificateAuditLogs } from '@documenso/lib/server-only/document/get-document-certificate-audit-logs';
 import { getOrganisationClaimByTeamId } from '@documenso/lib/server-only/organisation/get-organisation-claims';
 import { DOCUMENT_AUDIT_LOG_TYPE } from '@documenso/lib/types/document-audit-logs';
+import { findSignatureFieldForCertificate } from '@documenso/lib/utils/certificate-signature-field';
 import { extractDocumentAuthMethods } from '@documenso/lib/utils/document-auth';
 import { mapSecondaryIdToDocumentId } from '@documenso/lib/utils/envelope';
 import { getTranslations } from '@documenso/lib/utils/i18n';
@@ -14,7 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
-import { EnvelopeType, FieldType, SigningStatus } from '@prisma/client';
+import { EnvelopeType, SigningStatus } from '@prisma/client';
 import { DateTime } from 'luxon';
 import { redirect } from 'react-router';
 import { prop, sortBy } from 'remeda';
@@ -196,9 +197,13 @@ export default function SigningCertificate({ loaderData }: Route.ComponentProps)
   };
 
   const getRecipientSignatureField = (recipientId: number) => {
-    return document.recipients
-      .find((recipient) => recipient.id === recipientId)
-      ?.fields.find((field) => field.type === FieldType.SIGNATURE || field.type === FieldType.FREE_SIGNATURE);
+    const recipient = document.recipients.find((recipient) => recipient.id === recipientId);
+
+    if (!recipient) {
+      return undefined;
+    }
+
+    return findSignatureFieldForCertificate(recipient.fields);
   };
 
   return (
