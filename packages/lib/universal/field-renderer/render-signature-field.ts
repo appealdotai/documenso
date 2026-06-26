@@ -157,9 +157,17 @@ const createFieldSignature = (field: FieldToRender, options: RenderFieldElementO
     }
   }
 
-  // Handle sign mode.
+  // Handle sign and export mode.
   if (mode === 'sign' || mode === 'export') {
-    textToRender = placeholderValue;
+    if (mode === 'sign') {
+      textToRender = placeholderValue;
+    }
+
+    // Default to blank for export mode so optional unsigned fields don't burn
+    // the field type name (e.g. "SIGNATURE") into the sealed PDF.
+    if (mode === 'export') {
+      textToRender = '';
+    }
 
     if (field.inserted && !signature) {
       throw new AppError('MISSING_SIGNATURE');
