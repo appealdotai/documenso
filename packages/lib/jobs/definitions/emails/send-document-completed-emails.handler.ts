@@ -8,7 +8,7 @@ import { getI18nInstance } from '../../../client-only/providers/i18n-server';
 import { NEXT_PUBLIC_WEBAPP_URL } from '../../../constants/app';
 import { getEmailContext } from '../../../server-only/email/get-email-context';
 import { assertOrganisationRatesAndLimits } from '../../../server-only/rate-limit/assert-organisation-rates-and-limits';
-import { DOCUMENT_AUDIT_LOG_TYPE } from '../../../types/document-audit-logs';
+import { DOCUMENT_AUDIT_LOG_TYPE, DOCUMENT_EMAIL_TYPE } from '../../../types/document-audit-logs';
 import { extractDerivedDocumentEmailSettings } from '../../../types/document-email';
 import { getFileServerSide } from '../../../universal/upload/get-file.server';
 import { createDocumentAuditLogData } from '../../../utils/document-audit-logs';
@@ -19,6 +19,34 @@ import { renderEmailWithI18N } from '../../../utils/render-email-with-i18n';
 import { formatDocumentsPath } from '../../../utils/teams';
 import type { JobRunIO } from '../../client/_internal/job';
 import type { TSendDocumentCompletedEmailsJobDefinition } from './send-document-completed-emails';
+
+const getCompletionEmailKey = (recipientRole: string, recipientId: number) => `${recipientRole}:${recipientId}`;
+
+const getErrorMessage = (reason: unknown) => (reason instanceof Error ? reason.message : String(reason));
+
+const getSentCompletionEmailKeys = async (envelopeId: string) => {
+  const existingCompletionEmailLogs = await prisma.documentAuditLog.findMany({
+    where: {
+      envelopeId,
+      type: DOCUMENT_AUDIT_LOG_TYPE.EMAIL_SENT,
+      data: {
+        path: ['emailType'],
+        equals: DOCUMENT_EMAIL_TYPE.DOCUMENT_COMPLETED,
+      },
+    },
+    select: {
+      data: true,
+    },
+  });
+
+  return new Set(
+    existingCompletionEmailLogs.map((log) => {
+      const data = log.data as { recipientRole: string; recipientId: number };
+
+      return getCompletionEmailKey(data.recipientRole, data.recipientId);
+    }),
+  );
+};
 
 export const run = async ({ payload, io }: { payload: TSendDocumentCompletedEmailsJobDefinition; io: JobRunIO }) => {
   const { envelopeId, requestMetadata } = payload;
@@ -112,6 +140,8 @@ export const run = async ({ payload, io }: { payload: TSendDocumentCompletedEmai
   const isDocumentCompletedEmailEnabled = emailSettings.documentCompleted;
   const isOwnerDocumentCompletedEmailEnabled = emailSettings.ownerDocumentCompleted;
 
+  const sentCompletionEmailKeys = await getSentCompletionEmailKeys(envelope.id);
+
   // Send email to document owner if:
   // 1. Owner document completed emails are enabled AND
   // 2. Either:
@@ -119,7 +149,8 @@ export const run = async ({ payload, io }: { payload: TSendDocumentCompletedEmai
   //    - Recipient emails are disabled
   if (
     isOwnerDocumentCompletedEmailEnabled &&
-    (!envelope.recipients.find((recipient) => recipient.email === owner.email) || !isDocumentCompletedEmailEnabled)
+    (!envelope.recipients.find((recipient) => recipient.email === owner.email) || !isDocumentCompletedEmailEnabled) &&
+    !sentCompletionEmailKeys.has(getCompletionEmailKey('OWNER', owner.id))
   ) {
     const template = createElement(DocumentCompletedEmailTemplate, {
       documentName: envelope.title,
@@ -138,37 +169,58 @@ export const run = async ({ payload, io }: { payload: TSendDocumentCompletedEmai
 
     const i18n = await getI18nInstance(emailLanguage);
 
-    await emailTransport.sendMail({
-      to: [
-        {
-          name: owner.name || '',
-          address: owner.email,
-        },
-      ],
-      from: senderEmail,
-      replyTo: replyToEmail,
-      subject: i18n._(msg`Signing Complete!`),
-      html,
-      text,
-      attachments: completedDocumentEmailAttachments,
-    });
+    try {
+      await emailTransport.sendMail({
+        to: [
+          {
+            name: owner.name || '',
+            address: owner.email,
+          },
+        ],
+        from: senderEmail,
+        replyTo: replyToEmail,
+        subject: i18n._(msg`Signing Complete!`),
+        html,
+        text,
+        attachments: completedDocumentEmailAttachments,
+      });
 
-    await prisma.documentAuditLog.create({
-      data: createDocumentAuditLogData({
-        type: DOCUMENT_AUDIT_LOG_TYPE.EMAIL_SENT,
+      await prisma.documentAuditLog.create({
+        data: createDocumentAuditLogData({
+          type: DOCUMENT_AUDIT_LOG_TYPE.EMAIL_SENT,
+          envelopeId: envelope.id,
+          user: null,
+          requestMetadata,
+          data: {
+            emailType: DOCUMENT_EMAIL_TYPE.DOCUMENT_COMPLETED,
+            recipientEmail: owner.email,
+            recipientName: owner.name ?? '',
+            recipientId: owner.id,
+            recipientRole: 'OWNER',
+            isResending: false,
+          },
+        }),
+      });
+
+      sentCompletionEmailKeys.add(getCompletionEmailKey('OWNER', owner.id));
+    } catch (error) {
+      io.logger.error({
+        msg: 'Failed to send document completed email to document owner',
         envelopeId: envelope.id,
-        user: null,
-        requestMetadata,
-        data: {
-          emailType: 'DOCUMENT_COMPLETED',
-          recipientEmail: owner.email,
-          recipientName: owner.name ?? '',
-          recipientId: owner.id,
-          recipientRole: 'OWNER',
-          isResending: false,
-        },
-      }),
-    });
+        failedEmails: [owner.email],
+        failedRecipients: [
+          {
+            email: owner.email,
+            name: owner.name ?? '',
+            recipientId: owner.id,
+            role: 'OWNER',
+            error: getErrorMessage(error),
+          },
+        ],
+      });
+
+      throw error;
+    }
   }
 
   if (!isDocumentCompletedEmailEnabled) {
@@ -177,8 +229,11 @@ export const run = async ({ payload, io }: { payload: TSendDocumentCompletedEmai
 
   const recipientsToNotify = envelope.recipients.filter((recipient) => isRecipientEmailValidForSending(recipient));
 
-  await Promise.all(
+  const recipientEmailResults = await Promise.allSettled(
     recipientsToNotify.map(async (recipient) => {
+      if (sentCompletionEmailKeys.has(getCompletionEmailKey(recipient.role, recipient.id))) {
+        return;
+      }
       // A CC recipient never asked to be part of this document, so their completion
       // email is effectively unsolicited. Meter it against the organisation email
       // quota/stats so it is correctly logged.
@@ -260,7 +315,7 @@ export const run = async ({ payload, io }: { payload: TSendDocumentCompletedEmai
           user: null,
           requestMetadata,
           data: {
-            emailType: 'DOCUMENT_COMPLETED',
+            emailType: DOCUMENT_EMAIL_TYPE.DOCUMENT_COMPLETED,
             recipientEmail: recipient.email,
             recipientName: recipient.name,
             recipientId: recipient.id,
@@ -269,6 +324,39 @@ export const run = async ({ payload, io }: { payload: TSendDocumentCompletedEmai
           },
         }),
       });
+
+      sentCompletionEmailKeys.add(getCompletionEmailKey(recipient.role, recipient.id));
     }),
   );
+
+  const failedRecipients = recipientEmailResults.flatMap((result, index) => {
+    if (result.status === 'fulfilled') {
+      return [];
+    }
+
+    const recipient = recipientsToNotify[index];
+
+    return [
+      {
+        email: recipient.email,
+        name: recipient.name,
+        recipientId: recipient.id,
+        role: recipient.role,
+        error: getErrorMessage(result.reason),
+        reason: result.reason,
+      },
+    ];
+  });
+
+  if (failedRecipients.length > 0) {
+    io.logger.error({
+      msg: 'Failed to send document completed email to one or more recipients',
+      envelopeId: envelope.id,
+      failedCount: failedRecipients.length,
+      failedEmails: failedRecipients.map((recipient) => recipient.email),
+      failedRecipients: failedRecipients.map(({ reason: _reason, ...recipient }) => recipient),
+    });
+
+    throw failedRecipients[0].reason;
+  }
 };
