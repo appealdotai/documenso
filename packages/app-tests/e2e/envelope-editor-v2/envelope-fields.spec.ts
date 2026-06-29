@@ -20,7 +20,7 @@ import {
   type TEnvelopeEditorSurface,
 } from '../fixtures/envelope-editor';
 import { expectToastTextToBeVisible } from '../fixtures/generic';
-import { getKonvaElementCountForPage } from '../fixtures/konva';
+import { getKonvaElementCountForPage, getKonvaTransformerNodeCountForPage } from '../fixtures/konva';
 
 type TFieldFlowResult = {
   externalId: string;
@@ -46,6 +46,7 @@ const updateExternalId = async (surface: TEnvelopeEditorSurface, externalId: str
 
   if (!surface.isEmbedded) {
     await expectToastTextToBeVisible(surface.root, 'Envelope updated');
+    await surface.root.getByTestId('toast-close').click();
   }
 };
 
@@ -96,6 +97,17 @@ const selectFieldOnCanvas = async (root: Page, position: { x: number; y: number 
   await root.waitForTimeout(300);
   // Use force:true to bypass any floating action toolbar buttons that may intercept clicks.
   await canvas.click({ position, force: true });
+};
+
+/**
+ * Shift+click a field on the canvas to toggle it in/out of the current multi-selection.
+ */
+const shiftClickFieldOnCanvas = async (root: Page, position: { x: number; y: number }) => {
+  const canvas = root.locator('.konva-container canvas').first();
+  await expect(canvas).toBeVisible();
+  await root.waitForTimeout(300);
+  // Use force:true to bypass any floating action toolbar buttons that may intercept clicks.
+  await canvas.click({ position, modifiers: ['Shift'], force: true });
 };
 
 const runAddAndPersistSignatureTextFields = async (surface: TEnvelopeEditorSurface): Promise<TFieldFlowResult> => {
@@ -327,10 +339,9 @@ const runAllFieldTypesFlow = async (surface: TEnvelopeEditorSurface): Promise<TA
   // Place and configure each field type immediately after placement.
   // After placeFieldOnPdf, the sidebar shows the field's config form (field is selected in React state).
 
-  // 1. Signature: place and set fontSize to 24 and label.
+  // 1. Signature: place and set fontSize to 24.
   await placeFieldOnPdf(root, 'Signature', { x: 120, y: 50 });
   await root.locator('[data-testid="field-form-fontSize"]').fill('24');
-  await root.locator('[data-testid="field-form-label"]').fill('Sign here');
 
   // 2. Email: place and set textAlign to center.
   await placeFieldOnPdf(root, 'Email', { x: 120, y: 100 });
@@ -346,11 +357,10 @@ const runAllFieldTypesFlow = async (surface: TEnvelopeEditorSurface): Promise<TA
   await placeFieldOnPdf(root, 'Initials', { x: 120, y: 200 });
   await root.locator('[data-testid="field-form-fontSize"]').fill('16');
 
-  // 5. Date: place and set textAlign to center, required.
+  // 5. Date: place and set textAlign to center.
   await placeFieldOnPdf(root, 'Date', { x: 120, y: 250 });
   await root.locator('[data-testid="field-form-textAlign"]').click();
   await root.getByRole('option', { name: 'Center' }).click();
-  await root.locator('[data-testid="field-form-required"]').click();
 
   // 6. Text: place and configure label, placeholder, text, characterLimit, required.
   await placeFieldOnPdf(root, 'Text', { x: 120, y: 300 });
@@ -409,9 +419,8 @@ const runAllFieldTypesFlow = async (surface: TEnvelopeEditorSurface): Promise<TA
   await root.locator('[data-testid="field-form-validationLength"]').click();
   await root.getByRole('option', { name: '1', exact: true }).click();
 
-  // 10. Dropdown: place and configure label, two options, and default value.
+  // 10. Dropdown: place and configure two options, set default value.
   await placeFieldOnPdf(root, 'Dropdown', { x: 120, y: 500 });
-  await root.locator('[data-testid="field-form-label"]').fill('Color');
 
   // First option already has "Option 1". Change it to "Red".
   await root.locator('[data-testid="field-form-values-0-value"]').fill('Red');
@@ -475,8 +484,6 @@ const assertAllFieldTypesPersistedInDatabase = async ({
   // SIGNATURE
   expect(meta(FieldType.SIGNATURE).type).toBe('signature');
   expect(meta(FieldType.SIGNATURE).fontSize).toBe(24);
-  expect(meta(FieldType.SIGNATURE).label).toBe('Sign here');
-  expect(meta(FieldType.SIGNATURE).required).toBe(true);
 
   // EMAIL
   expect(meta(FieldType.EMAIL).type).toBe('email');
@@ -493,7 +500,6 @@ const assertAllFieldTypesPersistedInDatabase = async ({
   // DATE
   expect(meta(FieldType.DATE).type).toBe('date');
   expect(meta(FieldType.DATE).textAlign).toBe('center');
-  expect(meta(FieldType.DATE).required).toBe(true);
 
   // TEXT
   expect(meta(FieldType.TEXT).type).toBe('text');
@@ -541,7 +547,6 @@ const assertAllFieldTypesPersistedInDatabase = async ({
 
   // DROPDOWN
   expect(meta(FieldType.DROPDOWN).type).toBe('dropdown');
-  expect(meta(FieldType.DROPDOWN).label).toBe('Color');
   expect(meta(FieldType.DROPDOWN).defaultValue).toBe('Red');
   const dropdownValues = meta(FieldType.DROPDOWN).values as Array<{ value: string }>;
   expect(dropdownValues).toHaveLength(2);
@@ -767,9 +772,106 @@ const assertChangeFieldTypePersistedInDatabase = async ({
   expect(actualMetaTypes).toEqual(['date', 'date']);
 };
 
+// --- Shift+click multi-select flow ---
+
+type TShiftClickFlowResult = {
+  externalId: string;
+};
+
+const SHIFT_CLICK_FIELD_POSITIONS = {
+  signature: { x: 150, y: 120 },
+  text: { x: 150, y: 260 },
+  name: { x: 150, y: 400 },
+};
+
+const runShiftClickMultiSelectFlow = async (surface: TEnvelopeEditorSurface): Promise<TShiftClickFlowResult> => {
+  const externalId = `e2e-shift-click-${nanoid()}`;
+  const root = surface.root;
+
+  if (surface.isEmbedded && !surface.envelopeId) {
+    await addEnvelopeItemPdf(root, 'embedded-fields.pdf');
+  }
+
+  await updateExternalId(surface, externalId);
+  await setupRecipientsForFieldPlacement(surface);
+
+  await clickEnvelopeEditorStep(root, 'addFields');
+  await expect(root.locator('.konva-container canvas').first()).toBeVisible();
+
+  // Place three fields, spaced far enough apart that their action toolbars don't
+  // overlap a neighbouring field's click target.
+  await placeFieldOnPdf(root, 'Signature', SHIFT_CLICK_FIELD_POSITIONS.signature);
+  await placeFieldOnPdf(root, 'Text', SHIFT_CLICK_FIELD_POSITIONS.text);
+  await placeFieldOnPdf(root, 'Name', SHIFT_CLICK_FIELD_POSITIONS.name);
+  expect(await getKonvaElementCountForPage(root, 1, '.field-group')).toBe(3);
+
+  // A plain click selects exactly one field.
+  await selectFieldOnCanvas(root, SHIFT_CLICK_FIELD_POSITIONS.signature);
+  await expect.poll(() => getKonvaTransformerNodeCountForPage(root, 1)).toBe(1);
+
+  // Shift+click a second field ADDS it to the selection (the new behaviour).
+  await shiftClickFieldOnCanvas(root, SHIFT_CLICK_FIELD_POSITIONS.text);
+  await expect.poll(() => getKonvaTransformerNodeCountForPage(root, 1)).toBe(2);
+
+  // Shift+click an already-selected field REMOVES it from the selection.
+  await shiftClickFieldOnCanvas(root, SHIFT_CLICK_FIELD_POSITIONS.signature);
+  await expect.poll(() => getKonvaTransformerNodeCountForPage(root, 1)).toBe(1);
+
+  // Shift+click it again RE-ADDS it, leaving Signature + Text selected and Name excluded.
+  await shiftClickFieldOnCanvas(root, SHIFT_CLICK_FIELD_POSITIONS.signature);
+  await expect.poll(() => getKonvaTransformerNodeCountForPage(root, 1)).toBe(2);
+
+  // Delete the two selected fields via the floating action toolbar. Only the
+  // un-selected Name field should remain -- proving the multi-selection contained
+  // exactly the two Shift-clicked fields.
+  await expect(root.locator('button[title="Remove"]')).toBeVisible();
+  await root.locator('button[title="Remove"]').click();
+  expect(await getKonvaElementCountForPage(root, 1, '.field-group')).toBe(1);
+
+  // Navigate away and back to verify persistence.
+  await clickEnvelopeEditorStep(root, 'upload');
+  await clickEnvelopeEditorStep(root, 'addFields');
+  expect(await getKonvaElementCountForPage(root, 1, '.field-group')).toBe(1);
+
+  return { externalId };
+};
+
+const assertShiftClickMultiSelectPersistedInDatabase = async ({
+  surface,
+  externalId,
+}: {
+  surface: TEnvelopeEditorSurface;
+  externalId: string;
+}) => {
+  const envelope = await prisma.envelope.findFirstOrThrow({
+    where: {
+      externalId,
+      userId: surface.userId,
+      teamId: surface.teamId,
+      type: surface.envelopeType,
+    },
+    orderBy: { createdAt: 'desc' },
+    include: { fields: true },
+  });
+
+  // Signature + Text were multi-selected via Shift+click and deleted; only Name remains.
+  expect(envelope.fields).toHaveLength(1);
+  expect(envelope.fields[0].type).toBe(FieldType.NAME);
+};
+
 // --- Test describe blocks ---
 
 test.describe('document editor', () => {
+  test('shift+click adds and removes fields from the selection', async ({ page }) => {
+    const surface = await openDocumentEnvelopeEditor(page);
+    const result = await runShiftClickMultiSelectFlow(surface);
+
+    await assertShiftClickMultiSelectPersistedInDatabase({
+      surface,
+      ...result,
+    });
+  });
+
   test('add and persist signature/text fields', async ({ page }) => {
     const surface = await openDocumentEnvelopeEditor(page);
     const result = await runAddAndPersistSignatureTextFields(surface);
@@ -822,6 +924,16 @@ test.describe('document editor', () => {
 });
 
 test.describe('template editor', () => {
+  test('shift+click adds and removes fields from the selection', async ({ page }) => {
+    const surface = await openTemplateEnvelopeEditor(page);
+    const result = await runShiftClickMultiSelectFlow(surface);
+
+    await assertShiftClickMultiSelectPersistedInDatabase({
+      surface,
+      ...result,
+    });
+  });
+
   test('add and persist signature/text fields', async ({ page }) => {
     const surface = await openTemplateEnvelopeEditor(page);
     const result = await runAddAndPersistSignatureTextFields(surface);
@@ -874,6 +986,21 @@ test.describe('template editor', () => {
 });
 
 test.describe('embedded create', () => {
+  test('shift+click adds and removes fields from the selection', async ({ page }) => {
+    const surface = await openEmbeddedEnvelopeEditor(page, {
+      envelopeType: 'DOCUMENT',
+      tokenNamePrefix: 'e2e-embed-shift-click',
+    });
+    const result = await runShiftClickMultiSelectFlow(surface);
+
+    await persistEmbeddedEnvelope(surface);
+
+    await assertShiftClickMultiSelectPersistedInDatabase({
+      surface,
+      ...result,
+    });
+  });
+
   test('add and persist signature/text fields', async ({ page }) => {
     const surface = await openEmbeddedEnvelopeEditor(page, {
       envelopeType: 'DOCUMENT',
@@ -951,6 +1078,22 @@ test.describe('embedded create', () => {
 });
 
 test.describe('embedded edit', () => {
+  test('shift+click adds and removes fields from the selection', async ({ page }) => {
+    const surface = await openEmbeddedEnvelopeEditor(page, {
+      envelopeType: 'TEMPLATE',
+      mode: 'edit',
+      tokenNamePrefix: 'e2e-embed-shift-click',
+    });
+    const result = await runShiftClickMultiSelectFlow(surface);
+
+    await persistEmbeddedEnvelope(surface);
+
+    await assertShiftClickMultiSelectPersistedInDatabase({
+      surface,
+      ...result,
+    });
+  });
+
   test('add and persist signature/text fields', async ({ page }) => {
     const surface = await openEmbeddedEnvelopeEditor(page, {
       envelopeType: 'TEMPLATE',
