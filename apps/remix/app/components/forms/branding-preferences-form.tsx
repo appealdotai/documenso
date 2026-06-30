@@ -26,6 +26,7 @@ const ACCEPTED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 const ZBrandingPreferencesFormSchema = z.object({
   brandingEnabled: z.boolean().nullable(),
+  recipientForceLightMode: z.boolean().nullable(),
   brandingLogo: z
     .instanceof(File)
     .refine((file) => file.size <= MAX_FILE_SIZE, 'File size must be less than 5MB')
@@ -41,7 +42,13 @@ export type TBrandingPreferencesFormSchema = z.infer<typeof ZBrandingPreferences
 
 type SettingsSubset = Pick<
   TeamGlobalSettings,
-  'brandingEnabled' | 'brandingLogo' | 'brandingUrl' | 'brandingCompanyDetails' | 'brandingColors' | 'brandingCss'
+  | 'brandingEnabled'
+  | 'recipientForceLightMode'
+  | 'brandingLogo'
+  | 'brandingUrl'
+  | 'brandingCompanyDetails'
+  | 'brandingColors'
+  | 'brandingCss'
 >;
 
 export type BrandingPreferencesFormProps = {
@@ -74,6 +81,7 @@ export function BrandingPreferencesForm({
   const form = useForm<TBrandingPreferencesFormSchema>({
     values: {
       brandingEnabled: settings.brandingEnabled ?? null,
+      recipientForceLightMode: settings.recipientForceLightMode ?? null,
       brandingUrl: settings.brandingUrl ?? '',
       brandingLogo: undefined,
       brandingCompanyDetails: settings.brandingCompanyDetails ?? '',
@@ -161,6 +169,55 @@ export function BrandingPreferencesForm({
                   ) : (
                     <Trans>Enable custom branding for all documents in this organisation</Trans>
                   )}
+                </FormDescription>
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="recipientForceLightMode"
+            render={({ field }) => (
+              <FormItem className="flex-1">
+                <FormLabel>
+                  <Trans>Force light mode for recipients</Trans>
+                </FormLabel>
+
+                <FormControl>
+                  <Select
+                    {...field}
+                    value={field.value === null ? '-1' : field.value.toString()}
+                    onValueChange={(value) =>
+                      field.onChange(value === 'true' ? true : value === 'false' ? false : null)
+                    }
+                  >
+                    <SelectTrigger className="bg-background text-muted-foreground">
+                      <SelectValue />
+                    </SelectTrigger>
+
+                    <SelectContent className="z-[9999]">
+                      <SelectItem value="true">
+                        <Trans>Yes</Trans>
+                      </SelectItem>
+
+                      <SelectItem value="false">
+                        <Trans>No</Trans>
+                      </SelectItem>
+
+                      {canInherit && (
+                        <SelectItem value={'-1'}>
+                          <Trans>Inherit from organisation</Trans>
+                        </SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </FormControl>
+
+                <FormDescription>
+                  <Trans>
+                    When enabled, recipient signing pages and recipient emails always use a light theme, regardless of
+                    the signer&apos;s system or browser theme.
+                  </Trans>
                 </FormDescription>
               </FormItem>
             )}

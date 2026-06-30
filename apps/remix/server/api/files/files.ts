@@ -10,7 +10,12 @@ import type { Prisma } from '@prisma/client';
 import { Hono } from 'hono';
 
 import type { HonoEnv } from '../../router';
-import { checkEnvelopeFileAccess, handleEnvelopeItemFileRequest, resolveFileUploadUserId } from './files.helpers';
+import {
+  checkEnvelopeFileAccess,
+  handleEnvelopeItemFileRequest,
+  resolveEnvelopeItemFileDownloadTitle,
+  resolveFileUploadUserId,
+} from './files.helpers';
 import {
   isAllowedUploadContentType,
   type TGetPresignedPostUrlResponse,
@@ -226,8 +231,15 @@ export const filesRoute = new Hono<HonoEnv>()
           return c.json({ error: 'Document data not found' }, 404);
         }
 
+        const downloadTitle = await resolveEnvelopeItemFileDownloadTitle({
+          teamId: envelope.teamId,
+          envelopeId: envelope.id,
+          envelopeTitle: envelope.title,
+          envelopeItemTitle: envelopeItem.title,
+        });
+
         const baseOptions = {
-          title: envelopeItem.title,
+          title: downloadTitle,
           documentData: envelopeItem.documentData,
           isDownload: true,
           context: c,
@@ -354,8 +366,15 @@ export const filesRoute = new Hono<HonoEnv>()
         return c.json({ error: 'Document data not found' }, 404);
       }
 
+      const downloadTitle = await resolveEnvelopeItemFileDownloadTitle({
+        teamId: envelopeItem.envelope.teamId,
+        envelopeId: envelopeItem.envelope.id,
+        envelopeTitle: envelopeItem.envelope.title,
+        envelopeItemTitle: envelopeItem.title,
+      });
+
       return await handleEnvelopeItemFileRequest({
-        title: envelopeItem.title,
+        title: downloadTitle,
         status: envelopeItem.envelope.status,
         documentData: envelopeItem.documentData,
         version,

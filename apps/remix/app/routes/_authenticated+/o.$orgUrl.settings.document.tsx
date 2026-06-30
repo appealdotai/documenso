@@ -60,6 +60,7 @@ export default function OrganisationSettingsDocumentPage() {
         aiFeaturesEnabled,
         envelopeExpirationPeriod,
         reminderSettings,
+        useEnvelopeTitleForDownload,
       } = data;
 
       if (
@@ -69,7 +70,8 @@ export default function OrganisationSettingsDocumentPage() {
         includeSenderDetails === null ||
         includeSigningCertificate === null ||
         includeAuditLog === null ||
-        aiFeaturesEnabled === null
+        aiFeaturesEnabled === null ||
+        useEnvelopeTitleForDownload === null
       ) {
         throw new Error('Should not be possible.');
       }
@@ -84,6 +86,7 @@ export default function OrganisationSettingsDocumentPage() {
           includeSenderDetails,
           includeSigningCertificate,
           includeAuditLog,
+          useEnvelopeTitleForDownload,
           defaultRecipients,
           typedSignatureEnabled: signatureTypes.includes(DocumentSignatureType.TYPE),
           uploadSignatureEnabled: signatureTypes.includes(DocumentSignatureType.UPLOAD),

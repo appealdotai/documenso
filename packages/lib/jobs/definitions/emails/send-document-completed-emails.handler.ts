@@ -13,6 +13,7 @@ import { extractDerivedDocumentEmailSettings } from '../../../types/document-ema
 import { getFileServerSide } from '../../../universal/upload/get-file.server';
 import { createDocumentAuditLogData } from '../../../utils/document-audit-logs';
 import { unsafeBuildEnvelopeIdQuery } from '../../../utils/envelope';
+import { buildEnvelopeItemEmailAttachmentFilename } from '../../../utils/envelope-download-filename';
 import { isRecipientEmailValidForSending } from '../../../utils/recipients';
 import { renderCustomEmailTemplate } from '../../../utils/render-custom-email-template';
 import { renderEmailWithI18N } from '../../../utils/render-email-with-i18n';
@@ -94,15 +95,24 @@ export const run = async ({ payload, io }: { payload: TSendDocumentCompletedEmai
     throw new Error('Document has no recipients');
   }
 
-  const { branding, emailLanguage, senderEmail, replyToEmail, organisationId, claims, emailsDisabled, emailTransport } =
-    await getEmailContext({
-      emailType: 'RECIPIENT',
-      source: {
-        type: 'team',
-        teamId: envelope.teamId,
-      },
-      meta: envelope.documentMeta,
-    });
+  const {
+    branding,
+    emailLanguage,
+    senderEmail,
+    replyToEmail,
+    organisationId,
+    claims,
+    emailsDisabled,
+    emailTransport,
+    settings,
+  } = await getEmailContext({
+    emailType: 'RECIPIENT',
+    source: {
+      type: 'team',
+      teamId: envelope.teamId,
+    },
+    meta: envelope.documentMeta,
+  });
 
   // Don't send completion emails if the organisation has email sending disabled or the owner is disabled (e.g. banned).
   if (envelope.user.disabled || emailsDisabled) {
@@ -115,11 +125,15 @@ export const run = async ({ payload, io }: { payload: TSendDocumentCompletedEmai
     envelope.envelopeItems.map(async (envelopeItem) => {
       const file = await getFileServerSide(envelopeItem.documentData);
 
-      // Use the envelope title for version 1, and the envelope item title for version 2.
-      const fileNameToUse = envelope.internalVersion === 1 ? envelope.title : envelopeItem.title + '.pdf';
+      const filename = buildEnvelopeItemEmailAttachmentFilename({
+        envelopeTitle: envelope.title,
+        envelopeItemTitle: envelopeItem.title,
+        envelopeItemCount: envelope.envelopeItems.length,
+        useEnvelopeTitleForDownload: settings.useEnvelopeTitleForDownload,
+      });
 
       return {
-        filename: fileNameToUse.endsWith('.pdf') ? fileNameToUse : fileNameToUse + '.pdf',
+        filename,
         content: Buffer.from(file),
         contentType: 'application/pdf',
       };
