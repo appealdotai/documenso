@@ -63,6 +63,7 @@ export type TDocumentPreferencesFormSchema = {
   defaultRecipients: TDefaultRecipients | null;
   delegateDocumentOwnership: boolean | null;
   aiFeaturesEnabled: boolean | null;
+  useEnvelopeTitleForDownload: boolean | null;
   envelopeExpirationPeriod: TEnvelopeExpirationPeriod | null;
   reminderSettings: TEnvelopeReminderSettings | null;
 };
@@ -84,6 +85,7 @@ type SettingsSubset = Pick<
   | 'aiFeaturesEnabled'
   | 'envelopeExpirationPeriod'
   | 'reminderSettings'
+  | 'useEnvelopeTitleForDownload'
 >;
 
 export type DocumentPreferencesFormProps = {
@@ -125,6 +127,7 @@ export const DocumentPreferencesForm = ({
     aiFeaturesEnabled: z.boolean().nullable(),
     envelopeExpirationPeriod: ZEnvelopeExpirationPeriod.nullable(),
     reminderSettings: ZEnvelopeReminderSettings.nullable(),
+    useEnvelopeTitleForDownload: z.boolean().nullable(),
   });
 
   const form = useForm<TDocumentPreferencesFormSchema>({
@@ -143,6 +146,7 @@ export const DocumentPreferencesForm = ({
       aiFeaturesEnabled: settings.aiFeaturesEnabled,
       envelopeExpirationPeriod: settings.envelopeExpirationPeriod ?? null,
       reminderSettings: settings.reminderSettings ?? null,
+      useEnvelopeTitleForDownload: settings.useEnvelopeTitleForDownload,
     },
     resolver: zodResolver(ZDocumentPreferencesFormSchema),
   });
@@ -514,6 +518,56 @@ export const DocumentPreferencesForm = ({
                   <Trans>
                     Controls whether the audit logs will be included in the document when it is downloaded. The audit
                     logs can still be downloaded from the logs page separately.
+                  </Trans>
+                </FormDescription>
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="useEnvelopeTitleForDownload"
+            render={({ field }) => (
+              <FormItem className="flex-1">
+                <FormLabel>
+                  <Trans>Use document title for downloaded file names</Trans>
+                </FormLabel>
+
+                <FormControl>
+                  <Select
+                    {...field}
+                    value={field.value === null ? '-1' : field.value.toString()}
+                    onValueChange={(value) =>
+                      field.onChange(value === 'true' ? true : value === 'false' ? false : null)
+                    }
+                  >
+                    <SelectTrigger className="bg-background text-muted-foreground">
+                      <SelectValue />
+                    </SelectTrigger>
+
+                    <SelectContent>
+                      <SelectItem value="true">
+                        <Trans>Yes</Trans>
+                      </SelectItem>
+
+                      <SelectItem value="false">
+                        <Trans>No</Trans>
+                      </SelectItem>
+
+                      {canInherit && (
+                        <SelectItem value={'-1'}>
+                          <Trans>Inherit from organisation</Trans>
+                        </SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </FormControl>
+
+                <FormDescription>
+                  <Trans>
+                    When enabled, single-file documents download and email attachments use the document title (for
+                    example, the title passed via API override) instead of the per-file title. Multi-file documents
+                    continue to use per-file titles.
                   </Trans>
                 </FormDescription>
               </FormItem>

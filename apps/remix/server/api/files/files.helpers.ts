@@ -3,8 +3,10 @@ import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { verifyEmbeddingPresignToken } from '@documenso/lib/server-only/embedding-presign/verify-embedding-presign-token';
 import { generatePartialSignedPdf } from '@documenso/lib/server-only/pdf/generate-partial-signed-pdf';
 import { getTeamById } from '@documenso/lib/server-only/team/get-team';
+import { getTeamSettings } from '@documenso/lib/server-only/team/get-team-settings';
 import { sha256 } from '@documenso/lib/universal/crypto';
 import { getFileServerSide } from '@documenso/lib/universal/upload/get-file.server';
+import { getEnvelopeItemDownloadBaseTitle } from '@documenso/lib/utils/envelope-download-filename';
 import { prisma } from '@documenso/prisma';
 import {
   type DocumentDataType,
@@ -21,6 +23,34 @@ import type { Context } from 'hono';
 import { match } from 'ts-pattern';
 
 import type { HonoEnv } from '../../router';
+
+export const resolveEnvelopeItemFileDownloadTitle = async ({
+  teamId,
+  envelopeId,
+  envelopeTitle,
+  envelopeItemTitle,
+}: {
+  teamId: number;
+  envelopeId: string;
+  envelopeTitle: string;
+  envelopeItemTitle: string;
+}) => {
+  const [settings, envelopeItemCount] = await Promise.all([
+    getTeamSettings({ teamId }),
+    prisma.envelopeItem.count({
+      where: {
+        envelopeId,
+      },
+    }),
+  ]);
+
+  return getEnvelopeItemDownloadBaseTitle({
+    envelopeTitle,
+    envelopeItemTitle,
+    envelopeItemCount,
+    useEnvelopeTitleForDownload: settings.useEnvelopeTitleForDownload,
+  });
+};
 
 type DocumentDataInput = {
   type: DocumentDataType;

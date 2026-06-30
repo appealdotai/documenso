@@ -37,6 +37,9 @@ export const ZUpdateOrganisationSettingsRequestSchema = z.object({
     brandingCompanyDetails: z.string().optional(),
     brandingColors: ZCssVarsSchema.nullish(),
     brandingCss: z.string().max(BRANDING_CSS_MAX_LENGTH).optional(),
+    recipientForceLightMode: z.boolean().optional(),
+
+    useEnvelopeTitleForDownload: z.boolean().optional(),
 
     // Email related settings.
     emailId: z.string().nullish(),

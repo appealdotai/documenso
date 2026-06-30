@@ -32,6 +32,22 @@ const versionToFilenameSuffix = (version: DocumentVersion): string => {
   }
 };
 
+const parseFilenameFromContentDisposition = (header: string | null): string | null => {
+  if (!header) {
+    return null;
+  }
+
+  const filenameStar = header.match(/filename\*=UTF-8''([^;]+)/i);
+
+  if (filenameStar?.[1]) {
+    return decodeURIComponent(filenameStar[1]);
+  }
+
+  const filename = header.match(/filename="([^"]+)"/i) ?? header.match(/filename=([^;]+)/i);
+
+  return filename?.[1]?.trim() ?? null;
+};
+
 export const downloadPDF = async ({ envelopeItem, token, fileName, version = 'signed' }: DownloadPDFProps) => {
   const downloadUrl = getEnvelopeItemPdfUrl({
     type: 'download',
@@ -40,9 +56,21 @@ export const downloadPDF = async ({ envelopeItem, token, fileName, version = 'si
     version,
   });
 
-  const blob = await fetch(downloadUrl).then(async (res) => await res.blob());
+  const response = await fetch(downloadUrl);
+  const blob = await response.blob();
 
-  const baseTitle = (fileName ?? 'document').replace(/\.pdf$/, '');
+  const filenameFromHeader = parseFilenameFromContentDisposition(response.headers.get('Content-Disposition'));
+
+  if (filenameFromHeader) {
+    downloadFile({
+      filename: filenameFromHeader,
+      data: blob,
+    });
+
+    return;
+  }
+
+  const baseTitle = (fileName ?? 'document').replace(/\.pdf$/i, '');
 
   downloadFile({
     filename: `${baseTitle}${versionToFilenameSuffix(version)}`,

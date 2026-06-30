@@ -7,6 +7,7 @@ import { getTeamSettings } from '../team/get-team-settings';
 export type RecipientBrandingPayload = {
   allowCustomBranding: boolean;
   hidePoweredBy: boolean;
+  recipientForceLightMode: boolean;
   colors: TCssVarsSchema | null;
   css: string | null;
 };
@@ -42,6 +43,7 @@ export const loadRecipientBrandingByTeamId = async ({
     return {
       allowCustomBranding: false,
       hidePoweredBy,
+      recipientForceLightMode: settings.recipientForceLightMode,
       colors: null,
       css: null,
     };
@@ -53,6 +55,7 @@ export const loadRecipientBrandingByTeamId = async ({
   return {
     allowCustomBranding: true,
     hidePoweredBy,
+    recipientForceLightMode: settings.recipientForceLightMode,
     colors: parsedColors?.success ? parsedColors.data : null,
     css: settings.brandingCss && settings.brandingCss.length > 0 ? settings.brandingCss : null,
   };
