@@ -1398,6 +1398,10 @@ msgstr "나를 추가"
 msgid "Add Myself"
 msgstr "나 추가"
 
+#: apps/remix/app/components/dialogs/sign-field-signature-dialog.tsx
+msgid "Add new signature"
+msgstr ""
+
 #: apps/remix/app/components/dialogs/organisation-email-create-dialog.tsx
 msgid "Add Organisation Email"
 msgstr "조직 이메일 추가"
@@ -1837,10 +1841,6 @@ msgstr "필드를 제거하는 중 오류가 발생했습니다."
 msgid "An error occurred while removing the selection."
 msgstr "선택 항목을 제거하는 동안 오류가 발생했습니다."
 
-#: apps/remix/app/components/general/document-signing/document-signing-signature-field.tsx
-msgid "An error occurred while removing the signature."
-msgstr "서명을 제거하는 중 오류가 발생했습니다."
-
 #: apps/remix/app/components/dialogs/admin-user-reset-two-factor-dialog.tsx
 msgid "An error occurred while resetting two factor authentication for the user."
 msgstr "이 사용자의 2단계 인증을 재설정하는 동안 오류가 발생했습니다."
@@ -2044,6 +2044,15 @@ msgstr "API 사용량이 공정 이용 한도에 가까워지고 있습니다."
 #: apps/remix/app/routes/_authenticated+/admin+/stats.tsx
 msgid "App Version"
 msgstr "앱 버전"
+
+#: apps/remix/app/components/general/document-signing/document-signing-form.tsx
+#: apps/remix/app/components/general/envelope-signing/envelope-signer-form.tsx
+msgid "Applied when you click an empty signature field. Change per field via the picker."
+msgstr ""
+
+#: apps/remix/app/components/dialogs/sign-field-signature-dialog.tsx
+msgid "Apply"
+msgstr ""
 
 #: apps/remix/app/components/general/document-signing/csc-recipient-signing-in-progress-page.tsx
 msgid "Applying your signature"
@@ -2441,6 +2450,7 @@ msgstr "브랜딩 로고"
 #: apps/remix/app/routes/_authenticated+/o.$orgUrl.settings.branding.tsx
 #: apps/remix/app/routes/_authenticated+/o.$orgUrl.settings.branding.tsx
 #: apps/remix/app/routes/_authenticated+/t.$teamUrl+/settings.branding.tsx
+#: apps/remix/app/routes/_authenticated+/t.$teamUrl+/settings.branding.tsx
 msgid "Branding Preferences"
 msgstr "브랜딩 환경설정"
 
@@ -2588,6 +2598,7 @@ msgstr "누군가를 찾을 수 없나요?"
 #: apps/remix/app/components/dialogs/public-profile-template-manage-dialog.tsx
 #: apps/remix/app/components/dialogs/session-logout-all-dialog.tsx
 #: apps/remix/app/components/dialogs/sign-field-checkbox-dialog.tsx
+#: apps/remix/app/components/dialogs/sign-field-date-dialog.tsx
 #: apps/remix/app/components/dialogs/sign-field-email-dialog.tsx
 #: apps/remix/app/components/dialogs/sign-field-initials-dialog.tsx
 #: apps/remix/app/components/dialogs/sign-field-name-dialog.tsx
@@ -2627,7 +2638,6 @@ msgstr "누군가를 찾을 수 없나요?"
 #: apps/remix/app/components/general/document-signing/document-signing-name-field.tsx
 #: apps/remix/app/components/general/document-signing/document-signing-number-field.tsx
 #: apps/remix/app/components/general/document-signing/document-signing-reject-dialog.tsx
-#: apps/remix/app/components/general/document-signing/document-signing-signature-field.tsx
 #: apps/remix/app/components/general/document-signing/document-signing-text-field.tsx
 #: apps/remix/app/components/general/document/document-attachments-popover.tsx
 #: apps/remix/app/components/general/document/embedded-editor-attachment-popover.tsx
@@ -2709,6 +2719,10 @@ msgstr "Cc 수신자"
 msgid "Center"
 msgstr "가운데"
 
+#: apps/remix/app/components/general/document-signing/document-signing-field-container.tsx
+msgid "Change"
+msgstr ""
+
 #: apps/remix/app/components/general/envelope-editor/envelope-editor-fields-page-renderer.tsx
 msgid "Change Field Type"
 msgstr "필드 유형 변경"
@@ -2720,6 +2734,10 @@ msgstr "언어 변경하기"
 #: apps/remix/app/components/general/envelope-editor/envelope-editor-fields-page-renderer.tsx
 msgid "Change Recipient"
 msgstr "수신자 변경"
+
+#: apps/remix/app/components/dialogs/sign-field-signature-dialog.tsx
+msgid "Change signature"
+msgstr ""
 
 #: apps/remix/app/components/general/app-command-menu.tsx
 msgid "Change theme"
@@ -2769,6 +2787,10 @@ msgstr "결제하기"
 #: packages/lib/constants/i18n.ts
 msgid "Chinese"
 msgstr "중국어"
+
+#: apps/remix/app/components/dialogs/sign-field-signature-dialog.tsx
+msgid "Choose a signature"
+msgstr ""
 
 #: apps/remix/app/components/dialogs/template-direct-link-dialog.tsx
 msgid "Choose an existing recipient from below to continue"
@@ -3054,6 +3076,7 @@ msgstr "아직 서명을 완료하지 않은 수신자에게 알림 이메일을
 
 #: apps/remix/app/components/dialogs/public-profile-template-manage-dialog.tsx
 #: apps/remix/app/components/dialogs/sign-field-checkbox-dialog.tsx
+#: apps/remix/app/components/dialogs/sign-field-date-dialog.tsx
 #: apps/remix/app/components/dialogs/template-direct-link-dialog.tsx
 msgid "Confirm"
 msgstr "확인"
@@ -3538,6 +3561,10 @@ msgstr "문서 생성 중"
 msgid "Creating Template"
 msgstr "템플릿 생성 중"
 
+#: apps/remix/app/components/forms/editor/editor-field-generic-field-forms.tsx
+msgid "Crop"
+msgstr ""
+
 #: apps/remix/app/routes/_authenticated+/o.$orgUrl.settings.branding.tsx
 #: apps/remix/app/routes/_authenticated+/t.$teamUrl+/settings.branding.tsx
 msgid "CSS rules were dropped during sanitisation"
@@ -3563,6 +3590,10 @@ msgstr "현재 비밀번호가 올바르지 않습니다."
 msgid "Current recipients:"
 msgstr "현재 수신자:"
 
+#: apps/remix/app/components/dialogs/sign-field-signature-dialog.tsx
+msgid "Current signature"
+msgstr ""
+
 #: apps/remix/app/routes/_authenticated+/admin+/organisations.$id.tsx
 msgid "Current usage against organisation limits."
 msgstr "조직 한도 대비 현재 사용량입니다."
@@ -3572,6 +3603,7 @@ msgid "Currently all organisation members can access this team"
 msgstr "현재 모든 조직 구성원이 이 팀에 접근할 수 있습니다."
 
 #: apps/remix/app/routes/_authenticated+/o.$orgUrl.settings.branding.tsx
+#: apps/remix/app/routes/_authenticated+/t.$teamUrl+/settings.branding.tsx
 msgid "Currently branding can only be configured for Teams and above plans."
 msgstr "브랜딩은 현재 Teams 요금제 이상에서만 구성할 수 있습니다."
 
@@ -3647,6 +3679,10 @@ msgstr "날짜 형식"
 msgid "Date Settings"
 msgstr "날짜 설정"
 
+#: apps/remix/app/components/forms/editor/editor-field-date-form.tsx
+msgid "Date Value"
+msgstr ""
+
 #: apps/remix/app/components/dialogs/ai-field-detection-dialog.tsx
 msgid "David is the Employee, Lucas is the Manager"
 msgstr "David는 직원이고, Lucas는 관리자입니다."
@@ -3711,6 +3747,11 @@ msgstr "이 조직에 기본 설정이 적용되었습니다."
 #: apps/remix/app/routes/_authenticated+/admin+/teams.$id.tsx
 msgid "Default settings applied to this team. Inherited values come from the organisation."
 msgstr "이 팀에 기본 설정이 적용되었습니다. 상속된 값은 조직에서 가져옵니다."
+
+#: apps/remix/app/components/general/document-signing/document-signing-form.tsx
+#: apps/remix/app/components/general/envelope-signing/envelope-signer-form.tsx
+msgid "Default signature"
+msgstr ""
 
 #: apps/remix/app/components/forms/document-preferences-form.tsx
 msgid "Default Signature Settings"
@@ -4214,8 +4255,8 @@ msgstr "문서가 취소되었습니다"
 
 #: apps/remix/app/routes/_recipient+/sign.$token+/_index.tsx
 #: apps/remix/app/routes/_recipient+/sign.$token+/_index.tsx
+#: packages/lib/jobs/definitions/emails/send-document-deleted-emails.handler.ts
 #: packages/lib/server-only/admin/admin-super-delete-document.ts
-#: packages/lib/server-only/document/delete-document.ts
 msgid "Document Cancelled"
 msgstr "문서가 취소됨"
 
@@ -4723,6 +4764,10 @@ msgstr "문서를 이곳에 드래그해서 놓아 주세요."
 msgctxt "Draw signature"
 msgid "Draw"
 msgstr "그리기"
+
+#: apps/remix/app/components/dialogs/sign-field-signature-dialog.tsx
+msgid "Draw or type your signature"
+msgstr ""
 
 #: apps/remix/app/components/general/admin-global-settings-section.tsx
 msgid "Draw signature"
@@ -5259,10 +5304,16 @@ msgid "Enter Name"
 msgstr "이름을 입력하세요"
 
 #: apps/remix/app/components/dialogs/sign-field-number-dialog.tsx
+#: apps/remix/app/components/general/document-signing/document-signing-number-field.tsx
+#: apps/remix/app/components/general/document-signing/document-signing-number-field.tsx
+#: packages/lib/utils/fields.ts
 msgid "Enter Number"
 msgstr "숫자를 입력하세요"
 
 #: apps/remix/app/components/dialogs/sign-field-text-dialog.tsx
+#: apps/remix/app/components/general/document-signing/document-signing-text-field.tsx
+#: apps/remix/app/components/general/document-signing/document-signing-text-field.tsx
+#: packages/lib/utils/fields.ts
 msgid "Enter Text"
 msgstr "텍스트를 입력하세요"
 
@@ -5406,7 +5457,6 @@ msgstr "봉투가 업데이트되었습니다"
 #: apps/remix/app/components/general/document-signing/document-signing-radio-field.tsx
 #: apps/remix/app/components/general/document-signing/document-signing-radio-field.tsx
 #: apps/remix/app/components/general/document-signing/document-signing-reject-dialog.tsx
-#: apps/remix/app/components/general/document-signing/document-signing-signature-field.tsx
 #: apps/remix/app/components/general/document-signing/document-signing-signature-field.tsx
 #: apps/remix/app/components/general/document-signing/document-signing-signature-field.tsx
 #: apps/remix/app/components/general/document-signing/document-signing-text-field.tsx
@@ -5856,6 +5906,10 @@ msgid "For example, if the claim has a new flag \"FLAG_1\" set to true, then thi
 msgstr "예를 들어, 클레임에 새 플래그 \"FLAG_1\"이 true로 설정되면, 이 조직에도 해당 플래그가 추가됩니다."
 
 #: apps/remix/app/components/forms/branding-preferences-form.tsx
+msgid "Force light mode for recipients"
+msgstr ""
+
+#: apps/remix/app/components/forms/branding-preferences-form.tsx
 msgid "Foreground"
 msgstr "전경"
 
@@ -6184,6 +6238,7 @@ msgid "Home (No Folder)"
 msgstr "홈(폴더 없음)"
 
 #: apps/remix/app/components/forms/editor/editor-field-checkbox-form.tsx
+#: apps/remix/app/components/forms/editor/editor-field-generic-field-forms.tsx
 #: apps/remix/app/components/forms/editor/editor-field-radio-form.tsx
 #: packages/ui/primitives/document-flow/field-items-advanced-settings/checkbox-field.tsx
 msgid "Horizontal"
@@ -6360,6 +6415,8 @@ msgid "Inherit authentication method"
 msgstr "인증 방식 상속"
 
 #: apps/remix/app/components/forms/branding-preferences-form.tsx
+#: apps/remix/app/components/forms/branding-preferences-form.tsx
+#: apps/remix/app/components/forms/document-preferences-form.tsx
 #: apps/remix/app/components/forms/document-preferences-form.tsx
 #: apps/remix/app/components/forms/document-preferences-form.tsx
 #: apps/remix/app/components/forms/document-preferences-form.tsx
@@ -7363,6 +7420,8 @@ msgid "Next Recipient Name"
 msgstr "다음 수신자 이름"
 
 #: apps/remix/app/components/forms/branding-preferences-form.tsx
+#: apps/remix/app/components/forms/branding-preferences-form.tsx
+#: apps/remix/app/components/forms/document-preferences-form.tsx
 #: apps/remix/app/components/forms/document-preferences-form.tsx
 #: apps/remix/app/components/forms/document-preferences-form.tsx
 #: apps/remix/app/components/forms/document-preferences-form.tsx
@@ -7607,7 +7666,6 @@ msgid "Notifications"
 msgstr "알림"
 
 #: apps/remix/app/components/dialogs/ai-field-detection-dialog.tsx
-#: apps/remix/app/components/general/document-signing/document-signing-number-field.tsx
 #: apps/remix/app/components/general/envelope-editor/envelope-editor-fields-drag-drop.tsx
 #: packages/lib/utils/fields.ts
 #: packages/ui/primitives/document-flow/add-fields.tsx
@@ -7941,6 +7999,11 @@ msgstr "원본"
 #: apps/remix/app/components/dialogs/template-use-dialog.tsx
 msgid "Otherwise, the document will be created as a draft."
 msgstr "그렇지 않으면 문서는 초안으로 생성됩니다."
+
+#: apps/remix/app/components/dialogs/envelope-distribute-dialog.tsx
+#: apps/remix/app/components/general/envelope-editor/envelope-editor-fields-page.tsx
+msgid "Overlapping fields detected"
+msgstr ""
 
 #: apps/remix/app/components/forms/document-preferences-form.tsx
 #: apps/remix/app/components/forms/email-preferences-form.tsx
@@ -8397,6 +8460,10 @@ msgstr "문서를 승인하기 전에 검토해 주세요."
 msgid "Please review the document before signing."
 msgstr "서명 전에 문서를 검토해 주세요."
 
+#: apps/remix/app/components/dialogs/sign-field-date-dialog.tsx
+msgid "Please select a date"
+msgstr ""
+
 #: apps/remix/app/components/dialogs/template-use-dialog.tsx
 msgid "Please select a PDF file"
 msgstr "PDF 파일을 선택해 주세요."
@@ -8555,6 +8622,10 @@ msgstr "프로필은 현재 <0>숨김</0> 상태입니다."
 #: apps/remix/app/routes/_authenticated+/t.$teamUrl+/settings.public-profile.tsx
 msgid "Profile is currently <0>visible</0>."
 msgstr "프로필은 현재 <0>공개</0> 상태입니다."
+
+#: apps/remix/app/components/dialogs/sign-field-signature-dialog.tsx
+msgid "Profile signature"
+msgstr ""
 
 #: apps/remix/app/components/forms/profile.tsx
 #: apps/remix/app/routes/_authenticated+/admin+/users.$id.tsx
@@ -9048,6 +9119,10 @@ msgstr "조직 구성원 제거"
 #: apps/remix/app/components/dialogs/ai-recipient-detection-dialog.tsx
 msgid "Remove recipient"
 msgstr "수신자 제거"
+
+#: apps/remix/app/components/dialogs/sign-field-signature-dialog.tsx
+msgid "Remove signature"
+msgstr ""
 
 #: apps/remix/app/components/dialogs/team-email-delete-dialog.tsx
 msgid "Remove team email"
@@ -9577,6 +9652,11 @@ msgstr "최소 선택 개수"
 msgid "Select authentication methods"
 msgstr "인증 방식 선택"
 
+#: apps/remix/app/components/dialogs/sign-field-date-dialog.tsx
+#: packages/lib/utils/fields.ts
+msgid "Select Date"
+msgstr ""
+
 #: apps/remix/app/components/forms/editor/editor-field-dropdown-form.tsx
 #: packages/ui/primitives/document-flow/field-items-advanced-settings/dropdown-field.tsx
 msgid "Select default option"
@@ -9633,6 +9713,10 @@ msgstr "수신자를 선택하거나 추가하세요."
 #: apps/remix/app/components/general/default-recipients-multiselect-combobox.tsx
 msgid "Select or enter email address"
 msgstr "이메일 주소를 선택하거나 입력하세요."
+
+#: apps/remix/app/components/forms/editor/editor-field-generic-field-forms.tsx
+msgid "Select overflow behavior"
+msgstr ""
 
 #: apps/remix/app/components/general/document-signing/document-signing-auth-passkey.tsx
 msgid "Select passkey"
@@ -9909,14 +9993,12 @@ msgstr "사용량 표시하기"
 msgid "Show usage with quotas"
 msgstr "할당량과 함께 사용량 표시하기"
 
-#: apps/remix/app/components/dialogs/sign-field-signature-dialog.tsx
 #: apps/remix/app/components/general/document-signing/document-signing-auth-2fa.tsx
 #: apps/remix/app/components/general/document-signing/document-signing-auth-passkey.tsx
 #: apps/remix/app/components/general/document-signing/document-signing-auth-password.tsx
 #: apps/remix/app/components/general/document-signing/document-signing-auto-sign.tsx
 #: apps/remix/app/components/general/document-signing/document-signing-complete-dialog.tsx
 #: apps/remix/app/components/general/document-signing/document-signing-name-field.tsx
-#: apps/remix/app/components/general/document-signing/document-signing-signature-field.tsx
 #: apps/remix/app/components/general/document/document-page-view-button.tsx
 #: apps/remix/app/components/general/user-profile-skeleton.tsx
 #: apps/remix/app/components/general/user-profile-timur.tsx
@@ -9931,12 +10013,6 @@ msgstr "서명"
 msgctxt "Recipient role action verb"
 msgid "Sign"
 msgstr "서명"
-
-#. placeholder {0}: recipient.name
-#. placeholder {1}: recipient.email
-#: apps/remix/app/components/general/document-signing/document-signing-signature-field.tsx
-msgid "Sign as {0} <0>({1})</0>"
-msgstr "{0} <0>({1})</0>로 서명"
 
 #. placeholder {0}: recipient.name
 #. placeholder {1}: recipient.email
@@ -9996,8 +10072,8 @@ msgid "Sign Out"
 msgstr "로그아웃"
 
 #: apps/remix/app/components/dialogs/sign-field-signature-dialog.tsx
-msgid "Sign Signature Field"
-msgstr "서명 필드 서명"
+msgid "Sign signature field"
+msgstr ""
 
 #: apps/remix/app/components/embed/embed-direct-template-client-page.tsx
 #: apps/remix/app/components/embed/embed-document-signing-page-v1.tsx
@@ -10031,10 +10107,8 @@ msgstr "OIDC로 가입"
 #: apps/remix/app/components/embed/multisign/multi-sign-document-signing-view.tsx
 #: apps/remix/app/components/forms/profile.tsx
 #: apps/remix/app/components/general/direct-template/direct-template-signing-form.tsx
-#: apps/remix/app/components/general/document-signing/document-signing-form.tsx
 #: apps/remix/app/components/general/document-signing/document-signing-signature-field.tsx
 #: apps/remix/app/components/general/envelope-editor/envelope-editor-fields-drag-drop.tsx
-#: apps/remix/app/components/general/envelope-signing/envelope-signer-form.tsx
 #: apps/remix/app/components/tables/admin-document-recipient-item-table.tsx
 #: apps/remix/app/routes/_internal+/[__htmltopdf]+/certificate.tsx
 #: packages/lib/server-only/pdf/render-certificate.ts
@@ -10045,6 +10119,11 @@ msgstr "OIDC로 가입"
 #: packages/ui/primitives/template-flow/add-template-fields.tsx
 msgid "Signature"
 msgstr "서명"
+
+#. placeholder {0}: option.labelIndex
+#: apps/remix/app/components/dialogs/sign-field-signature-dialog.tsx
+msgid "Signature {0}"
+msgstr ""
 
 #: apps/remix/app/routes/_internal+/[__htmltopdf]+/certificate.tsx
 #: packages/lib/server-only/pdf/render-certificate.ts
@@ -10218,6 +10297,11 @@ msgstr "사이트 설정"
 #: apps/remix/app/components/dialogs/ai-recipient-detection-dialog.tsx
 msgid "Skip"
 msgstr "건너뛰기"
+
+#: apps/remix/app/components/dialogs/envelope-distribute-dialog.tsx
+#: apps/remix/app/components/general/envelope-editor/envelope-editor-fields-page.tsx
+msgid "Some fields are placed on top of each other. This may complicate the signing process or cause fields to not work as expected."
+msgstr ""
 
 #: packages/ui/primitives/document-flow/missing-signature-field-dialog.tsx
 msgid "Some signers have not been assigned a signature field. Please assign at least 1 signature field to each signer before proceeding."
@@ -10953,8 +11037,6 @@ msgid "test@example.com"
 msgstr "test@example.com"
 
 #: apps/remix/app/components/dialogs/ai-field-detection-dialog.tsx
-#: apps/remix/app/components/general/document-signing/document-signing-text-field.tsx
-#: apps/remix/app/components/general/document-signing/document-signing-text-field.tsx
 #: apps/remix/app/components/general/envelope-editor/envelope-editor-fields-drag-drop.tsx
 #: packages/lib/utils/fields.ts
 #: packages/ui/primitives/document-flow/add-fields.tsx
@@ -10984,6 +11066,10 @@ msgstr "기본 버튼의 텍스트 색상입니다."
 #: apps/remix/app/components/dialogs/sign-field-text-dialog.tsx
 msgid "Text is required"
 msgstr "텍스트는 필수 항목입니다"
+
+#: apps/remix/app/components/forms/editor/editor-field-generic-field-forms.tsx
+msgid "Text Overflow"
+msgstr ""
 
 #: apps/remix/app/components/general/envelope-editor/envelope-editor-fields-page.tsx
 msgid "Text Settings"
@@ -12342,6 +12428,7 @@ msgstr "배너 업데이트"
 
 #: apps/remix/app/routes/_authenticated+/o.$orgUrl.settings.branding.tsx
 #: apps/remix/app/routes/_authenticated+/o.$orgUrl.settings.email-domains._index.tsx
+#: apps/remix/app/routes/_authenticated+/t.$teamUrl+/settings.branding.tsx
 msgid "Update Billing"
 msgstr "결제 정보 업데이트"
 
@@ -12599,6 +12686,10 @@ msgstr "인증 앱 사용"
 msgid "Use Backup Code"
 msgstr "백업 코드 사용"
 
+#: apps/remix/app/components/forms/document-preferences-form.tsx
+msgid "Use document title for downloaded file names"
+msgstr ""
+
 #: apps/remix/app/components/dialogs/template-use-dialog.tsx
 #: apps/remix/app/components/general/envelope-editor/envelope-editor-header.tsx
 msgid "Use Template"
@@ -12739,6 +12830,7 @@ msgid "Verify your team email address"
 msgstr "팀 이메일 주소를 인증하세요."
 
 #: apps/remix/app/components/forms/editor/editor-field-checkbox-form.tsx
+#: apps/remix/app/components/forms/editor/editor-field-generic-field-forms.tsx
 #: apps/remix/app/components/forms/editor/editor-field-radio-form.tsx
 #: packages/ui/primitives/document-flow/field-items-advanced-settings/checkbox-field.tsx
 msgid "Vertical"
@@ -12942,7 +13034,7 @@ msgstr "대기 중"
 msgid "Waiting for others"
 msgstr "다른 사람을 기다리는 중"
 
-#: packages/lib/server-only/document/send-pending-email.ts
+#: packages/lib/jobs/definitions/emails/send-document-pending-email.handler.ts
 msgid "Waiting for others to complete signing."
 msgstr "다른 서명자들이 이 문서에 서명 완료하기를 기다리는 중입니다."
 
@@ -13450,12 +13542,20 @@ msgstr "이 문서를 편집하려던 것이었나요?"
 msgid "What you can do with teams:"
 msgstr "팀으로 할 수 있는 일:"
 
+#: apps/remix/app/components/forms/branding-preferences-form.tsx
+msgid "When enabled, recipient signing pages and recipient emails always use a light theme, regardless of the signer's system or browser theme."
+msgstr ""
+
 #: apps/remix/app/components/embed/authoring/configure-document-recipients.tsx
 #: apps/remix/app/components/general/envelope-editor/envelope-editor-recipient-form.tsx
 #: packages/ui/primitives/document-flow/add-signers.tsx
 #: packages/ui/primitives/template-flow/add-template-placeholder-recipients.tsx
 msgid "When enabled, signers can choose who should sign next in the sequence instead of following the predefined order."
 msgstr "활성화하면, 미리 정의된 순서 대신 서명자가 다음 서명자를 직접 선택할 수 있습니다."
+
+#: apps/remix/app/components/forms/document-preferences-form.tsx
+msgid "When enabled, single-file documents download and email attachments use the document title (for example, the title passed via API override) instead of the per-file title. Multi-file documents continue to use per-file titles."
+msgstr ""
 
 #: apps/remix/app/routes/_authenticated+/o.$orgUrl.settings.sso.tsx
 msgid "When enabled, users signing in via SSO for the first time will also receive their own personal organisation."
@@ -13504,6 +13604,8 @@ msgid "Yearly"
 msgstr "연간"
 
 #: apps/remix/app/components/forms/branding-preferences-form.tsx
+#: apps/remix/app/components/forms/branding-preferences-form.tsx
+#: apps/remix/app/components/forms/document-preferences-form.tsx
 #: apps/remix/app/components/forms/document-preferences-form.tsx
 #: apps/remix/app/components/forms/document-preferences-form.tsx
 #: apps/remix/app/components/forms/document-preferences-form.tsx
@@ -13916,8 +14018,7 @@ msgstr "Documenso에서 {0} 조직에 초대되었습니다."
 msgid "You have been invited to join the following organisation"
 msgstr "다음 조직에 참여하라는 초대를 받았습니다."
 
-#: packages/lib/server-only/recipient/delete-envelope-recipient.ts
-#: packages/lib/server-only/recipient/set-document-recipients.ts
+#: packages/lib/jobs/definitions/emails/send-recipient-removed-email.handler.ts
 msgid "You have been removed from a document"
 msgstr "문서에서 제거되었습니다."
 
@@ -14717,3 +14818,6 @@ msgstr "인증 코드:"
 msgid "your-domain.com another-domain.com"
 msgstr "your-domain.com another-domain.com"
 
+#: apps/remix/app/components/forms/editor/editor-field-date-form.tsx
+msgid "YYYY-MM-DD"
+msgstr ""
