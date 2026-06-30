@@ -4,6 +4,7 @@ import type { Transporter } from 'nodemailer';
 import { createTransport } from 'nodemailer';
 
 import { MailChannelsTransport } from './transports/mailchannels';
+import { wrapTransportWithRateLimit } from './transports/wrap-transport-with-rate-limit';
 
 /**
  * Creates a Nodemailer transport object for sending emails.
@@ -67,10 +68,12 @@ const getTransport = (): Transporter => {
       throw new Error('Resend transport requires NEXT_PRIVATE_RESEND_API_KEY');
     }
 
-    return createTransport(
-      ResendTransport.makeTransport({
-        apiKey: env('NEXT_PRIVATE_RESEND_API_KEY'),
-      }),
+    return wrapTransportWithRateLimit(
+      createTransport(
+        ResendTransport.makeTransport({
+          apiKey: env('NEXT_PRIVATE_RESEND_API_KEY'),
+        }),
+      ),
     );
   }
 
