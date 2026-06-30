@@ -55,6 +55,7 @@ export default function TeamsSettingsPage() {
         aiFeaturesEnabled,
         envelopeExpirationPeriod,
         reminderSettings,
+        useEnvelopeTitleForDownload,
       } = data;
 
       await updateTeamSettings({
@@ -67,6 +68,7 @@ export default function TeamsSettingsPage() {
           includeSenderDetails,
           includeSigningCertificate,
           includeAuditLog,
+          useEnvelopeTitleForDownload,
           defaultRecipients,
           aiFeaturesEnabled,
           envelopeExpirationPeriod,

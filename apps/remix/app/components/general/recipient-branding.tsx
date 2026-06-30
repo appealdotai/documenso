@@ -5,6 +5,7 @@ import { toNativeCssVarsString } from '~/utils/css-vars';
 
 export type RecipientBrandingPayload = {
   allowCustomBranding: boolean;
+  recipientForceLightMode: boolean;
   colors?: TCssVarsSchema | null;
   css?: string | null;
 };
@@ -59,6 +60,16 @@ export const RecipientBranding = ({ branding, cspNonce }: RecipientBrandingProps
   const css = `.documenso-branded { ${innerBody} }`;
 
   useEffect(() => {
+    if (branding?.recipientForceLightMode) {
+      document.documentElement.classList.add('dark-mode-disabled');
+
+      return () => {
+        document.documentElement.classList.remove('dark-mode-disabled');
+      };
+    }
+  }, [branding?.recipientForceLightMode]);
+
+  useEffect(() => {
     if (!branding?.allowCustomBranding) {
       return;
     }
@@ -77,6 +88,10 @@ export const RecipientBranding = ({ branding, cspNonce }: RecipientBrandingProps
       document.head.removeChild(style);
     };
   }, [branding, cspNonce, css, hasUserCss, hasVars]);
+
+  if (!branding?.allowCustomBranding && !branding?.recipientForceLightMode) {
+    return null;
+  }
 
   if (!branding?.allowCustomBranding) {
     return null;

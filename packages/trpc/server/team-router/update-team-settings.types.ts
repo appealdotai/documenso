@@ -40,6 +40,9 @@ export const ZUpdateTeamSettingsRequestSchema = z.object({
     brandingCompanyDetails: z.string().nullish(),
     brandingColors: ZCssVarsSchema.nullish(),
     brandingCss: z.string().max(BRANDING_CSS_MAX_LENGTH).nullish(),
+    recipientForceLightMode: z.boolean().nullish(),
+
+    useEnvelopeTitleForDownload: z.boolean().nullish(),
 
     // Email related settings.
     emailId: z.string().nullish(),

@@ -985,6 +985,9 @@ model OrganisationGlobalSettings {
   brandingCompanyDetails String  @default("")
   brandingColors         Json? /// [TCssVarsSchema] @zod.custom.use(ZCssVarsSchema)
   brandingCss            String  @default("")
+  recipientForceLightMode Boolean @default(false)
+
+  useEnvelopeTitleForDownload Boolean @default(false)
 
   envelopeExpirationPeriod Json? /// [EnvelopeExpirationPeriod] @zod.custom.use(ZEnvelopeExpirationPeriodSchema)
 
@@ -1028,6 +1031,9 @@ model TeamGlobalSettings {
   brandingCompanyDetails String?
   brandingColors         Json? /// [TCssVarsSchema] @zod.custom.use(ZCssVarsSchema)
   brandingCss            String?
+  recipientForceLightMode Boolean?
+
+  useEnvelopeTitleForDownload Boolean?
 
   envelopeExpirationPeriod Json? /// [EnvelopeExpirationPeriod] @zod.custom.use(ZEnvelopeExpirationPeriodSchema)
 

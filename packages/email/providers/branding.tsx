@@ -8,6 +8,10 @@ type BrandingContextValue = {
   brandingCompanyDetails: string;
   brandingHidePoweredBy: boolean;
   brandingColors?: EmailBrandingColors;
+  /**
+   * When set by `getEmailContext`, forces recipient emails to render with a light palette.
+   */
+  forceLightMode?: boolean;
 };
 
 const BrandingContext = createContext<BrandingContextValue | undefined>(undefined);
