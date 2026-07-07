@@ -26,23 +26,31 @@ jobs:
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
           STAGING_ENV_ID: ${{ secrets.STAGING_ENV_ID }}
+          STAGING_DB_SERVICE_ID: ${{ secrets.STAGING_DB_SERVICE_ID }}
           STAGING_SERVICE_ID: ${{ secrets.STAGING_SERVICE_ID }}
         run: |
-          curl --fail-with-body -X POST https://backboard.railway.app/graphql/v2 \
-            -H "Authorization: Bearer ${RAILWAY_TOKEN}" \
-            -H "Content-Type: application/json" \
-            -d "$(jq -n \
-              --arg environmentId "$STAGING_ENV_ID" \
-              --arg serviceId "$STAGING_SERVICE_ID" \
-              --argjson numReplicas 1 \
-              '{
-                query: "mutation($environmentId: String!, $serviceId: String!, $numReplicas: Int!) { serviceInstanceUpdate(environmentId: $environmentId, serviceId: $serviceId, input: { numReplicas: $numReplicas }) }",
-                variables: {
-                  environmentId: $environmentId,
-                  serviceId: $serviceId,
-                  numReplicas: $numReplicas
-                }
-              }')"
+          start_service() {
+            local service_id="$1"
+            local service_name="$2"
+
+            echo "Starting ${service_name}..."
+            curl --fail-with-body -X POST https://backboard.railway.com/graphql/v2 \
+              -H "Authorization: Bearer ${RAILWAY_TOKEN}" \
+              -H "Content-Type: application/json" \
+              -d "$(jq -n \
+                --arg environmentId "$STAGING_ENV_ID" \
+                --arg serviceId "$service_id" \
+                '{
+                  query: "mutation($environmentId: String!, $serviceId: String!) { serviceInstanceRedeploy(serviceId: $serviceId, environmentId: $environmentId) }",
+                  variables: {
+                    environmentId: $environmentId,
+                    serviceId: $serviceId
+                  }
+                }')"
+          }
+
+          start_service "$STAGING_DB_SERVICE_ID" "postgres"
+          start_service "$STAGING_SERVICE_ID" "app"
 
       - name: Stop staging (6:00 PM GMT+8)
         if: >-
@@ -51,20 +59,44 @@ jobs:
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
           STAGING_ENV_ID: ${{ secrets.STAGING_ENV_ID }}
+          STAGING_DB_SERVICE_ID: ${{ secrets.STAGING_DB_SERVICE_ID }}
           STAGING_SERVICE_ID: ${{ secrets.STAGING_SERVICE_ID }}
         run: |
-          curl --fail-with-body -X POST https://backboard.railway.app/graphql/v2 \
-            -H "Authorization: Bearer ${RAILWAY_TOKEN}" \
-            -H "Content-Type: application/json" \
-            -d "$(jq -n \
-              --arg environmentId "$STAGING_ENV_ID" \
-              --arg serviceId "$STAGING_SERVICE_ID" \
-              --argjson numReplicas 0 \
-              '{
-                query: "mutation($environmentId: String!, $serviceId: String!, $numReplicas: Int!) { serviceInstanceUpdate(environmentId: $environmentId, serviceId: $serviceId, input: { numReplicas: $numReplicas }) }",
-                variables: {
-                  environmentId: $environmentId,
-                  serviceId: $serviceId,
-                  numReplicas: $numReplicas
-                }
-              }')"
+          stop_service() {
+            local service_id="$1"
+            local service_name="$2"
+
+            echo "Stopping ${service_name}..."
+            DEPLOY_ID=$(curl -sf https://backboard.railway.com/graphql/v2 \
+              -H "Authorization: Bearer ${RAILWAY_TOKEN}" \
+              -H "Content-Type: application/json" \
+              -d "$(jq -n \
+                --arg environmentId "$STAGING_ENV_ID" \
+                --arg serviceId "$service_id" \
+                '{
+                  query: "query($environmentId: String!, $serviceId: String!) { deployments(first: 1, input: { serviceId: $serviceId, environmentId: $environmentId }) { edges { node { id } } } }",
+                  variables: {
+                    environmentId: $environmentId,
+                    serviceId: $serviceId
+                  }
+                }')" \
+              | jq -r '.data.deployments.edges[0].node.id')
+
+            if [ "$DEPLOY_ID" = "null" ] || [ -z "$DEPLOY_ID" ]; then
+              echo "No active deployment for ${service_name} — skipping."
+              return 0
+            fi
+
+            curl --fail-with-body -X POST https://backboard.railway.com/graphql/v2 \
+              -H "Authorization: Bearer ${RAILWAY_TOKEN}" \
+              -H "Content-Type: application/json" \
+              -d "$(jq -n \
+                --arg id "$DEPLOY_ID" \
+                '{
+                  query: "mutation($id: String!) { deploymentRemove(id: $id) }",
+                  variables: { id: $id }
+                }')"
+          }
+
+          stop_service "$STAGING_SERVICE_ID" "app"
+          stop_service "$STAGING_DB_SERVICE_ID" "postgres"
