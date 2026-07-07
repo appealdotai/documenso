@@ -34,7 +34,15 @@ jobs:
             -d "$(jq -n \
               --arg environmentId "$STAGING_ENV_ID" \
               --arg serviceId "$STAGING_SERVICE_ID" \
-              '{query: "mutation { serviceInstanceUpdate(environmentId: \($environmentId), serviceId: \($serviceId), input: { numReplicas: 1 }) }"}')"
+              --argjson numReplicas 1 \
+              '{
+                query: "mutation($environmentId: String!, $serviceId: String!, $numReplicas: Int!) { serviceInstanceUpdate(environmentId: $environmentId, serviceId: $serviceId, input: { numReplicas: $numReplicas }) }",
+                variables: {
+                  environmentId: $environmentId,
+                  serviceId: $serviceId,
+                  numReplicas: $numReplicas
+                }
+              }')"
 
       - name: Stop staging (6:00 PM GMT+8)
         if: >-
@@ -51,4 +59,12 @@ jobs:
             -d "$(jq -n \
               --arg environmentId "$STAGING_ENV_ID" \
               --arg serviceId "$STAGING_SERVICE_ID" \
-              '{query: "mutation { serviceInstanceUpdate(environmentId: \($environmentId), serviceId: \($serviceId), input: { numReplicas: 0 }) }"}')"
+              --argjson numReplicas 0 \
+              '{
+                query: "mutation($environmentId: String!, $serviceId: String!, $numReplicas: Int!) { serviceInstanceUpdate(environmentId: $environmentId, serviceId: $serviceId, input: { numReplicas: $numReplicas }) }",
+                variables: {
+                  environmentId: $environmentId,
+                  serviceId: $serviceId,
+                  numReplicas: $numReplicas
+                }
+              }')"
