@@ -1,4 +1,5 @@
 import { useOptionalSession } from '@documenso/lib/client-only/providers/session';
+import { getAppBrandConfig } from '@documenso/lib/constants/brand';
 import { cn } from '@documenso/ui/lib/utils';
 import { Button } from '@documenso/ui/primitives/button';
 import { i18n } from '@lingui/core';
@@ -11,8 +12,10 @@ import { GenericErrorLayout } from '~/components/general/generic-error-layout';
 import type { Route } from './+types/_layout';
 
 export function meta() {
+  const { productName } = getAppBrandConfig();
+
   return [
-    { title: i18n._(msg`Sign Document - Documenso`) },
+    { title: `${i18n._(msg`Sign Document`)} - ${productName}` },
     { name: 'robots', content: 'noindex, nofollow, noarchive, nosnippet, noimageindex' },
   ];
 }

@@ -1,5 +1,6 @@
 import { getOptionalSession } from '@documenso/auth/server/lib/utils/get-session';
 import { SessionProvider } from '@documenso/lib/client-only/providers/session';
+import { getAppBrandConfig, getAppBrandIconLinks } from '@documenso/lib/constants/brand';
 import { APP_I18N_OPTIONS, type SupportedLanguageCodes } from '@documenso/lib/constants/i18n';
 import { createPublicEnv } from '@documenso/lib/utils/env';
 import { extractLocaleData } from '@documenso/lib/utils/i18n';
@@ -117,16 +118,24 @@ export function LayoutContent({ children }: { children: React.ReactNode }) {
   // route tree, attached directly to document.body).
   const matches = useMatches();
   const isRecipientRoute = matches.some((m) => m.id?.startsWith('routes/_recipient+'));
+  const brandIconLinks = getAppBrandIconLinks();
+  const { manifestPath } = getAppBrandConfig();
 
   return (
     <html translate="no" lang={lang} data-theme={theme} className={theme ?? ''}>
       <head>
         <meta charSet="utf-8" />
-        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+        {brandIconLinks.map((icon) => (
+          <link
+            key={icon.href}
+            rel={icon.rel}
+            href={icon.href}
+            {...(icon.sizes ? { sizes: icon.sizes } : {})}
+            {...(icon.type ? { type: icon.type } : {})}
+          />
+        ))}
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="manifest" href="/site.webmanifest" />
+        <link rel="manifest" href={manifestPath} />
         <meta name="google" content="notranslate" />
         <Meta />
         <Links nonce={nonce(cspNonce)} />
