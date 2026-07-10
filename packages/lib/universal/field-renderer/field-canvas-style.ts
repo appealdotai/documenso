@@ -1,17 +1,21 @@
+import { isRequiredField } from '@documenso/lib/utils/advanced-fields-helpers';
 import {
   FIELD_PROBE_ANCHOR_SELECTOR,
   FIELD_ROOT_CONTAINER_PROBE_CLASS_NAME,
 } from '@documenso/ui/lib/field-root-container-classes';
+import type { Field } from '@prisma/client';
 import { colord } from 'colord';
-
 import type { FieldCanvasStyle, FieldRenderMode, FieldToRender } from './field-renderer';
 
 export type FieldCanvasStyleCache = Map<string, FieldCanvasStyle | undefined>;
 
 export const createFieldCanvasStyleCache = (): FieldCanvasStyleCache => new Map();
 
-export const getFieldCanvasStyleCacheKey = (field: FieldToRender) =>
-  `${field.type}:${field.inserted}:${field.fieldMeta?.readOnly ?? false}:${field.isValidating ?? false}`;
+export const getFieldCanvasStyleCacheKey = (field: FieldToRender) => {
+  const isRequired = !field.inserted && !field.fieldMeta?.readOnly && isRequiredField(field as unknown as Field);
+
+  return `${field.type}:${field.inserted}:${field.fieldMeta?.readOnly ?? false}:${field.isValidating ?? false}:${isRequired ? 'required' : 'optional'}`;
+};
 
 export const getPixelValue = (value: string) => {
   const parsedValue = Number.parseFloat(value);
@@ -85,6 +89,12 @@ const createFieldProbeElement = (field: FieldToRender): HTMLElement => {
   $probe.dataset.validate = field.isValidating ? 'true' : 'false';
   $probe.dataset.readonly = field.fieldMeta?.readOnly ? 'true' : 'false';
 
+  if (!field.inserted && !field.fieldMeta?.readOnly) {
+    $probe.dataset.fieldRequired = isRequiredField(field as unknown as Field) ? 'true' : 'false';
+  } else {
+    $probe.dataset.fieldRequired = 'false';
+  }
+
   Object.assign($probe.style, {
     position: 'absolute',
     width: '0',
@@ -106,8 +116,8 @@ const computeFieldCanvasStyleFromProbe = (field: FieldToRender): FieldCanvasStyl
   // The probe must be appended inside the same subtree as the real fields so it
   // inherits the identical CSS cascade. Custom embed CSS is typically scoped
   // under `.embed--DocumentContainer`; appending to `document.body` would resolve
-  // a different (wrong) cascade. If the anchor is absent (non-embed contexts),
-  // there is no custom field CSS to read, so we skip the probe entirely.
+  // a different (wrong) cascade. Fall back to `.documenso-branded` on recipient
+  // routes when the document container is not present.
   const $anchor = document.querySelector(FIELD_PROBE_ANCHOR_SELECTOR);
 
   if (!$anchor) {

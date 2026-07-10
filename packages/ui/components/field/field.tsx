@@ -2,7 +2,7 @@ import { useElementBounds } from '@documenso/lib/client-only/hooks/use-element-b
 import { useFieldPageCoords } from '@documenso/lib/client-only/hooks/use-field-page-coords';
 import { useIsPageInDom } from '@documenso/lib/client-only/hooks/use-is-page-in-dom';
 import { PDF_VIEWER_CONTENT_SELECTOR, PDF_VIEWER_PAGE_SELECTOR } from '@documenso/lib/constants/pdf-viewer';
-import { isFieldUnsignedAndRequired } from '@documenso/lib/utils/advanced-fields-helpers';
+import { isFieldUnsignedAndRequired, isRequiredField } from '@documenso/lib/utils/advanced-fields-helpers';
 import { type Field, FieldType } from '@prisma/client';
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -109,6 +109,9 @@ export function FieldRootContainer({ field, children, color, className, readonly
     return null;
   }
 
+  const isReadOnly = Boolean(readonly);
+  const showSigningHighlight = !field.inserted && !isReadOnly;
+
   return (
     <FieldContainerPortal field={field}>
       <div
@@ -116,14 +119,15 @@ export function FieldRootContainer({ field, children, color, className, readonly
         ref={ref}
         data-field-type={field.type}
         data-inserted={field.inserted ? 'true' : 'false'}
-        data-readonly={readonly ? 'true' : 'false'}
+        data-readonly={isReadOnly ? 'true' : 'false'}
+        data-field-required={showSigningHighlight && isRequiredField(field) ? 'true' : 'false'}
+        data-validate={isValidating && isFieldUnsignedAndRequired(field) ? 'true' : 'false'}
         className={cn(
           FIELD_ROOT_CONTAINER_CLASS_NAME,
           color?.base,
           {
             'px-2': field.type !== FieldType.SIGNATURE && field.type !== FieldType.FREE_SIGNATURE,
             'justify-center': !field.inserted,
-            'ring-orange-300': isValidating && isFieldUnsignedAndRequired(field),
           },
           className,
         )}

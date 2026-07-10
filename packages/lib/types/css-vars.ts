@@ -23,6 +23,24 @@ export const ZCssVarsSchema = z
     fieldCard: z.string().optional().describe('Field card background color'),
     fieldCardBorder: z.string().optional().describe('Field card border color'),
     fieldCardForeground: z.string().optional().describe('Field card text color'),
+    fieldRequiredCard: z.string().optional().describe('Required unsigned field background color'),
+    fieldRequiredCardBorder: z.string().optional().describe('Required unsigned field border color'),
+    fieldRequiredCardBorderWidth: z
+      .string()
+      .regex(CSS_LENGTH_REGEX, 'Must be a CSS length such as 2px, 0.125rem, or 0')
+      .optional()
+      .describe('Required unsigned field border width'),
+    fieldOptionalCard: z.string().optional().describe('Optional unsigned field background color'),
+    fieldOptionalCardBorder: z.string().optional().describe('Optional unsigned field border color'),
+    fieldOptionalCardBorderWidth: z
+      .string()
+      .regex(CSS_LENGTH_REGEX, 'Must be a CSS length such as 2px, 0.125rem, or 0')
+      .optional()
+      .describe('Optional unsigned field border width'),
+    fieldValidationCardBorder: z
+      .string()
+      .optional()
+      .describe('Border colour for required fields highlighted during validation'),
     widget: z.string().optional().describe('Widget background color'),
     widgetForeground: z.string().optional().describe('Widget text color'),
     border: z.string().optional().describe('Default border color'),

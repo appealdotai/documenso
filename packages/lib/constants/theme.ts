@@ -32,6 +32,11 @@ export const DEFAULT_BRAND_COLORS = {
   fieldCard: '#e2f8d3', //               95 74% 90%
   fieldCardBorder: '#a2e771', //         95.08 71.08% 67.45%
   fieldCardForeground: '#0f172a', //     222.2 47.4% 11.2%
+  fieldRequiredCard: '#e2f8d3', //       95 74% 90%
+  fieldRequiredCardBorder: '#a2e771', // 95.08 71.08% 67.45%
+  fieldOptionalCard: '#ffffff', //       0 0% 100%
+  fieldOptionalCardBorder: '#e2e8f0', // 214.3 31.8% 91.4%
+  fieldValidationCardBorder: '#fdba74', // orange-300
   widget: '#f7f7f7', //                  0 0% 97%
   widgetForeground: '#f2f2f2', //        0 0% 95%
   border: '#e2e8f0', //                  214.3 31.8% 91.4%
@@ -53,6 +58,17 @@ export const DEFAULT_BRAND_COLORS = {
   // not flow through `toNativeCssVars` and is not user-customisable from the
   // branding form. `radius` is a length, not a colour, so it lives in
   // `DEFAULT_BRAND_RADIUS` below.
-} as const satisfies Record<keyof Omit<TCssVarsSchema, 'radius' | 'cardBorderTint'>, string>;
+} as const satisfies Record<
+  keyof Omit<
+    TCssVarsSchema,
+    'radius' | 'cardBorderTint' | 'fieldRequiredCardBorderWidth' | 'fieldOptionalCardBorderWidth'
+  >,
+  string
+>;
 
 export const DEFAULT_BRAND_RADIUS = '0.5rem';
+
+export const DEFAULT_BRAND_LENGTHS = {
+  fieldRequiredCardBorderWidth: '2px',
+  fieldOptionalCardBorderWidth: '2px',
+} as const satisfies Partial<Pick<TCssVarsSchema, 'fieldRequiredCardBorderWidth' | 'fieldOptionalCardBorderWidth'>>;
