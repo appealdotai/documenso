@@ -97,8 +97,8 @@ const createFieldProbeElement = (field: FieldToRender): HTMLElement => {
 
   Object.assign($probe.style, {
     position: 'absolute',
-    width: '0',
-    height: '0',
+    width: '48px',
+    height: '24px',
     overflow: 'hidden',
     pointerEvents: 'none',
     visibility: 'hidden',
@@ -106,6 +106,90 @@ const createFieldProbeElement = (field: FieldToRender): HTMLElement => {
   } satisfies Partial<CSSStyleDeclaration>);
 
   return $probe;
+};
+
+const getCssVarHslColor = (element: Element, variableName: string, alpha?: number) => {
+  const value = getComputedStyle(element).getPropertyValue(variableName).trim();
+
+  if (!value) {
+    return undefined;
+  }
+
+  if (alpha !== undefined) {
+    return `hsl(${value} / ${alpha})`;
+  }
+
+  return `hsl(${value})`;
+};
+
+const resolveFieldCanvasStyleFromCssVars = (field: FieldToRender): FieldCanvasStyle | undefined => {
+  if (typeof document === 'undefined') {
+    return undefined;
+  }
+
+  const $styleSource = document.querySelector('.documenso-branded') ?? document.documentElement;
+
+  if (field.inserted || field.fieldMeta?.readOnly) {
+    return {
+      backgroundColor: getRenderableColor(getCssVarHslColor($styleSource, '--field-optional-card', 0.9)),
+      borderColor: getRenderableColor(getCssVarHslColor($styleSource, '--field-optional-card-border')),
+      borderWidth: getPixelValue(
+        getComputedStyle($styleSource).getPropertyValue('--field-optional-card-border-width').trim() || '2px',
+      ),
+      borderRadius: 2,
+    };
+  }
+
+  const isRequired = isRequiredField(field as unknown as Field);
+  const isValidating = Boolean(field.isValidating && isRequired);
+
+  if (isValidating) {
+    return {
+      backgroundColor: getRenderableColor(getCssVarHslColor($styleSource, '--field-required-card', 0.9)),
+      borderColor: getRenderableColor(getCssVarHslColor($styleSource, '--field-validation-card-border')),
+      borderWidth: getPixelValue(
+        getComputedStyle($styleSource).getPropertyValue('--field-required-card-border-width').trim() || '2px',
+      ),
+      borderRadius: 2,
+    };
+  }
+
+  if (isRequired) {
+    return {
+      backgroundColor: getRenderableColor(getCssVarHslColor($styleSource, '--field-required-card', 0.9)),
+      borderColor: getRenderableColor(getCssVarHslColor($styleSource, '--field-required-card-border')),
+      borderWidth: getPixelValue(
+        getComputedStyle($styleSource).getPropertyValue('--field-required-card-border-width').trim() || '2px',
+      ),
+      borderRadius: 2,
+    };
+  }
+
+  return {
+    backgroundColor: getRenderableColor(getCssVarHslColor($styleSource, '--field-optional-card', 0.9)),
+    borderColor: getRenderableColor(getCssVarHslColor($styleSource, '--field-optional-card-border')),
+    borderWidth: getPixelValue(
+      getComputedStyle($styleSource).getPropertyValue('--field-optional-card-border-width').trim() || '2px',
+    ),
+    borderRadius: 2,
+  };
+};
+
+const mergeFieldCanvasStyles = (
+  primary: FieldCanvasStyle | undefined,
+  fallback: FieldCanvasStyle | undefined,
+): FieldCanvasStyle | undefined => {
+  if (!primary && !fallback) {
+    return undefined;
+  }
+
+  return {
+    backgroundColor: primary?.backgroundColor ?? fallback?.backgroundColor,
+    borderColor: primary?.borderColor ?? fallback?.borderColor,
+    borderRadius: primary?.borderRadius ?? fallback?.borderRadius,
+    borderWidth: primary?.borderWidth ?? fallback?.borderWidth,
+    opacity: primary?.opacity ?? fallback?.opacity,
+  };
 };
 
 const computeFieldCanvasStyleFromProbe = (field: FieldToRender): FieldCanvasStyle | undefined => {
@@ -170,7 +254,9 @@ export const resolveFieldCanvasStyle = (
     return cache.get(cacheKey);
   }
 
-  const style = computeFieldCanvasStyleFromProbe(field);
+  const probeStyle = computeFieldCanvasStyleFromProbe(field);
+  const cssVarStyle = resolveFieldCanvasStyleFromCssVars(field);
+  const style = mergeFieldCanvasStyles(probeStyle, cssVarStyle);
 
   cache?.set(cacheKey, style);
 

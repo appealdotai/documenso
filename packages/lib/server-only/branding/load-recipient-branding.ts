@@ -1,6 +1,7 @@
 import { IS_BILLING_ENABLED } from '../../constants/app';
 import type { TCssVarsSchema } from '../../types/css-vars';
 import { ZCssVarsSchema } from '../../types/css-vars';
+import { resolveSigningFieldHighlightColors } from '../../utils/signing-field-highlight-colors';
 import { getOrganisationClaimByTeamId } from '../organisation/get-organisation-claims';
 import { getTeamSettings } from '../team/get-team-settings';
 
@@ -39,7 +40,11 @@ export const loadRecipientBrandingByTeamId = async ({
     allowCustomBranding = false;
   }
 
-  if (!allowCustomBranding) {
+  const parsedColors = settings.brandingColors ? ZCssVarsSchema.safeParse(settings.brandingColors) : null;
+  const savedColors = parsedColors?.success ? parsedColors.data : null;
+  const fieldHighlightColors = settings.brandingEnabled ? resolveSigningFieldHighlightColors(savedColors) : null;
+
+  if (!allowCustomBranding && !fieldHighlightColors) {
     return {
       allowCustomBranding: false,
       hidePoweredBy,
@@ -49,14 +54,16 @@ export const loadRecipientBrandingByTeamId = async ({
     };
   }
 
-  // brandingColors is stored as JSON; parse defensively. Drop unknown keys via Zod.
-  const parsedColors = settings.brandingColors ? ZCssVarsSchema.safeParse(settings.brandingColors) : null;
+  const mergedColors: TCssVarsSchema = {
+    ...(allowCustomBranding && savedColors ? savedColors : {}),
+    ...(fieldHighlightColors ?? {}),
+  };
 
   return {
-    allowCustomBranding: true,
+    allowCustomBranding: allowCustomBranding || fieldHighlightColors !== null,
     hidePoweredBy,
     recipientForceLightMode: settings.recipientForceLightMode,
-    colors: parsedColors?.success ? parsedColors.data : null,
-    css: settings.brandingCss && settings.brandingCss.length > 0 ? settings.brandingCss : null,
+    colors: Object.keys(mergedColors).length > 0 ? mergedColors : null,
+    css: allowCustomBranding && settings.brandingCss && settings.brandingCss.length > 0 ? settings.brandingCss : null,
   };
 };

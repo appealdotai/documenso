@@ -236,7 +236,10 @@ export const InboxTableActionButton = ({ row }: InboxTableActionButtonProps) => 
             token={recipient.token}
             onRejected={handleRejected}
             trigger={
-              <Button variant="outline" className="w-28 text-destructive hover:text-destructive">
+              <Button
+                variant="outline"
+                className="w-28 border-destructive/60 bg-destructive/10 text-destructive hover:border-destructive hover:bg-destructive/15 hover:text-destructive dark:border-destructive/70 dark:bg-destructive/20 dark:hover:bg-destructive/30"
+              >
                 <BanIcon className="mr-2 -ml-1 h-4 w-4" />
                 <Trans>Reject</Trans>
               </Button>
