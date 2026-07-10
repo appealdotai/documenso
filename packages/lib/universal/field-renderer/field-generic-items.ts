@@ -120,70 +120,47 @@ type CreateFieldHoverInteractionOptions = {
 };
 
 /**
- * Adds smooth transition-like behavior for hover effects to the field group and rectangle.
+ * Adds smooth transition-like behavior for hover effects on the field border.
  */
 export const createFieldHoverInteraction = ({ options, fieldGroup, fieldRect }: CreateFieldHoverInteractionOptions) => {
-  const { mode } = options;
+  const { mode, fieldCanvasStyle } = options;
 
-  if (mode === 'export' || !options.color) {
+  if (mode === 'export' || mode !== 'sign') {
     return;
   }
 
-  if (options.fieldCanvasStyle?.backgroundColor) {
+  const defaultStroke = fieldCanvasStyle?.borderColor;
+  const hoverStroke = fieldCanvasStyle?.borderHoverColor;
+
+  if (!defaultStroke || !hoverStroke) {
     return;
   }
-
-  const hoverColor = getRecipientColorStyles(options.color).baseRingHover;
 
   fieldGroup.on('mouseover', () => {
     const layer = fieldRect.getLayer();
+
     if (!layer) {
       return;
     }
 
     new Konva.Tween({
       node: fieldRect,
-      duration: 0.3,
-      fill: hoverColor,
+      duration: 0.2,
+      stroke: hoverStroke,
     }).play();
   });
 
   fieldGroup.on('mouseout', () => {
     const layer = fieldRect.getLayer();
+
     if (!layer) {
       return;
     }
 
     new Konva.Tween({
       node: fieldRect,
-      duration: 0.3,
-      fill: DEFAULT_RECT_BACKGROUND,
-    }).play();
-  });
-
-  fieldGroup.on('transformstart', () => {
-    const layer = fieldRect.getLayer();
-    if (!layer) {
-      return;
-    }
-
-    new Konva.Tween({
-      node: fieldRect,
-      duration: 0.3,
-      fill: hoverColor,
-    }).play();
-  });
-
-  fieldGroup.on('transformend', () => {
-    const layer = fieldRect.getLayer();
-    if (!layer) {
-      return;
-    }
-
-    new Konva.Tween({
-      node: fieldRect,
-      duration: 0.3,
-      fill: DEFAULT_RECT_BACKGROUND,
+      duration: 0.2,
+      stroke: defaultStroke,
     }).play();
   });
 };

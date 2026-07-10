@@ -1,17 +1,26 @@
+import type { TCssVarsSchema } from '@documenso/lib/types/css-vars';
+import { isRequiredField } from '@documenso/lib/utils/advanced-fields-helpers';
+import {
+  getSigningFieldHighlightCacheKey,
+  resolveFieldCanvasStyleFromBrandingColors,
+} from '@documenso/lib/utils/signing-field-highlight-colors';
 import {
   FIELD_PROBE_ANCHOR_SELECTOR,
   FIELD_ROOT_CONTAINER_PROBE_CLASS_NAME,
 } from '@documenso/ui/lib/field-root-container-classes';
+import type { Field } from '@prisma/client';
 import { colord } from 'colord';
-
 import type { FieldCanvasStyle, FieldRenderMode, FieldToRender } from './field-renderer';
 
 export type FieldCanvasStyleCache = Map<string, FieldCanvasStyle | undefined>;
 
 export const createFieldCanvasStyleCache = (): FieldCanvasStyleCache => new Map();
 
-export const getFieldCanvasStyleCacheKey = (field: FieldToRender) =>
-  `${field.type}:${field.inserted}:${field.fieldMeta?.readOnly ?? false}:${field.isValidating ?? false}`;
+export const getFieldCanvasStyleCacheKey = (field: FieldToRender) => {
+  const isRequired = !field.inserted && !field.fieldMeta?.readOnly && isRequiredField(field as unknown as Field);
+
+  return `${field.type}:${field.inserted}:${field.fieldMeta?.readOnly ?? false}:${field.isValidating ?? false}:${isRequired ? 'required' : 'optional'}`;
+};
 
 export const getPixelValue = (value: string) => {
   const parsedValue = Number.parseFloat(value);
@@ -85,10 +94,16 @@ const createFieldProbeElement = (field: FieldToRender): HTMLElement => {
   $probe.dataset.validate = field.isValidating ? 'true' : 'false';
   $probe.dataset.readonly = field.fieldMeta?.readOnly ? 'true' : 'false';
 
+  if (!field.inserted && !field.fieldMeta?.readOnly) {
+    $probe.dataset.fieldRequired = isRequiredField(field as unknown as Field) ? 'true' : 'false';
+  } else {
+    $probe.dataset.fieldRequired = 'false';
+  }
+
   Object.assign($probe.style, {
     position: 'absolute',
-    width: '0',
-    height: '0',
+    width: '48px',
+    height: '24px',
     overflow: 'hidden',
     pointerEvents: 'none',
     visibility: 'hidden',
@@ -96,6 +111,93 @@ const createFieldProbeElement = (field: FieldToRender): HTMLElement => {
   } satisfies Partial<CSSStyleDeclaration>);
 
   return $probe;
+};
+
+const getCssVarHslColor = (element: Element, variableName: string, alpha?: number) => {
+  const value = getComputedStyle(element).getPropertyValue(variableName).trim();
+
+  if (!value) {
+    return undefined;
+  }
+
+  if (alpha !== undefined) {
+    return `hsl(${value} / ${alpha})`;
+  }
+
+  return `hsl(${value})`;
+};
+
+const resolveFieldCanvasStyleFromCssVars = (field: FieldToRender): FieldCanvasStyle | undefined => {
+  if (typeof document === 'undefined') {
+    return undefined;
+  }
+
+  const $styleSource = document.querySelector('.documenso-branded') ?? document.documentElement;
+
+  if (field.inserted || field.fieldMeta?.readOnly) {
+    return {
+      backgroundColor: getRenderableColor(getCssVarHslColor($styleSource, '--field-optional-card', 0.9)),
+      borderColor: getRenderableColor(getCssVarHslColor($styleSource, '--field-optional-card-border')),
+      borderWidth: getPixelValue(
+        getComputedStyle($styleSource).getPropertyValue('--field-optional-card-border-width').trim() || '2px',
+      ),
+      borderRadius: 2,
+    };
+  }
+
+  const isRequired = isRequiredField(field as unknown as Field);
+  const isValidating = Boolean(field.isValidating && isRequired);
+
+  if (isValidating) {
+    return {
+      backgroundColor: getRenderableColor(getCssVarHslColor($styleSource, '--field-required-card', 0.9)),
+      borderColor: getRenderableColor(getCssVarHslColor($styleSource, '--field-validation-card-border')),
+      borderWidth: getPixelValue(
+        getComputedStyle($styleSource).getPropertyValue('--field-required-card-border-width').trim() || '2px',
+      ),
+      borderRadius: 2,
+    };
+  }
+
+  if (isRequired) {
+    return {
+      backgroundColor: getRenderableColor(getCssVarHslColor($styleSource, '--field-required-card', 0.9)),
+      borderColor: getRenderableColor(getCssVarHslColor($styleSource, '--field-required-card-border')),
+      borderHoverColor: getRenderableColor(getCssVarHslColor($styleSource, '--field-required-card-border-hover')),
+      borderWidth: getPixelValue(
+        getComputedStyle($styleSource).getPropertyValue('--field-required-card-border-width').trim() || '2px',
+      ),
+      borderRadius: 2,
+    };
+  }
+
+  return {
+    backgroundColor: getRenderableColor(getCssVarHslColor($styleSource, '--field-optional-card', 0.9)),
+    borderColor: getRenderableColor(getCssVarHslColor($styleSource, '--field-optional-card-border')),
+    borderHoverColor: getRenderableColor(getCssVarHslColor($styleSource, '--field-optional-card-border-hover')),
+    borderWidth: getPixelValue(
+      getComputedStyle($styleSource).getPropertyValue('--field-optional-card-border-width').trim() || '2px',
+    ),
+    borderRadius: 2,
+  };
+};
+
+const mergeFieldCanvasStyles = (
+  primary: FieldCanvasStyle | undefined,
+  fallback: FieldCanvasStyle | undefined,
+): FieldCanvasStyle | undefined => {
+  if (!primary && !fallback) {
+    return undefined;
+  }
+
+  return {
+    backgroundColor: primary?.backgroundColor ?? fallback?.backgroundColor,
+    borderColor: primary?.borderColor ?? fallback?.borderColor,
+    borderHoverColor: primary?.borderHoverColor ?? fallback?.borderHoverColor,
+    borderRadius: primary?.borderRadius ?? fallback?.borderRadius,
+    borderWidth: primary?.borderWidth ?? fallback?.borderWidth,
+    opacity: primary?.opacity ?? fallback?.opacity,
+  };
 };
 
 const computeFieldCanvasStyleFromProbe = (field: FieldToRender): FieldCanvasStyle | undefined => {
@@ -106,8 +208,8 @@ const computeFieldCanvasStyleFromProbe = (field: FieldToRender): FieldCanvasStyl
   // The probe must be appended inside the same subtree as the real fields so it
   // inherits the identical CSS cascade. Custom embed CSS is typically scoped
   // under `.embed--DocumentContainer`; appending to `document.body` would resolve
-  // a different (wrong) cascade. If the anchor is absent (non-embed contexts),
-  // there is no custom field CSS to read, so we skip the probe entirely.
+  // a different (wrong) cascade. Fall back to `.documenso-branded` on recipient
+  // routes when the document container is not present.
   const $anchor = document.querySelector(FIELD_PROBE_ANCHOR_SELECTOR);
 
   if (!$anchor) {
@@ -149,18 +251,22 @@ export const resolveFieldCanvasStyle = (
   field: FieldToRender,
   mode: FieldRenderMode,
   cache?: FieldCanvasStyleCache,
+  brandingColors?: TCssVarsSchema | null,
 ): FieldCanvasStyle | undefined => {
   if (mode !== 'sign') {
     return undefined;
   }
 
-  const cacheKey = getFieldCanvasStyleCacheKey(field);
+  const cacheKey = `${getFieldCanvasStyleCacheKey(field)}:${getSigningFieldHighlightCacheKey(brandingColors)}`;
 
   if (cache?.has(cacheKey)) {
     return cache.get(cacheKey);
   }
 
-  const style = computeFieldCanvasStyleFromProbe(field);
+  const brandingStyle = resolveFieldCanvasStyleFromBrandingColors(field, brandingColors);
+  const probeStyle = computeFieldCanvasStyleFromProbe(field);
+  const cssVarStyle = resolveFieldCanvasStyleFromCssVars(field);
+  const style = mergeFieldCanvasStyles(brandingStyle, mergeFieldCanvasStyles(probeStyle, cssVarStyle));
 
   cache?.set(cacheKey, style);
 

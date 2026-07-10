@@ -3,6 +3,7 @@ import { isBase64Image } from '@documenso/lib/constants/signatures';
 import { DEFAULT_DOCUMENT_TIME_ZONE } from '@documenso/lib/constants/time-zones';
 import { DO_NOT_INVALIDATE_QUERY_ON_MUTATION } from '@documenso/lib/constants/trpc';
 import type { EnvelopeForSigningResponse } from '@documenso/lib/server-only/envelope/get-envelope-for-recipient-signing';
+import type { TCssVarsSchema } from '@documenso/lib/types/css-vars';
 import type { TRecipientActionAuth } from '@documenso/lib/types/document-auth';
 import { DocumentAuth } from '@documenso/lib/types/document-auth';
 import { isFieldUnsignedAndRequired, isRequiredField } from '@documenso/lib/utils/advanced-fields-helpers';
@@ -49,6 +50,8 @@ export type EnvelopeSigningContextValue = {
   setSelectedAssistantRecipientId: (_value: number | null) => void;
   selectedAssistantRecipient: EnvelopeForSigningResponse['envelope']['recipients'][number] | null;
 
+  signingFieldHighlightColors: TCssVarsSchema | null;
+
   signField: (
     _fieldId: number,
     _value: TSignEnvelopeFieldValue,
@@ -77,6 +80,7 @@ export interface EnvelopeSigningProviderProps {
   email?: string | null;
   signature?: string | null;
   envelopeData: EnvelopeForSigningResponse;
+  signingFieldHighlightColors?: TCssVarsSchema | null;
   children: React.ReactNode;
 }
 
@@ -144,6 +148,7 @@ export const EnvelopeSigningProvider = ({
   email: initialEmail,
   signature: initialSignature,
   envelopeData: initialEnvelopeData,
+  signingFieldHighlightColors = null,
   children,
 }: EnvelopeSigningProviderProps) => {
   const [envelopeData, setEnvelopeData] = useState(() => prefillDateFields(initialEnvelopeData));
@@ -452,6 +457,8 @@ export const EnvelopeSigningProvider = ({
         setSelectedAssistantRecipientId,
         selectedAssistantRecipient,
         selectedAssistantRecipientFields,
+
+        signingFieldHighlightColors,
 
         signField,
       }}

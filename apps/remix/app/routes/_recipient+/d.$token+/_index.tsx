@@ -7,6 +7,7 @@ import { getEnvelopeForDirectTemplateSigning } from '@documenso/lib/server-only/
 import { getTemplateByDirectLinkToken } from '@documenso/lib/server-only/template/get-template-by-direct-link-token';
 import { DocumentAccessAuth } from '@documenso/lib/types/document-auth';
 import { extractDocumentAuthMethods } from '@documenso/lib/utils/document-auth';
+import { resolveSigningFieldHighlightColors } from '@documenso/lib/utils/signing-field-highlight-colors';
 import { prisma } from '@documenso/prisma';
 import { Plural } from '@lingui/react/macro';
 import { UsersIcon } from 'lucide-react';
@@ -166,7 +167,14 @@ export default function DirectTemplatePage() {
   return (
     <>
       <RecipientBranding branding={data.branding} cspNonce={cspNonce} />
-      {data.version === 2 ? <DirectSigningPageV2 data={data.payload} /> : <DirectSigningPageV1 data={data.payload} />}
+      {data.version === 2 ? (
+        <DirectSigningPageV2
+          data={data.payload}
+          signingFieldHighlightColors={resolveSigningFieldHighlightColors(data.branding?.colors)}
+        />
+      ) : (
+        <DirectSigningPageV1 data={data.payload} />
+      )}
     </>
   );
 }
@@ -226,7 +234,13 @@ const DirectSigningPageV1 = ({ data }: { data: Awaited<ReturnType<typeof handleV
   );
 };
 
-const DirectSigningPageV2 = ({ data }: { data: Awaited<ReturnType<typeof handleV2Loader>> }) => {
+const DirectSigningPageV2 = ({
+  data,
+  signingFieldHighlightColors,
+}: {
+  data: Awaited<ReturnType<typeof handleV2Loader>>;
+  signingFieldHighlightColors: ReturnType<typeof resolveSigningFieldHighlightColors>;
+}) => {
   const { sessionData } = useOptionalSession();
 
   const user = sessionData?.user;
@@ -249,6 +263,7 @@ const DirectSigningPageV2 = ({ data }: { data: Awaited<ReturnType<typeof handleV
       email={isEmailForced ? user?.email || '' : ''} // Doing this allows us to let users change the email if they want to for non-auth templates.
       fullName={user?.name}
       signature={user?.signature}
+      signingFieldHighlightColors={signingFieldHighlightColors}
     >
       <DocumentSigningAuthProvider documentAuthOptions={envelope.authOptions} recipient={recipient} user={user}>
         <EnvelopeRenderProvider

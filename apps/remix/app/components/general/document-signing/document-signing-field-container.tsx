@@ -2,7 +2,6 @@ import type { TRecipientActionAuth } from '@documenso/lib/types/document-auth';
 import { ZFieldMetaSchema } from '@documenso/lib/types/field-meta';
 import type { FieldWithSignature } from '@documenso/prisma/types/field-with-signature';
 import { FieldRootContainer } from '@documenso/ui/components/field/field';
-import { getRecipientColorStyles } from '@documenso/ui/lib/recipient-colors';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@documenso/ui/primitives/tooltip';
 import { Trans } from '@lingui/react/macro';
 import { FieldType } from '@prisma/client';
@@ -123,7 +122,7 @@ export const DocumentSigningFieldContainer = ({
   };
 
   return (
-    <FieldRootContainer color={getRecipientColorStyles(field.fieldMeta?.readOnly ? 'readOnly' : 0)} field={field}>
+    <FieldRootContainer field={field} readonly={readOnlyField}>
       {!field.inserted && !loading && !readOnlyField && (
         <button
           type="submit"
