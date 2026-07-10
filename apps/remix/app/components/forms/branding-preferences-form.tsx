@@ -1,6 +1,6 @@
 import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
 import { NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
-import { DEFAULT_BRAND_COLORS, DEFAULT_BRAND_RADIUS } from '@documenso/lib/constants/theme';
+import { DEFAULT_BRAND_COLORS, DEFAULT_BRAND_LENGTHS, DEFAULT_BRAND_RADIUS } from '@documenso/lib/constants/theme';
 import { ZCssVarsSchema } from '@documenso/lib/types/css-vars';
 import { cn } from '@documenso/ui/lib/utils';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@documenso/ui/primitives/accordion';
@@ -679,6 +679,29 @@ export function BrandingPreferencesForm({
                         )}
                       />
                     </div>
+
+                    <FormField
+                      control={form.control}
+                      name="brandingColors.fieldRequiredCardBorderWidth"
+                      render={({ field }) => (
+                        <FormItem className="mt-4 max-w-xs">
+                          <FormLabel>
+                            <Trans>Border width</Trans>
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              type="text"
+                              placeholder={DEFAULT_BRAND_LENGTHS.fieldRequiredCardBorderWidth}
+                              value={field.value ?? ''}
+                              onChange={(e) => field.onChange(e.target.value)}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            <Trans>Border width in px or rem (e.g. 2px).</Trans>
+                          </FormDescription>
+                        </FormItem>
+                      )}
+                    />
                   </div>
 
                   <div>
@@ -748,6 +771,29 @@ export function BrandingPreferencesForm({
                         )}
                       />
                     </div>
+
+                    <FormField
+                      control={form.control}
+                      name="brandingColors.fieldOptionalCardBorderWidth"
+                      render={({ field }) => (
+                        <FormItem className="mt-4 max-w-xs">
+                          <FormLabel>
+                            <Trans>Border width</Trans>
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              type="text"
+                              placeholder={DEFAULT_BRAND_LENGTHS.fieldOptionalCardBorderWidth}
+                              value={field.value ?? ''}
+                              onChange={(e) => field.onChange(e.target.value)}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            <Trans>Border width in px or rem (e.g. 2px).</Trans>
+                          </FormDescription>
+                        </FormItem>
+                      )}
+                    />
                   </div>
 
                   <div>
