@@ -163,6 +163,7 @@ const resolveFieldCanvasStyleFromCssVars = (field: FieldToRender): FieldCanvasSt
     return {
       backgroundColor: getRenderableColor(getCssVarHslColor($styleSource, '--field-required-card', 0.9)),
       borderColor: getRenderableColor(getCssVarHslColor($styleSource, '--field-required-card-border')),
+      borderHoverColor: getRenderableColor(getCssVarHslColor($styleSource, '--field-required-card-border-hover')),
       borderWidth: getPixelValue(
         getComputedStyle($styleSource).getPropertyValue('--field-required-card-border-width').trim() || '2px',
       ),
@@ -173,6 +174,7 @@ const resolveFieldCanvasStyleFromCssVars = (field: FieldToRender): FieldCanvasSt
   return {
     backgroundColor: getRenderableColor(getCssVarHslColor($styleSource, '--field-optional-card', 0.9)),
     borderColor: getRenderableColor(getCssVarHslColor($styleSource, '--field-optional-card-border')),
+    borderHoverColor: getRenderableColor(getCssVarHslColor($styleSource, '--field-optional-card-border-hover')),
     borderWidth: getPixelValue(
       getComputedStyle($styleSource).getPropertyValue('--field-optional-card-border-width').trim() || '2px',
     ),
@@ -191,6 +193,7 @@ const mergeFieldCanvasStyles = (
   return {
     backgroundColor: primary?.backgroundColor ?? fallback?.backgroundColor,
     borderColor: primary?.borderColor ?? fallback?.borderColor,
+    borderHoverColor: primary?.borderHoverColor ?? fallback?.borderHoverColor,
     borderRadius: primary?.borderRadius ?? fallback?.borderRadius,
     borderWidth: primary?.borderWidth ?? fallback?.borderWidth,
     opacity: primary?.opacity ?? fallback?.opacity,

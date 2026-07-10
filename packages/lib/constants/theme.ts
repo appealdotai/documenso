@@ -34,8 +34,10 @@ export const DEFAULT_BRAND_COLORS = {
   fieldCardForeground: '#0f172a', //     222.2 47.4% 11.2%
   fieldRequiredCard: '#e2f8d3', //       95 74% 90%
   fieldRequiredCardBorder: '#a2e771', // 95.08 71.08% 67.45%
+  fieldRequiredCardBorderHover: '#7db83a', // darker green
   fieldOptionalCard: '#ffffff', //       0 0% 100%
   fieldOptionalCardBorder: '#e2e8f0', // 214.3 31.8% 91.4%
+  fieldOptionalCardBorderHover: '#94a3b8', // slate-400
   fieldValidationCardBorder: '#fdba74', // orange-300
   widget: '#f7f7f7', //                  0 0% 97%
   widgetForeground: '#f2f2f2', //        0 0% 95%

@@ -8,9 +8,11 @@ import { isRequiredField } from './advanced-fields-helpers';
 export const SIGNING_FIELD_HIGHLIGHT_COLOR_KEYS = [
   'fieldRequiredCard',
   'fieldRequiredCardBorder',
+  'fieldRequiredCardBorderHover',
   'fieldRequiredCardBorderWidth',
   'fieldOptionalCard',
   'fieldOptionalCardBorder',
+  'fieldOptionalCardBorderHover',
   'fieldOptionalCardBorderWidth',
   'fieldValidationCardBorder',
 ] as const satisfies readonly (keyof TCssVarsSchema)[];
@@ -20,9 +22,11 @@ export type SigningFieldHighlightColorKey = (typeof SIGNING_FIELD_HIGHLIGHT_COLO
 const DEFAULT_SIGNING_FIELD_HIGHLIGHT_COLORS: Pick<TCssVarsSchema, SigningFieldHighlightColorKey> = {
   fieldRequiredCard: DEFAULT_BRAND_COLORS.fieldRequiredCard,
   fieldRequiredCardBorder: DEFAULT_BRAND_COLORS.fieldRequiredCardBorder,
+  fieldRequiredCardBorderHover: DEFAULT_BRAND_COLORS.fieldRequiredCardBorderHover,
   fieldRequiredCardBorderWidth: DEFAULT_BRAND_LENGTHS.fieldRequiredCardBorderWidth,
   fieldOptionalCard: DEFAULT_BRAND_COLORS.fieldOptionalCard,
   fieldOptionalCardBorder: DEFAULT_BRAND_COLORS.fieldOptionalCardBorder,
+  fieldOptionalCardBorderHover: DEFAULT_BRAND_COLORS.fieldOptionalCardBorderHover,
   fieldOptionalCardBorderWidth: DEFAULT_BRAND_LENGTHS.fieldOptionalCardBorderWidth,
   fieldValidationCardBorder: DEFAULT_BRAND_COLORS.fieldValidationCardBorder,
 };
@@ -115,6 +119,7 @@ export const resolveFieldCanvasStyleFromBrandingColors = (
     return {
       backgroundColor: colorToCanvasColor(colors.fieldOptionalCard, 0.9),
       borderColor: colorToCanvasColor(colors.fieldOptionalCardBorder),
+      borderHoverColor: colorToCanvasColor(colors.fieldOptionalCardBorderHover),
       borderWidth: parsePixelValue(
         colors.fieldOptionalCardBorderWidth ?? DEFAULT_BRAND_LENGTHS.fieldOptionalCardBorderWidth,
       ),
@@ -140,6 +145,7 @@ export const resolveFieldCanvasStyleFromBrandingColors = (
     return {
       backgroundColor: colorToCanvasColor(colors.fieldRequiredCard, 0.9),
       borderColor: colorToCanvasColor(colors.fieldRequiredCardBorder),
+      borderHoverColor: colorToCanvasColor(colors.fieldRequiredCardBorderHover),
       borderWidth: parsePixelValue(
         colors.fieldRequiredCardBorderWidth ?? DEFAULT_BRAND_LENGTHS.fieldRequiredCardBorderWidth,
       ),
@@ -150,6 +156,7 @@ export const resolveFieldCanvasStyleFromBrandingColors = (
   return {
     backgroundColor: colorToCanvasColor(colors.fieldOptionalCard, 0.9),
     borderColor: colorToCanvasColor(colors.fieldOptionalCardBorder),
+    borderHoverColor: colorToCanvasColor(colors.fieldOptionalCardBorderHover),
     borderWidth: parsePixelValue(
       colors.fieldOptionalCardBorderWidth ?? DEFAULT_BRAND_LENGTHS.fieldOptionalCardBorderWidth,
     ),

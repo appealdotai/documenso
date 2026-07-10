@@ -54,6 +54,7 @@ export type RenderFieldElementOptions = {
 export type FieldCanvasStyle = {
   backgroundColor?: string;
   borderColor?: string;
+  borderHoverColor?: string;
   borderRadius?: number;
   borderWidth?: number;
   opacity?: number;

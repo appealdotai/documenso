@@ -25,6 +25,7 @@ export const ZCssVarsSchema = z
     fieldCardForeground: z.string().optional().describe('Field card text color'),
     fieldRequiredCard: z.string().optional().describe('Required unsigned field background color'),
     fieldRequiredCardBorder: z.string().optional().describe('Required unsigned field border color'),
+    fieldRequiredCardBorderHover: z.string().optional().describe('Required unsigned field border color on hover'),
     fieldRequiredCardBorderWidth: z
       .string()
       .regex(CSS_LENGTH_REGEX, 'Must be a CSS length such as 2px, 0.125rem, or 0')
@@ -32,6 +33,7 @@ export const ZCssVarsSchema = z
       .describe('Required unsigned field border width'),
     fieldOptionalCard: z.string().optional().describe('Optional unsigned field background color'),
     fieldOptionalCardBorder: z.string().optional().describe('Optional unsigned field border color'),
+    fieldOptionalCardBorderHover: z.string().optional().describe('Optional unsigned field border color on hover'),
     fieldOptionalCardBorderWidth: z
       .string()
       .regex(CSS_LENGTH_REGEX, 'Must be a CSS length such as 2px, 0.125rem, or 0')
