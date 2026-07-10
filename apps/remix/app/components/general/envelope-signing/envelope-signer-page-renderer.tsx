@@ -79,6 +79,7 @@ export const EnvelopeSignerPageRenderer = ({ pageData }: { pageData: PageRenderD
     selectedAssistantRecipientFields,
     selectedAssistantRecipient,
     isDirectTemplate,
+    signingFieldHighlightColors,
   } = useRequiredEnvelopeSigningContext();
 
   // Note: We're using refs here due to the closure within the signField function.
@@ -189,6 +190,7 @@ export const EnvelopeSignerPageRenderer = ({ pageData }: { pageData: PageRenderD
       color,
       mode: 'sign',
       fieldCanvasStyleCache,
+      brandingColors: signingFieldHighlightColors,
     });
 
     const handleFieldGroupClick = (e: KonvaEventObject<Event>) => {
@@ -501,6 +503,7 @@ export const EnvelopeSignerPageRenderer = ({ pageData }: { pageData: PageRenderD
           editable: false,
           mode: 'sign',
           fieldCanvasStyleCache,
+          brandingColors: signingFieldHighlightColors,
         });
 
         // Other-recipient fields are display-only — they have no click handlers

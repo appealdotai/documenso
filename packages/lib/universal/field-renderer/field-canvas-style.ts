@@ -1,4 +1,9 @@
+import type { TCssVarsSchema } from '@documenso/lib/types/css-vars';
 import { isRequiredField } from '@documenso/lib/utils/advanced-fields-helpers';
+import {
+  getSigningFieldHighlightCacheKey,
+  resolveFieldCanvasStyleFromBrandingColors,
+} from '@documenso/lib/utils/signing-field-highlight-colors';
 import {
   FIELD_PROBE_ANCHOR_SELECTOR,
   FIELD_ROOT_CONTAINER_PROBE_CLASS_NAME,
@@ -243,20 +248,22 @@ export const resolveFieldCanvasStyle = (
   field: FieldToRender,
   mode: FieldRenderMode,
   cache?: FieldCanvasStyleCache,
+  brandingColors?: TCssVarsSchema | null,
 ): FieldCanvasStyle | undefined => {
   if (mode !== 'sign') {
     return undefined;
   }
 
-  const cacheKey = getFieldCanvasStyleCacheKey(field);
+  const cacheKey = `${getFieldCanvasStyleCacheKey(field)}:${getSigningFieldHighlightCacheKey(brandingColors)}`;
 
   if (cache?.has(cacheKey)) {
     return cache.get(cacheKey);
   }
 
+  const brandingStyle = resolveFieldCanvasStyleFromBrandingColors(field, brandingColors);
   const probeStyle = computeFieldCanvasStyleFromProbe(field);
   const cssVarStyle = resolveFieldCanvasStyleFromCssVars(field);
-  const style = mergeFieldCanvasStyles(probeStyle, cssVarStyle);
+  const style = mergeFieldCanvasStyles(brandingStyle, mergeFieldCanvasStyles(probeStyle, cssVarStyle));
 
   cache?.set(cacheKey, style);
 
