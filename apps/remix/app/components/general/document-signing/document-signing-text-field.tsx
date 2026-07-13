@@ -95,6 +95,20 @@ export const DocumentSigningTextField = ({ field, onSignField, onUnsignField }: 
         return;
       }
 
+      // V1 rejects signing an already-inserted field — clear it first when re-editing.
+      if (field.inserted) {
+        const removePayload: TRemovedSignedFieldWithTokenMutationSchema = {
+          token: recipient.token,
+          fieldId: field.id,
+        };
+
+        if (onUnsignField) {
+          await onUnsignField(removePayload);
+        } else {
+          await removeSignedFieldWithToken(removePayload);
+        }
+      }
+
       const payload: TSignFieldWithTokenMutationSchema = {
         token: recipient.token,
         fieldId: field.id,

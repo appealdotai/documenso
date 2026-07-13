@@ -54,11 +54,25 @@ export const InlineFieldInput = ({
 }: InlineFieldInputProps) => {
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
   const skipCommitOnBlurRef = useRef(false);
+  // Ignore blur that fires immediately after open (same click that focused the input).
+  const canCommitOnBlurRef = useRef(false);
 
   const overflowMode = resolveFieldOverflowMode({ overflow });
   const isHorizontalOverflow = overflowMode === 'horizontal';
   const scaledFontSize = fontSize * scale;
   const scaledPadding = INLINE_FIELD_TEXT_PADDING_PX * scale;
+
+  useEffect(() => {
+    canCommitOnBlurRef.current = false;
+
+    const enableBlurCommit = window.setTimeout(() => {
+      canCommitOnBlurRef.current = true;
+    }, 200);
+
+    return () => {
+      window.clearTimeout(enableBlurCommit);
+    };
+  }, []);
 
   useEffect(() => {
     if (!autoFocus) {
@@ -82,6 +96,14 @@ export const InlineFieldInput = ({
   const handleBlur = () => {
     if (skipCommitOnBlurRef.current) {
       skipCommitOnBlurRef.current = false;
+      return;
+    }
+
+    // Re-focus instead of closing when the opening click steals focus back.
+    if (!canCommitOnBlurRef.current) {
+      requestAnimationFrame(() => {
+        inputRef.current?.focus();
+      });
       return;
     }
 
