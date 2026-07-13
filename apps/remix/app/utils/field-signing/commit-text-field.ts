@@ -1,5 +1,4 @@
 import { validateTextField } from '@documenso/lib/advanced-fields-validation/validate-text';
-import type { TFieldText } from '@documenso/lib/types/field';
 import type { TTextFieldMeta } from '@documenso/lib/types/field-meta';
 import type { TSignEnvelopeFieldValue } from '@documenso/trpc/server/envelope-router/sign-envelope-field.types';
 import { FieldType } from '@prisma/client';
@@ -8,7 +7,10 @@ export const getTextFieldDefaultValue = ({
   field,
   text = null,
 }: {
-  field: Pick<TFieldText, 'customText' | 'fieldMeta'>;
+  field: {
+    customText?: string | null;
+    fieldMeta?: TTextFieldMeta | null;
+  };
   text?: string | null;
 }): string => {
   return field.customText || text || field.fieldMeta?.text || '';

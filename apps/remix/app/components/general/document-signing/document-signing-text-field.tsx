@@ -1,4 +1,3 @@
-import { validateTextField } from '@documenso/lib/advanced-fields-validation/validate-text';
 import { DO_NOT_INVALIDATE_QUERY_ON_MUTATION } from '@documenso/lib/constants/trpc';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import type { TRecipientActionAuth } from '@documenso/lib/types/document-auth';
@@ -10,15 +9,12 @@ import type {
   TSignFieldWithTokenMutationSchema,
 } from '@documenso/trpc/server/field-router/schema';
 import { cn } from '@documenso/ui/lib/utils';
-import { Button } from '@documenso/ui/primitives/button';
-import { Dialog, DialogContent, DialogFooter, DialogTitle } from '@documenso/ui/primitives/dialog';
-import { Textarea } from '@documenso/ui/primitives/textarea';
 import { useToast } from '@documenso/ui/primitives/use-toast';
-import { msg } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react';
-import { Plural, Trans } from '@lingui/react/macro';
-import { useEffect, useState } from 'react';
+import { Trans, useLingui } from '@lingui/react/macro';
+import { useCallback, useEffect, useRef } from 'react';
 import { useRevalidator } from 'react-router';
+
+import { getTextFieldDefaultValue, validateInlineTextFieldValue } from '~/utils/field-signing/commit-text-field';
 
 import { useRequiredDocumentSigningAuthContext } from './document-signing-auth-provider';
 import { DocumentSigningFieldContainer } from './document-signing-field-container';
@@ -28,6 +24,8 @@ import {
   DocumentSigningFieldsUninserted,
 } from './document-signing-fields';
 import { useDocumentSigningRecipientContext } from './document-signing-recipient-provider';
+import { InlineFieldInput } from './inline-field-input';
+import { useInlineFieldEditor } from './use-inline-field-editor';
 
 export type DocumentSigningTextFieldProps = {
   field: FieldWithSignatureAndFieldMeta;
@@ -35,31 +33,12 @@ export type DocumentSigningTextFieldProps = {
   onUnsignField?: (value: TRemovedSignedFieldWithTokenMutationSchema) => Promise<void> | void;
 };
 
-type ValidationErrors = {
-  required: string[];
-  characterLimit: string[];
-};
-
-export type TextFieldProps = {
-  field: FieldWithSignatureAndFieldMeta;
-  onSignField?: (value: TSignFieldWithTokenMutationSchema) => Promise<void> | void;
-  onUnsignField?: (value: TRemovedSignedFieldWithTokenMutationSchema) => Promise<void> | void;
-};
-
 export const DocumentSigningTextField = ({ field, onSignField, onUnsignField }: DocumentSigningTextFieldProps) => {
-  const { _ } = useLingui();
+  const { t } = useLingui();
   const { toast } = useToast();
   const { revalidate } = useRevalidator();
 
   const { recipient, isAssistantMode } = useDocumentSigningRecipientContext();
-
-  const initialErrors: ValidationErrors = {
-    required: [],
-    characterLimit: [],
-  };
-  const [errors, setErrors] = useState(initialErrors);
-  const userInputHasErrors = Object.values(errors).some((error) => error.length > 0);
-
   const { executeActionAuthProcedure } = useRequiredDocumentSigningAuthContext();
 
   const { mutateAsync: signFieldWithToken, isPending: isSignFieldWithTokenLoading } =
@@ -72,94 +51,66 @@ export const DocumentSigningTextField = ({ field, onSignField, onUnsignField }: 
   const parsedFieldMeta = safeFieldMeta.success ? safeFieldMeta.data : null;
 
   const isLoading = isSignFieldWithTokenLoading || isRemoveSignedFieldWithTokenLoading;
+  const isReadOnly = parsedFieldMeta?.readOnly ?? false;
+
   const shouldAutoSignField =
     (!field.inserted && parsedFieldMeta?.text) ||
     (!field.inserted && parsedFieldMeta?.text && parsedFieldMeta?.readOnly);
 
-  const [showCustomTextModal, setShowCustomTextModal] = useState(false);
-  const [localText, setLocalCustomText] = useState(parsedFieldMeta?.text ?? '');
+  const initialValue = getTextFieldDefaultValue({
+    field: {
+      customText: field.customText,
+      fieldMeta: parsedFieldMeta,
+    },
+  });
 
-  useEffect(() => {
-    if (!showCustomTextModal) {
-      setLocalCustomText(parsedFieldMeta?.text ?? '');
-      setErrors(initialErrors);
-    }
-  }, [showCustomTextModal]);
+  const validate = useCallback(
+    (value: string) => validateInlineTextFieldValue(value, parsedFieldMeta),
+    [parsedFieldMeta],
+  );
 
-  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const text = e.target.value;
-    setLocalCustomText(text);
+  const {
+    draftValue,
+    errors,
+    hasErrors,
+    isEditing,
+    startEditing,
+    stopEditing,
+    updateDraft,
+    tryValidateForCommit,
+    resetDraft,
+  } = useInlineFieldEditor({
+    initialValue,
+    validate,
+  });
 
-    if (parsedFieldMeta) {
-      const validationErrors = validateTextField(text, parsedFieldMeta, true);
-      setErrors({
-        required: validationErrors.filter((error) => error.includes('required')),
-        characterLimit: validationErrors.filter((error) => error.includes('character limit')),
-      });
-    }
-  };
+  const isCommittingRef = useRef(false);
+  const hasAutoSignedRef = useRef(false);
 
-  /**
-   * When the user clicks the sign button in the dialog where they enter the text field.
-   */
-  const onDialogSignClick = () => {
-    if (parsedFieldMeta) {
-      const validationErrors = validateTextField(localText, parsedFieldMeta, true);
-
-      if (validationErrors.length > 0) {
-        setErrors({
-          required: validationErrors.filter((error) => error.includes('required')),
-          characterLimit: validationErrors.filter((error) => error.includes('character limit')),
-        });
-        return;
-      }
-    }
-
-    setShowCustomTextModal(false);
-
-    void executeActionAuthProcedure({
-      onReauthFormSubmit: async (authOptions) => await onSign(authOptions),
-      actionTarget: field.type,
-    });
-  };
-
-  const onPreSign = () => {
-    setShowCustomTextModal(true);
-
-    if (localText && parsedFieldMeta) {
-      const validationErrors = validateTextField(localText, parsedFieldMeta, true);
-      setErrors({
-        required: validationErrors.filter((error) => error.includes('required')),
-        characterLimit: validationErrors.filter((error) => error.includes('character limit')),
-      });
-    }
-
-    return false;
-  };
-
-  const onSign = async (authOptions?: TRecipientActionAuth) => {
+  const onSign = async (authOptions?: TRecipientActionAuth, value = draftValue) => {
     try {
-      if (!localText || userInputHasErrors) {
+      const validationErrors = validateInlineTextFieldValue(value, parsedFieldMeta);
+
+      if (validationErrors.length > 0 || !value) {
         return;
       }
 
       const payload: TSignFieldWithTokenMutationSchema = {
         token: recipient.token,
         fieldId: field.id,
-        value: localText,
+        value,
         isBase64: true,
         authOptions,
       };
 
       if (onSignField) {
         await onSignField(payload);
+        stopEditing();
         return;
       }
 
       await signFieldWithToken(payload);
-
-      setLocalCustomText('');
-
+      stopEditing();
       await revalidate();
     } catch (err) {
       const error = AppError.parseError(err);
@@ -171,10 +122,10 @@ export const DocumentSigningTextField = ({ field, onSignField, onUnsignField }: 
       console.error(err);
 
       toast({
-        title: _(msg`Error`),
+        title: t`Error`,
         description: isAssistantMode
-          ? _(msg`An error occurred while signing as assistant.`)
-          : _(msg`An error occurred while signing the document.`),
+          ? t`An error occurred while signing as assistant.`
+          : t`An error occurred while signing the document.`,
         variant: 'destructive',
       });
     }
@@ -189,133 +140,174 @@ export const DocumentSigningTextField = ({ field, onSignField, onUnsignField }: 
 
       if (onUnsignField) {
         await onUnsignField(payload);
+        resetDraft(parsedFieldMeta?.text ?? '');
         return;
       }
 
       await removeSignedFieldWithToken(payload);
-
-      setLocalCustomText(parsedFieldMeta?.text ?? '');
-
+      resetDraft(parsedFieldMeta?.text ?? '');
       await revalidate();
     } catch (err) {
       console.error(err);
 
       toast({
-        title: _(msg`Error`),
-        description: _(msg`An error occurred while removing the field.`),
+        title: t`Error`,
+        description: t`An error occurred while removing the field.`,
         variant: 'destructive',
       });
     }
   };
 
-  useEffect(() => {
-    if (shouldAutoSignField) {
-      void executeActionAuthProcedure({
-        onReauthFormSubmit: async (authOptions) => await onSign(authOptions),
+  const onPreSign = () => {
+    if (isReadOnly) {
+      return false;
+    }
+
+    startEditing(initialValue);
+    return false;
+  };
+
+  const onActivateSignedField = async () => {
+    if (isReadOnly) {
+      return;
+    }
+
+    startEditing(field.customText || initialValue);
+  };
+
+  const handleCommit = async () => {
+    if (isCommittingRef.current || isLoading || !isEditing) {
+      return;
+    }
+
+    const trimmed = draftValue;
+    const previousValue = field.inserted ? field.customText : '';
+
+    // Unchanged inserted value — just leave edit mode.
+    if (field.inserted && trimmed === previousValue) {
+      stopEditing();
+      return;
+    }
+
+    // Empty optional / cancel empty uninserted — leave without signing.
+    // Clearing an inserted field removes it when validation allows (optional).
+    if (!trimmed) {
+      if (field.inserted) {
+        if (!tryValidateForCommit()) {
+          return;
+        }
+
+        isCommittingRef.current = true;
+
+        try {
+          await onRemove();
+          stopEditing();
+        } finally {
+          isCommittingRef.current = false;
+        }
+
+        return;
+      }
+
+      if (!tryValidateForCommit()) {
+        return;
+      }
+
+      stopEditing();
+      return;
+    }
+
+    if (!tryValidateForCommit()) {
+      return;
+    }
+
+    isCommittingRef.current = true;
+
+    try {
+      await executeActionAuthProcedure({
+        onReauthFormSubmit: async (authOptions) => await onSign(authOptions, trimmed),
         actionTarget: field.type,
       });
+    } finally {
+      isCommittingRef.current = false;
     }
+  };
+
+  const handleCancel = () => {
+    resetDraft(field.inserted ? field.customText || initialValue : initialValue);
+    stopEditing();
+  };
+
+  useEffect(() => {
+    if (!shouldAutoSignField || hasAutoSignedRef.current) {
+      return;
+    }
+
+    hasAutoSignedRef.current = true;
+
+    void executeActionAuthProcedure({
+      onReauthFormSubmit: async (authOptions) => await onSign(authOptions, parsedFieldMeta?.text ?? ''),
+      actionTarget: field.type,
+    });
+    // Intentionally run once on mount for prefilled/read-only auto-sign.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const charactersRemaining = (parsedFieldMeta?.characterLimit ?? 0) - (localText.length ?? 0);
-
   return (
-    <DocumentSigningFieldContainer field={field} onPreSign={onPreSign} onSign={onSign} onRemove={onRemove} type="Text">
+    <DocumentSigningFieldContainer
+      field={field}
+      onPreSign={onPreSign}
+      onSign={onSign}
+      onRemove={onRemove}
+      onActivateSignedField={onActivateSignedField}
+      isEditing={isEditing}
+      type="Text"
+    >
       {isLoading && <DocumentSigningFieldsLoader />}
 
-      {!field.inserted && (
+      {isEditing && !isLoading && (
+        <div
+          className={cn('absolute inset-0 z-20 flex h-full w-full flex-col', {
+            'ring-2 ring-red-300 ring-offset-1': hasErrors,
+          })}
+        >
+          <InlineFieldInput
+            variant="text"
+            value={draftValue}
+            onChange={updateDraft}
+            onCommit={() => void handleCommit()}
+            onCancel={handleCancel}
+            placeholder={parsedFieldMeta?.placeholder ?? t`Enter your text here`}
+            textAlign={parsedFieldMeta?.textAlign}
+            overflow={parsedFieldMeta?.overflow}
+            fontSize={parsedFieldMeta?.fontSize}
+            characterLimit={parsedFieldMeta?.characterLimit}
+            hasError={hasErrors}
+            disabled={isLoading}
+            aria-label={t`Text field`}
+          />
+
+          {hasErrors && (
+            <div className="pointer-events-none absolute top-full left-0 z-30 mt-1 max-w-[240px] rounded bg-background/95 px-1.5 py-1 text-red-500 text-xs shadow-sm">
+              {errors.map((error) => (
+                <p key={error}>{error}</p>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {!isEditing && !field.inserted && (
         <DocumentSigningFieldsUninserted>
           <Trans>Enter Text</Trans>
         </DocumentSigningFieldsUninserted>
       )}
 
-      {field.inserted && (
+      {!isEditing && field.inserted && (
         <DocumentSigningFieldsInserted textAlign={parsedFieldMeta?.textAlign} overflow={parsedFieldMeta?.overflow}>
           {field.customText}
         </DocumentSigningFieldsInserted>
       )}
-
-      <Dialog open={showCustomTextModal} onOpenChange={setShowCustomTextModal}>
-        <DialogContent>
-          <DialogTitle>
-            <Trans>Enter Text</Trans>
-          </DialogTitle>
-
-          <div>
-            <Textarea
-              id="custom-text"
-              placeholder={parsedFieldMeta?.placeholder ?? _(msg`Enter your text here`)}
-              className={cn('mt-2 w-full rounded-md', {
-                'border-2 border-red-300 text-left ring-2 ring-red-200 ring-offset-2 ring-offset-red-200 focus-visible:border-red-400 focus-visible:ring-4 focus-visible:ring-red-200 focus-visible:ring-offset-2 focus-visible:ring-offset-red-200':
-                  userInputHasErrors,
-                'text-center': parsedFieldMeta?.textAlign === 'center',
-                'text-right': parsedFieldMeta?.textAlign === 'right',
-              })}
-              value={localText}
-              onChange={handleTextChange}
-            />
-          </div>
-
-          {parsedFieldMeta?.characterLimit !== undefined &&
-            parsedFieldMeta?.characterLimit > 0 &&
-            !userInputHasErrors && (
-              <div className="text-muted-foreground text-sm">
-                <Plural
-                  value={charactersRemaining}
-                  one="1 character remaining"
-                  other={`${charactersRemaining} characters remaining`}
-                />
-              </div>
-            )}
-
-          {userInputHasErrors && (
-            <div className="text-sm">
-              {errors.required.map((error, index) => (
-                <p key={index} className="text-red-500">
-                  {error}
-                </p>
-              ))}
-              {errors.characterLimit.map((error, index) => (
-                <p key={index} className="text-red-500">
-                  {error}{' '}
-                  {charactersRemaining < 0 && (
-                    <Plural
-                      value={Math.abs(charactersRemaining)}
-                      one="(1 character over)"
-                      other="(# characters over)"
-                    />
-                  )}
-                </p>
-              ))}
-            </div>
-          )}
-
-          <DialogFooter>
-            <div className="mt-4 flex w-full flex-1 flex-nowrap gap-4">
-              <Button
-                type="button"
-                variant="secondary"
-                className="flex-1"
-                onClick={() => {
-                  setShowCustomTextModal(false);
-                  setLocalCustomText('');
-                }}
-              >
-                <Trans>Cancel</Trans>
-              </Button>
-
-              <Button
-                type="button"
-                className="flex-1"
-                disabled={!localText || userInputHasErrors}
-                onClick={() => onDialogSignClick()}
-              >
-                <Trans>Save</Trans>
-              </Button>
-            </div>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </DocumentSigningFieldContainer>
   );
 };

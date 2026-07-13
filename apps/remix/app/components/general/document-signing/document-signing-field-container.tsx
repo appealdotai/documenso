@@ -17,6 +17,12 @@ export type DocumentSigningFieldContainerProps = {
   children: React.ReactNode;
 
   /**
+   * When true, the full-field click capture layer is hidden so an inline
+   * input can receive pointer events.
+   */
+  isEditing?: boolean;
+
+  /**
    * A function that is called before the field requires to be signed, or reauthed.
    *
    * Example, you may want to show a dialog prior to signing where they can enter a value.
@@ -44,6 +50,7 @@ export type DocumentSigningFieldContainerProps = {
 export const DocumentSigningFieldContainer = ({
   field,
   loading,
+  isEditing = false,
   onPreSign,
   onSign,
   onRemove,
@@ -105,7 +112,7 @@ export const DocumentSigningFieldContainer = ({
       return;
     }
 
-    if (type === 'Signature' && onActivateSignedField) {
+    if (onActivateSignedField && (type === 'Signature' || type === 'Text' || type === 'Number')) {
       await onActivateSignedField();
       return;
     }
@@ -121,9 +128,11 @@ export const DocumentSigningFieldContainer = ({
     await onRemove?.(fieldType);
   };
 
+  const showsChangeTooltip = type === 'Signature' || type === 'Text' || type === 'Number';
+
   return (
     <FieldRootContainer field={field} readonly={readOnlyField}>
-      {!field.inserted && !loading && !readOnlyField && (
+      {!field.inserted && !loading && !readOnlyField && !isEditing && (
         <button
           type="submit"
           className="absolute inset-0 z-10 h-full w-full rounded-[2px]"
@@ -131,7 +140,7 @@ export const DocumentSigningFieldContainer = ({
         />
       )}
 
-      {type === 'Checkbox' && field.inserted && !loading && !readOnlyField && (
+      {type === 'Checkbox' && field.inserted && !loading && !readOnlyField && !isEditing && (
         <button
           className="absolute -bottom-10 flex items-center justify-evenly rounded-md border bg-gray-900 opacity-0 group-hover:opacity-100"
           onClick={() => void onClearCheckBoxValues(type)}
@@ -142,7 +151,7 @@ export const DocumentSigningFieldContainer = ({
         </button>
       )}
 
-      {type !== 'Checkbox' && field.inserted && !loading && !readOnlyField && (
+      {type !== 'Checkbox' && field.inserted && !loading && !readOnlyField && !isEditing && (
         <Tooltip delayDuration={0}>
           <TooltipTrigger asChild>
             <button className="absolute inset-0 z-10" onClick={onSignedFieldClick}></button>
@@ -151,7 +160,7 @@ export const DocumentSigningFieldContainer = ({
           <TooltipContent className="border-0 bg-orange-300 fill-orange-300 text-orange-900" sideOffset={2}>
             {tooltipText && <p>{tooltipText}</p>}
 
-            {type === 'Signature' ? <Trans>Change</Trans> : <Trans>Remove</Trans>}
+            {showsChangeTooltip ? <Trans>Change</Trans> : <Trans>Remove</Trans>}
             <TooltipArrow />
           </TooltipContent>
         </Tooltip>
