@@ -49,7 +49,7 @@ test('[NEXT_RECIPIENT_DICTATION]: should allow updating next recipient when dict
 
     if (field.type === FieldType.TEXT) {
       await page.locator('#custom-text').fill('TEXT');
-      await page.getByRole('button', { name: 'Save' }).click();
+      await page.locator('#custom-text').press('Enter');
     }
 
     await expect(page.locator(`#field-${field.id}`)).toHaveAttribute('data-inserted', 'true');
@@ -138,7 +138,7 @@ test('[NEXT_RECIPIENT_DICTATION]: should not show dictation UI when disabled', a
 
     if (field.type === FieldType.TEXT) {
       await page.locator('#custom-text').fill('TEXT');
-      await page.getByRole('button', { name: 'Save' }).click();
+      await page.locator('#custom-text').press('Enter');
     }
 
     await expect(page.locator(`#field-${field.id}`)).toHaveAttribute('data-inserted', 'true');
@@ -222,7 +222,7 @@ test('[NEXT_RECIPIENT_DICTATION]: should work with parallel signing flow', async
 
       if (field.type === FieldType.TEXT) {
         await page.locator('#custom-text').fill('TEXT');
-        await page.getByRole('button', { name: 'Save' }).click();
+        await page.locator('#custom-text').press('Enter');
       }
 
       await expect(page.locator(`#field-${field.id}`)).toHaveAttribute('data-inserted', 'true');
@@ -309,7 +309,7 @@ test('[NEXT_RECIPIENT_DICTATION]: should allow assistant to dictate next signer'
 
     if (field.type === FieldType.TEXT) {
       await page.locator('#custom-text').fill('TEXT');
-      await page.getByRole('button', { name: 'Save' }).click();
+      await page.locator('#custom-text').press('Enter');
     }
 
     await expect(page.locator(`#field-${field.id}`)).toHaveAttribute('data-inserted', 'true');
