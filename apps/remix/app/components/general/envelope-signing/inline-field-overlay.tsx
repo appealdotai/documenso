@@ -193,7 +193,7 @@ export const InlineFieldOverlay = ({ field, scale, onCommit, onCancel }: InlineF
 
   return (
     <div
-      className={cn('absolute z-20', {
+      className={cn('absolute z-20 flex', {
         'ring-2 ring-red-300 ring-offset-1': hasErrors,
       })}
       style={{

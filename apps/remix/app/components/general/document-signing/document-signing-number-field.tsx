@@ -280,7 +280,7 @@ export const DocumentSigningNumberField = ({ field, onSignField, onUnsignField }
 
       {isEditing && !isLoading && (
         <div
-          className={cn('absolute inset-0 z-20 flex h-full w-full flex-col', {
+          className={cn('absolute inset-0 z-20 flex h-full w-full', {
             'ring-2 ring-red-300 ring-offset-1': hasErrors,
           })}
         >
