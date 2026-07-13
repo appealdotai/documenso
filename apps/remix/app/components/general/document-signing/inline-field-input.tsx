@@ -7,7 +7,10 @@ import { type CSSProperties, type KeyboardEvent, type RefObject, useEffect, useM
 
 export const INLINE_FIELD_TEXT_PADDING_PX = 6;
 
-/** iOS zooms focused inputs under 16px, which shifts the caret vs the field overlay. */
+/**
+ * iOS zooms focused inputs under 16px. We keep the real font-size at >=16px on
+ * touch devices, then CSS-scale the control so it still matches the field size.
+ */
 const MOBILE_MIN_FONT_SIZE_PX = 16;
 
 export type InlineFieldInputProps = {
@@ -89,18 +92,31 @@ export const InlineFieldInput = ({
   const isHorizontalOverflow = overflowMode === 'horizontal';
   const isMultilineText = variant === 'text' && (overflowMode === 'vertical' || overflowMode === 'auto');
 
-  const scaledFontSize = useMemo(() => {
-    const baseSize = fontSize * scale;
+  const { renderFontSize, visualScale, renderPadding } = useMemo(() => {
+    const desiredFontSize = fontSize * scale;
+    const desiredPadding = INLINE_FIELD_TEXT_PADDING_PX * scale;
+    const needsMobileScale = prefersCoarsePointer && desiredFontSize < MOBILE_MIN_FONT_SIZE_PX;
 
-    // Prevent iOS focus-zoom which misaligns the caret relative to the field box.
-    if (prefersCoarsePointer) {
-      return Math.max(baseSize, MOBILE_MIN_FONT_SIZE_PX);
+    if (!needsMobileScale) {
+      return {
+        renderFontSize: desiredFontSize,
+        visualScale: 1,
+        renderPadding: desiredPadding,
+      };
     }
 
-    return baseSize;
+    const nextVisualScale = desiredFontSize / MOBILE_MIN_FONT_SIZE_PX;
+
+    return {
+      renderFontSize: MOBILE_MIN_FONT_SIZE_PX,
+      visualScale: nextVisualScale,
+      // Padding is also scaled by CSS transform, so inflate it first.
+      renderPadding: desiredPadding / nextVisualScale,
+    };
   }, [fontSize, prefersCoarsePointer, scale]);
 
-  const scaledPadding = INLINE_FIELD_TEXT_PADDING_PX * scale;
+  const transformOrigin =
+    textAlign === 'center' ? 'center center' : textAlign === 'right' ? 'right center' : 'left center';
 
   useEffect(() => {
     canCommitOnBlurRef.current = false;
@@ -192,66 +208,78 @@ export const InlineFieldInput = ({
 
   const sharedStyle: CSSProperties = {
     fontFamily: konvaTextFontFamily,
-    fontSize: `${scaledFontSize}px`,
+    fontSize: `${renderFontSize}px`,
     lineHeight: 1.2,
     paddingTop: 0,
     paddingBottom: 0,
-    paddingLeft: `${scaledPadding}px`,
-    paddingRight: `${scaledPadding}px`,
+    paddingLeft: `${renderPadding}px`,
+    paddingRight: `${renderPadding}px`,
     margin: 0,
     color: 'black',
     // Kill iOS / WebKit intrinsic textarea padding that pushes the caret down.
     WebkitAppearance: 'none',
   };
 
+  const scalerStyle: CSSProperties | undefined =
+    visualScale === 1
+      ? undefined
+      : {
+          width: `${100 / visualScale}%`,
+          ...(isMultilineText ? { height: `${100 / visualScale}%` } : null),
+          transform: `scale(${visualScale})`,
+          transformOrigin,
+        };
+
   return (
     <div
-      className={cn('flex h-full w-full', {
+      className={cn('flex h-full w-full overflow-hidden', {
         'items-center': !isMultilineText,
         'items-stretch': isMultilineText,
       })}
     >
-      {variant === 'number' ? (
-        <input
-          ref={inputRef as RefObject<HTMLInputElement>}
-          id="custom-number"
-          type="text"
-          inputMode="decimal"
-          autoComplete="off"
-          aria-invalid={hasError}
-          aria-label={ariaLabel}
-          disabled={disabled}
-          placeholder={placeholder}
-          value={value}
-          maxLength={characterLimit && characterLimit > 0 ? characterLimit : undefined}
-          className={sharedClassName}
-          style={sharedStyle}
-          onChange={(event) => onChange(event.target.value)}
-          onBlur={handleBlur}
-          onKeyDown={handleKeyDown}
-          onClick={(event) => event.stopPropagation()}
-          onPointerDown={(event) => event.stopPropagation()}
-        />
-      ) : (
-        <textarea
-          ref={inputRef as RefObject<HTMLTextAreaElement>}
-          id="custom-text"
-          rows={isMultilineText ? undefined : 1}
-          aria-invalid={hasError}
-          aria-label={ariaLabel}
-          disabled={disabled}
-          placeholder={placeholder}
-          value={value}
-          maxLength={characterLimit && characterLimit > 0 ? characterLimit : undefined}
-          className={sharedClassName}
-          style={sharedStyle}
-          onChange={(event) => onChange(event.target.value)}
-          onBlur={handleBlur}
-          onKeyDown={handleKeyDown}
-          onClick={(event) => event.stopPropagation()}
-          onPointerDown={(event) => event.stopPropagation()}
-        />
-      )}
+      <div className={cn('flex w-full', isMultilineText ? 'h-full' : 'items-center')} style={scalerStyle}>
+        {variant === 'number' ? (
+          <input
+            ref={inputRef as RefObject<HTMLInputElement>}
+            id="custom-number"
+            type="text"
+            inputMode="decimal"
+            autoComplete="off"
+            aria-invalid={hasError}
+            aria-label={ariaLabel}
+            disabled={disabled}
+            placeholder={placeholder}
+            value={value}
+            maxLength={characterLimit && characterLimit > 0 ? characterLimit : undefined}
+            className={sharedClassName}
+            style={sharedStyle}
+            onChange={(event) => onChange(event.target.value)}
+            onBlur={handleBlur}
+            onKeyDown={handleKeyDown}
+            onClick={(event) => event.stopPropagation()}
+            onPointerDown={(event) => event.stopPropagation()}
+          />
+        ) : (
+          <textarea
+            ref={inputRef as RefObject<HTMLTextAreaElement>}
+            id="custom-text"
+            rows={isMultilineText ? undefined : 1}
+            aria-invalid={hasError}
+            aria-label={ariaLabel}
+            disabled={disabled}
+            placeholder={placeholder}
+            value={value}
+            maxLength={characterLimit && characterLimit > 0 ? characterLimit : undefined}
+            className={sharedClassName}
+            style={sharedStyle}
+            onChange={(event) => onChange(event.target.value)}
+            onBlur={handleBlur}
+            onKeyDown={handleKeyDown}
+            onClick={(event) => event.stopPropagation()}
+            onPointerDown={(event) => event.stopPropagation()}
+          />
+        )}
+      </div>
     </div>
   );
 };
