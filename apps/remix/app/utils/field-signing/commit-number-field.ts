@@ -1,5 +1,4 @@
 import { validateNumberField } from '@documenso/lib/advanced-fields-validation/validate-number';
-import type { TFieldNumber } from '@documenso/lib/types/field';
 import type { TNumberFieldMeta } from '@documenso/lib/types/field-meta';
 import type { TSignEnvelopeFieldValue } from '@documenso/trpc/server/envelope-router/sign-envelope-field.types';
 import { FieldType } from '@prisma/client';
@@ -8,7 +7,10 @@ export const getNumberFieldDefaultValue = ({
   field,
   number = null,
 }: {
-  field: Pick<TFieldNumber, 'customText' | 'fieldMeta'>;
+  field: {
+    customText?: string | null;
+    fieldMeta?: TNumberFieldMeta | null;
+  };
   number?: string | null;
 }): string => {
   if (field.customText) {
