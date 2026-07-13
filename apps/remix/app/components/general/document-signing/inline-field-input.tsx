@@ -139,6 +139,7 @@ export const InlineFieldInput = ({
     return (
       <input
         ref={inputRef as RefObject<HTMLInputElement>}
+        id="custom-number"
         type="text"
         inputMode="decimal"
         autoComplete="off"
@@ -162,6 +163,7 @@ export const InlineFieldInput = ({
   return (
     <textarea
       ref={inputRef as RefObject<HTMLTextAreaElement>}
+      id="custom-text"
       aria-invalid={hasError}
       aria-label={ariaLabel}
       disabled={disabled}
