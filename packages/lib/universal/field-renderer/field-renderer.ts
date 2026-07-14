@@ -67,12 +67,29 @@ export type FieldCanvasStyle = {
   borderRightWidth?: number;
   borderBottomWidth?: number;
   borderLeftWidth?: number;
+  /** Optional per-side colours (falls back to `borderColor`). */
+  borderTopColor?: string;
+  borderRightColor?: string;
+  borderBottomColor?: string;
+  borderLeftColor?: string;
   /**
    * When true, draw an outer accent ring (hover / editing) without changing
    * the field's layout box.
    */
   showAccentRing?: boolean;
   accentRingColor?: string;
+  /**
+   * Optional idle fields use an asymmetric hover: faint L/T/R + thicker bottom.
+   * When set, hover interaction applies these instead of a uniform accent ring.
+   */
+  hoverBorderTopWidth?: number;
+  hoverBorderRightWidth?: number;
+  hoverBorderBottomWidth?: number;
+  hoverBorderLeftWidth?: number;
+  hoverBorderTopColor?: string;
+  hoverBorderRightColor?: string;
+  hoverBorderBottomColor?: string;
+  hoverBorderLeftColor?: string;
   opacity?: number;
 };
 

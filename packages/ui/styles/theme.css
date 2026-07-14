@@ -268,6 +268,15 @@
     border-width: var(--field-required-card-border-width);
   }
 
+  .field--FieldRootContainer.field-card-container[data-inserted="true"][data-field-required="false"]:not(
+      [data-readonly="true"]
+    ) {
+    background-color: rgb(255 255 255 / 0.9);
+    border-color: hsl(var(--field-optional-card-border));
+    border-style: solid;
+    border-width: var(--field-optional-card-border-width);
+  }
+
   .field--FieldRootContainer.field-card-container[data-readonly="true"] {
     background-color: rgb(255 255 255 / 0.9);
     border-color: rgb(176 176 176);
@@ -305,17 +314,40 @@
 
   .field--FieldRootContainer.field-card-container[data-inserted="false"][data-readonly="false"][data-field-required="false"]:not(
       [data-validate="true"]
-    ) {
+    ):not([data-editing="true"]) {
     background-color: hsl(var(--field-optional-card) / 0.9);
     border-color: hsl(var(--field-optional-card-border));
     border-style: solid;
     border-width: 0 0 var(--field-optional-card-border-width) 0;
+    box-shadow: none;
   }
 
   .field--FieldRootContainer.field-card-container[data-inserted="false"][data-readonly="false"][data-field-required="false"]:not(
       [data-validate="true"]
-    ):hover {
+    ):not([data-editing="true"]):hover,
+  .field--FieldRootContainer.field-card-container[data-field-required="false"][data-editing="true"]:not(
+      [data-readonly="true"]
+    ) {
     border-color: hsl(var(--field-optional-card-border-hover));
+    border-style: solid;
+    /* Keep bottom-only real border; fake L/T/R + thicker bottom via shadows (no layout jump). */
+    border-width: 0 0 var(--field-optional-card-border-width) 0;
+    box-shadow:
+      0 -1px 0 0 hsl(var(--field-optional-card-border-hover) / 0.4),
+      1px 0 0 0 hsl(var(--field-optional-card-border-hover) / 0.4),
+      -1px 0 0 0 hsl(var(--field-optional-card-border-hover) / 0.4),
+      0 1px 0 0 hsl(var(--field-optional-card-border-hover));
+  }
+
+  .field--FieldRootContainer.field-card-container[data-inserted="false"][data-readonly="false"][data-field-required="false"][data-editing="true"] {
+    background-color: hsl(var(--field-optional-card) / 0.9);
+  }
+
+  .field--FieldRootContainer.field-card-container[data-inserted="true"][data-field-required="false"][data-editing="true"] {
+    background-color: rgb(255 255 255 / 0.9);
+    border-color: hsl(var(--field-optional-card-border-hover));
+    border-width: var(--field-optional-card-border-width);
+    box-shadow: 0 0 0 1px hsl(var(--field-optional-card-border-hover) / 0.4);
   }
 
   .field--FieldRootContainer.field-card-container[data-inserted="false"][data-readonly="false"][data-validate="true"][data-field-required="true"] {

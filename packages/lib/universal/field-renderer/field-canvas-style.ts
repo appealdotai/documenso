@@ -124,6 +124,8 @@ const getCssVarHslColor = (element: Element, variableName: string, alpha?: numbe
   return `hsl(${value})`;
 };
 
+const OPTIONAL_FIELD_SIDE_BORDER_OPACITY = 0.4;
+
 const resolveFieldCanvasStyleFromCssVars = (field: FieldToRender): FieldCanvasStyle | undefined => {
   if (typeof document === 'undefined') {
     return undefined;
@@ -144,7 +146,26 @@ const resolveFieldCanvasStyleFromCssVars = (field: FieldToRender): FieldCanvasSt
   const requiredBorderHoverColor = getRenderableColor(
     getCssVarHslColor($styleSource, '--field-required-card-border-hover'),
   );
+  const optionalBorderColor = getRenderableColor(getCssVarHslColor($styleSource, '--field-optional-card-border'));
+  const optionalBorderHoverColor = getRenderableColor(
+    getCssVarHslColor($styleSource, '--field-optional-card-border-hover'),
+  );
+  const optionalSideHoverColor = getRenderableColor(
+    getCssVarHslColor($styleSource, '--field-optional-card-border-hover', OPTIONAL_FIELD_SIDE_BORDER_OPACITY),
+  );
   const filledBackground = 'rgba(255, 255, 255, 0.9)';
+  const optionalHoverSideStyle = {
+    borderTopWidth: 1,
+    borderRightWidth: 1,
+    borderBottomWidth: optionalBorderWidth + 1,
+    borderLeftWidth: 1,
+    borderTopColor: optionalSideHoverColor,
+    borderRightColor: optionalSideHoverColor,
+    borderBottomColor: optionalBorderHoverColor,
+    borderLeftColor: optionalSideHoverColor,
+    borderColor: optionalBorderHoverColor,
+    borderHoverColor: optionalBorderHoverColor,
+  };
 
   if (field.fieldMeta?.readOnly) {
     return {
@@ -170,9 +191,12 @@ const resolveFieldCanvasStyleFromCssVars = (field: FieldToRender): FieldCanvasSt
 
     return {
       backgroundColor: filledBackground,
-      borderColor: '#e5e7eb',
-      borderWidth: 2,
+      borderColor: isEditing ? optionalBorderHoverColor : optionalBorderColor,
+      borderHoverColor: optionalBorderHoverColor,
+      borderWidth: optionalBorderWidth,
       borderRadius: 2,
+      showAccentRing: isEditing,
+      accentRingColor: isEditing ? optionalSideHoverColor : undefined,
     };
   }
 
@@ -199,15 +223,31 @@ const resolveFieldCanvasStyleFromCssVars = (field: FieldToRender): FieldCanvasSt
     };
   }
 
+  if (isEditing) {
+    return {
+      backgroundColor: getRenderableColor(getCssVarHslColor($styleSource, '--field-optional-card', 0.9)),
+      borderRadius: 2,
+      ...optionalHoverSideStyle,
+    };
+  }
+
   return {
     backgroundColor: getRenderableColor(getCssVarHslColor($styleSource, '--field-optional-card', 0.9)),
-    borderColor: getRenderableColor(getCssVarHslColor($styleSource, '--field-optional-card-border')),
-    borderHoverColor: getRenderableColor(getCssVarHslColor($styleSource, '--field-optional-card-border-hover')),
+    borderColor: optionalBorderColor,
+    borderHoverColor: optionalBorderHoverColor,
     borderTopWidth: 0,
     borderRightWidth: 0,
     borderBottomWidth: optionalBorderWidth,
     borderLeftWidth: 0,
     borderRadius: 2,
+    hoverBorderTopWidth: optionalHoverSideStyle.borderTopWidth,
+    hoverBorderRightWidth: optionalHoverSideStyle.borderRightWidth,
+    hoverBorderBottomWidth: optionalHoverSideStyle.borderBottomWidth,
+    hoverBorderLeftWidth: optionalHoverSideStyle.borderLeftWidth,
+    hoverBorderTopColor: optionalHoverSideStyle.borderTopColor,
+    hoverBorderRightColor: optionalHoverSideStyle.borderRightColor,
+    hoverBorderBottomColor: optionalHoverSideStyle.borderBottomColor,
+    hoverBorderLeftColor: optionalHoverSideStyle.borderLeftColor,
   };
 };
 
@@ -229,8 +269,20 @@ const mergeFieldCanvasStyles = (
     borderRightWidth: primary?.borderRightWidth ?? fallback?.borderRightWidth,
     borderBottomWidth: primary?.borderBottomWidth ?? fallback?.borderBottomWidth,
     borderLeftWidth: primary?.borderLeftWidth ?? fallback?.borderLeftWidth,
+    borderTopColor: primary?.borderTopColor ?? fallback?.borderTopColor,
+    borderRightColor: primary?.borderRightColor ?? fallback?.borderRightColor,
+    borderBottomColor: primary?.borderBottomColor ?? fallback?.borderBottomColor,
+    borderLeftColor: primary?.borderLeftColor ?? fallback?.borderLeftColor,
     showAccentRing: primary?.showAccentRing ?? fallback?.showAccentRing,
     accentRingColor: primary?.accentRingColor ?? fallback?.accentRingColor,
+    hoverBorderTopWidth: primary?.hoverBorderTopWidth ?? fallback?.hoverBorderTopWidth,
+    hoverBorderRightWidth: primary?.hoverBorderRightWidth ?? fallback?.hoverBorderRightWidth,
+    hoverBorderBottomWidth: primary?.hoverBorderBottomWidth ?? fallback?.hoverBorderBottomWidth,
+    hoverBorderLeftWidth: primary?.hoverBorderLeftWidth ?? fallback?.hoverBorderLeftWidth,
+    hoverBorderTopColor: primary?.hoverBorderTopColor ?? fallback?.hoverBorderTopColor,
+    hoverBorderRightColor: primary?.hoverBorderRightColor ?? fallback?.hoverBorderRightColor,
+    hoverBorderBottomColor: primary?.hoverBorderBottomColor ?? fallback?.hoverBorderBottomColor,
+    hoverBorderLeftColor: primary?.hoverBorderLeftColor ?? fallback?.hoverBorderLeftColor,
     opacity: primary?.opacity ?? fallback?.opacity,
   };
 };

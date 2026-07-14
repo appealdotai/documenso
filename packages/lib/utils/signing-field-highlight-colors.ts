@@ -100,6 +100,8 @@ const colorToCanvasColor = (value: string | undefined, alpha?: number) => {
   return color.toRgbString();
 };
 
+const OPTIONAL_FIELD_SIDE_BORDER_OPACITY = 0.4;
+
 type SigningFieldStateInput = {
   inserted: boolean;
   isValidating?: boolean;
@@ -109,6 +111,30 @@ type SigningFieldStateInput = {
 };
 
 const FILLED_FIELD_BACKGROUND = 'rgba(255, 255, 255, 0.9)';
+
+const getOptionalHoverSideStyle = ({
+  optionalBorderWidth,
+  optionalBorderHoverColor,
+}: {
+  optionalBorderWidth: number;
+  optionalBorderHoverColor: string | undefined;
+}) => {
+  const sideColor = colorToCanvasColor(optionalBorderHoverColor, OPTIONAL_FIELD_SIDE_BORDER_OPACITY);
+  const bottomColor = optionalBorderHoverColor;
+
+  return {
+    borderTopWidth: 1,
+    borderRightWidth: 1,
+    borderBottomWidth: optionalBorderWidth + 1,
+    borderLeftWidth: 1,
+    borderTopColor: sideColor,
+    borderRightColor: sideColor,
+    borderBottomColor: bottomColor,
+    borderLeftColor: sideColor,
+    borderColor: bottomColor,
+    borderHoverColor: bottomColor,
+  };
+};
 
 /**
  * Resolve Konva field styles directly from branding colour tokens.
@@ -127,6 +153,12 @@ export const resolveFieldCanvasStyleFromBrandingColors = (
     parsePixelValue(colors.fieldOptionalCardBorderWidth ?? DEFAULT_BRAND_LENGTHS.fieldOptionalCardBorderWidth) ?? 2;
   const requiredBorderColor = colorToCanvasColor(colors.fieldRequiredCardBorder);
   const requiredBorderHoverColor = colorToCanvasColor(colors.fieldRequiredCardBorderHover);
+  const optionalBorderColor = colorToCanvasColor(colors.fieldOptionalCardBorder);
+  const optionalBorderHoverColor = colorToCanvasColor(colors.fieldOptionalCardBorderHover);
+  const optionalHoverSideStyle = getOptionalHoverSideStyle({
+    optionalBorderWidth,
+    optionalBorderHoverColor,
+  });
 
   if (field.fieldMeta?.readOnly) {
     return {
@@ -152,9 +184,14 @@ export const resolveFieldCanvasStyleFromBrandingColors = (
 
     return {
       backgroundColor: FILLED_FIELD_BACKGROUND,
-      borderColor: '#e5e7eb',
-      borderWidth: 2,
+      borderColor: isEditing ? optionalBorderHoverColor : optionalBorderColor,
+      borderHoverColor: optionalBorderHoverColor,
+      borderWidth: optionalBorderWidth,
       borderRadius: 2,
+      showAccentRing: isEditing,
+      accentRingColor: isEditing
+        ? colorToCanvasColor(colors.fieldOptionalCardBorderHover, OPTIONAL_FIELD_SIDE_BORDER_OPACITY)
+        : undefined,
     };
   }
 
@@ -181,15 +218,31 @@ export const resolveFieldCanvasStyleFromBrandingColors = (
     };
   }
 
+  if (isEditing) {
+    return {
+      backgroundColor: colorToCanvasColor(colors.fieldOptionalCard, 0.9),
+      borderRadius: 2,
+      ...optionalHoverSideStyle,
+    };
+  }
+
   return {
     backgroundColor: colorToCanvasColor(colors.fieldOptionalCard, 0.9),
-    borderColor: colorToCanvasColor(colors.fieldOptionalCardBorder),
-    borderHoverColor: colorToCanvasColor(colors.fieldOptionalCardBorderHover),
+    borderColor: optionalBorderColor,
+    borderHoverColor: optionalBorderHoverColor,
     borderTopWidth: 0,
     borderRightWidth: 0,
     borderBottomWidth: optionalBorderWidth,
     borderLeftWidth: 0,
     borderRadius: 2,
+    hoverBorderTopWidth: optionalHoverSideStyle.borderTopWidth,
+    hoverBorderRightWidth: optionalHoverSideStyle.borderRightWidth,
+    hoverBorderBottomWidth: optionalHoverSideStyle.borderBottomWidth,
+    hoverBorderLeftWidth: optionalHoverSideStyle.borderLeftWidth,
+    hoverBorderTopColor: optionalHoverSideStyle.borderTopColor,
+    hoverBorderRightColor: optionalHoverSideStyle.borderRightColor,
+    hoverBorderBottomColor: optionalHoverSideStyle.borderBottomColor,
+    hoverBorderLeftColor: optionalHoverSideStyle.borderLeftColor,
   };
 };
 

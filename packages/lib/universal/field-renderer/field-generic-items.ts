@@ -79,6 +79,7 @@ const upsertFieldBorderLines = ({
   fieldWidth,
   fieldHeight,
   borderColor,
+  sideColors,
   sideWidths,
   visible,
 }: {
@@ -86,6 +87,12 @@ const upsertFieldBorderLines = ({
   fieldWidth: number;
   fieldHeight: number;
   borderColor: string;
+  sideColors?: {
+    top?: string;
+    right?: string;
+    bottom?: string;
+    left?: string;
+  };
   sideWidths: ReturnType<typeof getFieldBorderSideWidths>;
   visible: boolean;
 }) => {
@@ -93,21 +100,25 @@ const upsertFieldBorderLines = ({
     {
       name: 'field-border-top',
       width: sideWidths.top,
+      color: sideColors?.top ?? borderColor,
       points: [0, 0, fieldWidth, 0],
     },
     {
       name: 'field-border-right',
       width: sideWidths.right,
+      color: sideColors?.right ?? borderColor,
       points: [fieldWidth, 0, fieldWidth, fieldHeight],
     },
     {
       name: 'field-border-bottom',
       width: sideWidths.bottom,
+      color: sideColors?.bottom ?? borderColor,
       points: [0, fieldHeight, fieldWidth, fieldHeight],
     },
     {
       name: 'field-border-left',
       width: sideWidths.left,
+      color: sideColors?.left ?? borderColor,
       points: [0, 0, 0, fieldHeight],
     },
   ] as const;
@@ -130,7 +141,7 @@ const upsertFieldBorderLines = ({
     line.setAttrs({
       name: side.name,
       points: [...side.points],
-      stroke: borderColor,
+      stroke: side.color,
       strokeWidth: side.width,
       lineCap: 'square',
       listening: false,
@@ -228,6 +239,12 @@ export const upsertFieldRect = (
       fieldWidth,
       fieldHeight,
       borderColor,
+      sideColors: {
+        top: fieldCanvasStyle?.borderTopColor,
+        right: fieldCanvasStyle?.borderRightColor,
+        bottom: fieldCanvasStyle?.borderBottomColor,
+        left: fieldCanvasStyle?.borderLeftColor,
+      },
       sideWidths,
       visible: isVisible,
     });
@@ -312,17 +329,30 @@ export const createFieldHoverInteraction = ({ options, fieldGroup, fieldRect }: 
     return;
   }
 
-  // Editing owns the accent ring; skip ephemeral hover while actively editing.
+  // Editing owns the accent treatment; skip ephemeral hover while actively editing.
   if (fieldCanvasStyle?.showAccentRing) {
+    return;
+  }
+
+  // Optional fields already painted in their editing/hover asymmetric layout.
+  if (
+    fieldCanvasStyle?.borderTopWidth !== undefined &&
+    fieldCanvasStyle.borderTopWidth > 0 &&
+    fieldCanvasStyle.hoverBorderTopWidth === undefined
+  ) {
     return;
   }
 
   const defaultStroke = fieldCanvasStyle?.borderColor;
   const hoverStroke = fieldCanvasStyle?.borderHoverColor;
+  const hasAsymmetricHover =
+    fieldCanvasStyle?.hoverBorderBottomWidth !== undefined || fieldCanvasStyle?.hoverBorderTopWidth !== undefined;
 
-  if (!defaultStroke || !hoverStroke) {
+  if (!defaultStroke || (!hoverStroke && !hasAsymmetricHover)) {
     return;
   }
+
+  const idleSideWidths = getFieldBorderSideWidths(fieldCanvasStyle);
 
   const applyHover = (isHovered: boolean) => {
     const layer = fieldRect.getLayer();
@@ -331,7 +361,52 @@ export const createFieldHoverInteraction = ({ options, fieldGroup, fieldRect }: 
       return;
     }
 
-    const stroke = isHovered ? hoverStroke : defaultStroke;
+    if (hasAsymmetricHover) {
+      const hoverSideWidths = isHovered
+        ? {
+            top: fieldCanvasStyle?.hoverBorderTopWidth ?? 0,
+            right: fieldCanvasStyle?.hoverBorderRightWidth ?? 0,
+            bottom: fieldCanvasStyle?.hoverBorderBottomWidth ?? idleSideWidths.bottom,
+            left: fieldCanvasStyle?.hoverBorderLeftWidth ?? 0,
+            isUniform: false as const,
+          }
+        : idleSideWidths;
+
+      fieldRect.strokeWidth(0);
+
+      upsertFieldBorderLines({
+        fieldGroup,
+        fieldWidth: fieldRect.width(),
+        fieldHeight: fieldRect.height(),
+        borderColor: isHovered
+          ? (fieldCanvasStyle?.hoverBorderBottomColor ?? hoverStroke ?? defaultStroke)
+          : defaultStroke,
+        sideColors: isHovered
+          ? {
+              top: fieldCanvasStyle?.hoverBorderTopColor,
+              right: fieldCanvasStyle?.hoverBorderRightColor,
+              bottom: fieldCanvasStyle?.hoverBorderBottomColor,
+              left: fieldCanvasStyle?.hoverBorderLeftColor,
+            }
+          : undefined,
+        sideWidths: hoverSideWidths,
+        visible: true,
+      });
+
+      upsertFieldAccentRing({
+        fieldGroup,
+        fieldWidth: fieldRect.width(),
+        fieldHeight: fieldRect.height(),
+        ringColor: hoverStroke ?? defaultStroke,
+        borderRadius: fieldCanvasStyle?.borderRadius ?? 2,
+        visible: false,
+      });
+
+      layer.batchDraw();
+      return;
+    }
+
+    const stroke = isHovered ? (hoverStroke ?? defaultStroke) : defaultStroke;
 
     new Konva.Tween({
       node: fieldRect,
@@ -357,7 +432,7 @@ export const createFieldHoverInteraction = ({ options, fieldGroup, fieldRect }: 
       fieldGroup,
       fieldWidth: fieldRect.width(),
       fieldHeight: fieldRect.height(),
-      ringColor: hoverStroke,
+      ringColor: hoverStroke ?? defaultStroke,
       borderRadius: fieldCanvasStyle?.borderRadius ?? 2,
       visible: isHovered,
     });
