@@ -5,6 +5,8 @@ import type { TCssVarsSchema } from '../types/css-vars';
 import type { FieldCanvasStyle } from '../universal/field-renderer/field-renderer';
 import { isRequiredField } from './advanced-fields-helpers';
 
+const TRANSPARENT_BACKGROUND = 'rgba(0, 0, 0, 0)';
+
 export const SIGNING_FIELD_HIGHLIGHT_COLOR_KEYS = [
   'fieldRequiredCard',
   'fieldRequiredCardBorder',
@@ -98,11 +100,40 @@ const colorToCanvasColor = (value: string | undefined, alpha?: number) => {
   return color.toRgbString();
 };
 
+const OPTIONAL_FIELD_SIDE_BORDER_OPACITY = 0.4;
+
 type SigningFieldStateInput = {
   inserted: boolean;
   isValidating?: boolean;
+  isEditing?: boolean;
   fieldMeta?: { readOnly?: boolean } | null;
   type: Field['type'];
+};
+
+const FILLED_FIELD_BACKGROUND = 'rgba(255, 255, 255, 0.9)';
+
+const getOptionalHoverSideStyle = ({
+  optionalBorderWidth,
+  optionalBorderHoverColor,
+}: {
+  optionalBorderWidth: number;
+  optionalBorderHoverColor: string | undefined;
+}) => {
+  const sideColor = colorToCanvasColor(optionalBorderHoverColor, OPTIONAL_FIELD_SIDE_BORDER_OPACITY);
+  const bottomColor = optionalBorderHoverColor;
+
+  return {
+    borderTopWidth: 1,
+    borderRightWidth: 1,
+    borderBottomWidth: optionalBorderWidth + 1,
+    borderLeftWidth: 1,
+    borderTopColor: sideColor,
+    borderRightColor: sideColor,
+    borderBottomColor: bottomColor,
+    borderLeftColor: sideColor,
+    borderColor: bottomColor,
+    borderHoverColor: bottomColor,
+  };
 };
 
 /**
@@ -114,29 +145,63 @@ export const resolveFieldCanvasStyleFromBrandingColors = (
   brandingColors: TCssVarsSchema | null | undefined,
 ): FieldCanvasStyle | undefined => {
   const colors = resolveSigningFieldHighlightColors(brandingColors);
+  const isRequired = isRequiredField({ type: field.type, fieldMeta: field.fieldMeta ?? null } as Field);
+  const isEditing = Boolean(field.isEditing);
+  const requiredBorderWidth =
+    parsePixelValue(colors.fieldRequiredCardBorderWidth ?? DEFAULT_BRAND_LENGTHS.fieldRequiredCardBorderWidth) ?? 2;
+  const optionalBorderWidth =
+    parsePixelValue(colors.fieldOptionalCardBorderWidth ?? DEFAULT_BRAND_LENGTHS.fieldOptionalCardBorderWidth) ?? 2;
+  const requiredBorderColor = colorToCanvasColor(colors.fieldRequiredCardBorder);
+  const requiredBorderHoverColor = colorToCanvasColor(colors.fieldRequiredCardBorderHover);
+  const optionalBorderColor = colorToCanvasColor(colors.fieldOptionalCardBorder);
+  const optionalBorderHoverColor = colorToCanvasColor(colors.fieldOptionalCardBorderHover);
+  const optionalHoverSideStyle = getOptionalHoverSideStyle({
+    optionalBorderWidth,
+    optionalBorderHoverColor,
+  });
 
-  if (field.inserted || field.fieldMeta?.readOnly) {
+  if (field.fieldMeta?.readOnly) {
     return {
-      backgroundColor: colorToCanvasColor(colors.fieldOptionalCard, 0.9),
-      borderColor: colorToCanvasColor(colors.fieldOptionalCardBorder),
-      borderHoverColor: colorToCanvasColor(colors.fieldOptionalCardBorderHover),
-      borderWidth: parsePixelValue(
-        colors.fieldOptionalCardBorderWidth ?? DEFAULT_BRAND_LENGTHS.fieldOptionalCardBorderWidth,
-      ),
+      backgroundColor: FILLED_FIELD_BACKGROUND,
+      borderColor: 'rgb(176, 176, 176)',
+      borderWidth: 2,
       borderRadius: 2,
     };
   }
 
-  const isRequired = isRequiredField({ type: field.type, fieldMeta: field.fieldMeta ?? null } as Field);
+  if (field.inserted) {
+    if (isRequired) {
+      return {
+        backgroundColor: FILLED_FIELD_BACKGROUND,
+        borderColor: isEditing ? requiredBorderHoverColor : requiredBorderColor,
+        borderHoverColor: requiredBorderHoverColor,
+        borderWidth: requiredBorderWidth,
+        borderRadius: 2,
+        showAccentRing: isEditing,
+        accentRingColor: isEditing ? requiredBorderHoverColor : undefined,
+      };
+    }
+
+    return {
+      backgroundColor: FILLED_FIELD_BACKGROUND,
+      borderColor: isEditing ? optionalBorderHoverColor : optionalBorderColor,
+      borderHoverColor: optionalBorderHoverColor,
+      borderWidth: optionalBorderWidth,
+      borderRadius: 2,
+      showAccentRing: isEditing,
+      accentRingColor: isEditing
+        ? colorToCanvasColor(colors.fieldOptionalCardBorderHover, OPTIONAL_FIELD_SIDE_BORDER_OPACITY)
+        : undefined,
+    };
+  }
+
   const isValidating = Boolean(field.isValidating && isRequired);
 
   if (isValidating) {
     return {
-      backgroundColor: colorToCanvasColor(colors.fieldRequiredCard, 0.9),
+      backgroundColor: TRANSPARENT_BACKGROUND,
       borderColor: colorToCanvasColor(colors.fieldValidationCardBorder),
-      borderWidth: parsePixelValue(
-        colors.fieldRequiredCardBorderWidth ?? DEFAULT_BRAND_LENGTHS.fieldRequiredCardBorderWidth,
-      ),
+      borderWidth: requiredBorderWidth + 1,
       borderRadius: 2,
     };
   }
@@ -144,23 +209,40 @@ export const resolveFieldCanvasStyleFromBrandingColors = (
   if (isRequired) {
     return {
       backgroundColor: colorToCanvasColor(colors.fieldRequiredCard, 0.9),
-      borderColor: colorToCanvasColor(colors.fieldRequiredCardBorder),
-      borderHoverColor: colorToCanvasColor(colors.fieldRequiredCardBorderHover),
-      borderWidth: parsePixelValue(
-        colors.fieldRequiredCardBorderWidth ?? DEFAULT_BRAND_LENGTHS.fieldRequiredCardBorderWidth,
-      ),
+      borderColor: isEditing ? requiredBorderHoverColor : requiredBorderColor,
+      borderHoverColor: requiredBorderHoverColor,
+      borderWidth: requiredBorderWidth,
       borderRadius: 2,
+      showAccentRing: isEditing,
+      accentRingColor: isEditing ? requiredBorderHoverColor : undefined,
+    };
+  }
+
+  if (isEditing) {
+    return {
+      backgroundColor: colorToCanvasColor(colors.fieldOptionalCard, 0.9),
+      borderRadius: 2,
+      ...optionalHoverSideStyle,
     };
   }
 
   return {
     backgroundColor: colorToCanvasColor(colors.fieldOptionalCard, 0.9),
-    borderColor: colorToCanvasColor(colors.fieldOptionalCardBorder),
-    borderHoverColor: colorToCanvasColor(colors.fieldOptionalCardBorderHover),
-    borderWidth: parsePixelValue(
-      colors.fieldOptionalCardBorderWidth ?? DEFAULT_BRAND_LENGTHS.fieldOptionalCardBorderWidth,
-    ),
+    borderColor: optionalBorderColor,
+    borderHoverColor: optionalBorderHoverColor,
+    borderTopWidth: 0,
+    borderRightWidth: 0,
+    borderBottomWidth: optionalBorderWidth,
+    borderLeftWidth: 0,
     borderRadius: 2,
+    hoverBorderTopWidth: optionalHoverSideStyle.borderTopWidth,
+    hoverBorderRightWidth: optionalHoverSideStyle.borderRightWidth,
+    hoverBorderBottomWidth: optionalHoverSideStyle.borderBottomWidth,
+    hoverBorderLeftWidth: optionalHoverSideStyle.borderLeftWidth,
+    hoverBorderTopColor: optionalHoverSideStyle.borderTopColor,
+    hoverBorderRightColor: optionalHoverSideStyle.borderRightColor,
+    hoverBorderBottomColor: optionalHoverSideStyle.borderBottomColor,
+    hoverBorderLeftColor: optionalHoverSideStyle.borderLeftColor,
   };
 };
 

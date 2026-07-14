@@ -17,6 +17,11 @@ export type FieldToRender = Pick<
   positionX: number;
   positionY: number;
   isValidating?: boolean;
+  /**
+   * When true, the field is actively being edited inline (text/number).
+   * Applies the same accent ring treatment as hover for required fields.
+   */
+  isEditing?: boolean;
   fieldMeta?: TFieldMetaSchema | null;
   signature?: Pick<Signature, 'signatureImageAsBase64' | 'typedSignature'> | null;
 };
@@ -56,7 +61,35 @@ export type FieldCanvasStyle = {
   borderColor?: string;
   borderHoverColor?: string;
   borderRadius?: number;
+  /** Uniform border width. Ignored when per-side widths are set. */
   borderWidth?: number;
+  borderTopWidth?: number;
+  borderRightWidth?: number;
+  borderBottomWidth?: number;
+  borderLeftWidth?: number;
+  /** Optional per-side colours (falls back to `borderColor`). */
+  borderTopColor?: string;
+  borderRightColor?: string;
+  borderBottomColor?: string;
+  borderLeftColor?: string;
+  /**
+   * When true, draw an outer accent ring (hover / editing) without changing
+   * the field's layout box.
+   */
+  showAccentRing?: boolean;
+  accentRingColor?: string;
+  /**
+   * Optional idle fields use an asymmetric hover: faint L/T/R + thicker bottom.
+   * When set, hover interaction applies these instead of a uniform accent ring.
+   */
+  hoverBorderTopWidth?: number;
+  hoverBorderRightWidth?: number;
+  hoverBorderBottomWidth?: number;
+  hoverBorderLeftWidth?: number;
+  hoverBorderTopColor?: string;
+  hoverBorderRightColor?: string;
+  hoverBorderBottomColor?: string;
+  hoverBorderLeftColor?: string;
   opacity?: number;
 };
 

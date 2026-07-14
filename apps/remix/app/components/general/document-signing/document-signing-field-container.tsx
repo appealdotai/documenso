@@ -131,7 +131,7 @@ export const DocumentSigningFieldContainer = ({
   const showsChangeTooltip = type === 'Signature' || type === 'Text' || type === 'Number';
 
   return (
-    <FieldRootContainer field={field} readonly={readOnlyField}>
+    <FieldRootContainer field={field} readonly={readOnlyField} isEditing={isEditing}>
       {!field.inserted && !loading && !readOnlyField && !isEditing && (
         <button
           type="submit"

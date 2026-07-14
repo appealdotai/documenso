@@ -41,7 +41,7 @@ export const renderCheckboxFieldElement = (field: FieldToRender, options: Render
     pageLayer.add(fieldGroup);
   }
 
-  const fieldRect = upsertFieldRect(field, options);
+  const fieldRect = upsertFieldRect(field, options, fieldGroup);
   fieldGroup.add(fieldRect);
 
   const fontSize = checkboxMeta?.fontSize || DEFAULT_STANDARD_FONT_SIZE;

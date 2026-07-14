@@ -217,7 +217,7 @@ export const renderGenericTextFieldElement = (field: FieldToRender, options: Ren
   }
 
   // Render the field background and text.
-  const fieldRect = upsertFieldRect(field, options);
+  const fieldRect = upsertFieldRect(field, options, fieldGroup);
   const {
     fieldText,
     isLabel,
