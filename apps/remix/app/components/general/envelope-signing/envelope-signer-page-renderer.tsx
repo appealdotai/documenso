@@ -9,7 +9,16 @@ import { isBase64Image } from '@documenso/lib/constants/signatures';
 import type { TRecipientActionAuth } from '@documenso/lib/types/document-auth';
 import type { TEnvelope } from '@documenso/lib/types/envelope';
 import { ZFullFieldSchema } from '@documenso/lib/types/field';
-import { ZNumberFieldMeta, ZTextFieldMeta } from '@documenso/lib/types/field-meta';
+import {
+  type TDateFieldMeta,
+  type TDropdownFieldMeta,
+  type TNumberFieldMeta,
+  type TTextFieldMeta,
+  ZDateFieldMeta,
+  ZDropdownFieldMeta,
+  ZNumberFieldMeta,
+  ZTextFieldMeta,
+} from '@documenso/lib/types/field-meta';
 import {
   createFieldCanvasStyleCache,
   type FieldCanvasStyleCache,
@@ -32,8 +41,6 @@ import { match } from 'ts-pattern';
 
 import { useEmbedSigningContext } from '~/components/embed/embed-signing-context';
 import { handleCheckboxFieldClick } from '~/utils/field-signing/checkbox-field';
-import { handleDateFieldClick } from '~/utils/field-signing/date-field';
-import { handleDropdownFieldClick } from '~/utils/field-signing/dropdown-field';
 import { handleEmailFieldClick } from '~/utils/field-signing/email-field';
 import { handleInitialsFieldClick } from '~/utils/field-signing/initial-field';
 import { handleNameFieldClick } from '~/utils/field-signing/name-field';
@@ -42,6 +49,8 @@ import { runSignatureFieldAction } from '~/utils/field-signing/signature-field-a
 
 import { useRequiredDocumentSigningAuthContext } from '../document-signing/document-signing-auth-provider';
 import { useRequiredEnvelopeSigningContext } from '../document-signing/envelope-signing-provider';
+import { InlineDateOverlay } from './inline-date-overlay';
+import { InlineDropdownOverlay } from './inline-dropdown-overlay';
 import { InlineFieldOverlay } from './inline-field-overlay';
 
 type GenericLocalField = TEnvelope['fields'][number] & {
@@ -357,37 +366,18 @@ export const EnvelopeSignerPageRenderer = ({ pageData }: { pageData: PageRenderD
             });
         })
         /**
-         * DROPDOWN FIELD.
+         * DROPDOWN FIELD — inline HTML overlay (no dialog).
          */
         .with({ type: FieldType.DROPDOWN }, (field) => {
-          void handleDropdownFieldClick({ field, text: null })
-            .then(async (payload) => {
-              if (payload) {
-                fieldGroup.add(loadingSpinnerGroup);
-                await signField(field.id, payload);
-              }
-            })
-            .finally(() => {
-              loadingSpinnerGroup.destroy();
-            });
+          loadingSpinnerGroup.destroy();
+          setActiveInlineFieldIdRef.current(field.id);
         })
         /**
-         * DATE FIELD.
+         * DATE FIELD — inline HTML overlay (no dialog).
          */
         .with({ type: FieldType.DATE }, (field) => {
-          void handleDateFieldClick({
-            field,
-            dateFormat: envelope.documentMeta.dateFormat ?? undefined,
-          })
-            .then(async (payload) => {
-              if (payload) {
-                fieldGroup.add(loadingSpinnerGroup);
-                await signField(field.id, payload);
-              }
-            })
-            .finally(() => {
-              loadingSpinnerGroup.destroy();
-            });
+          loadingSpinnerGroup.destroy();
+          setActiveInlineFieldIdRef.current(field.id);
         })
         /**
          * SIGNATURE FIELD.
@@ -640,6 +630,16 @@ export const EnvelopeSignerPageRenderer = ({ pageData }: { pageData: PageRenderD
       return parsed.success ? parsed.data : null;
     }
 
+    if (activeInlineField.type === FieldType.DROPDOWN) {
+      const parsed = ZDropdownFieldMeta.safeParse(activeInlineField.fieldMeta);
+      return parsed.success ? parsed.data : null;
+    }
+
+    if (activeInlineField.type === FieldType.DATE) {
+      const parsed = ZDateFieldMeta.safeParse(activeInlineField.fieldMeta);
+      return parsed.success ? parsed.data : null;
+    }
+
     return null;
   }, [activeInlineField]);
 
@@ -661,16 +661,28 @@ export const EnvelopeSignerPageRenderer = ({ pageData }: { pageData: PageRenderD
     fieldGroup?.add(loadingSpinnerGroup);
 
     try {
-      await signField(activeInlineField.id, {
-        type: activeInlineField.type === FieldType.NUMBER ? FieldType.NUMBER : FieldType.TEXT,
-        value,
-      });
+      if (activeInlineField.type === FieldType.NUMBER) {
+        await signField(activeInlineField.id, { type: FieldType.NUMBER, value });
+      } else if (activeInlineField.type === FieldType.TEXT) {
+        await signField(activeInlineField.id, { type: FieldType.TEXT, value });
+      } else if (activeInlineField.type === FieldType.DROPDOWN) {
+        await signField(activeInlineField.id, { type: FieldType.DROPDOWN, value });
+      } else if (activeInlineField.type === FieldType.DATE) {
+        await signField(activeInlineField.id, { type: FieldType.DATE, value });
+      } else {
+        return;
+      }
 
       setActiveInlineFieldId(null);
     } finally {
       loadingSpinnerGroup.destroy();
     }
   };
+
+  const isInlineTextOrNumber =
+    activeInlineField?.type === FieldType.TEXT || activeInlineField?.type === FieldType.NUMBER;
+  const isInlineDropdown = activeInlineField?.type === FieldType.DROPDOWN;
+  const isInlineDate = activeInlineField?.type === FieldType.DATE;
 
   if (!currentEnvelopeItem) {
     return null;
@@ -701,19 +713,43 @@ export const EnvelopeSignerPageRenderer = ({ pageData }: { pageData: PageRenderD
         />
       ))}
 
-      {activeInlineField &&
-        (activeInlineField.type === FieldType.TEXT || activeInlineField.type === FieldType.NUMBER) && (
-          <InlineFieldOverlay
-            key={activeInlineField.id}
-            field={{
-              ...activeInlineField,
-              fieldMeta: activeInlineFieldMeta,
-            }}
-            scale={scale}
-            onCommit={handleInlineFieldCommit}
-            onCancel={() => setActiveInlineFieldId(null)}
-          />
-        )}
+      {activeInlineField && isInlineTextOrNumber && (
+        <InlineFieldOverlay
+          key={activeInlineField.id}
+          field={{
+            ...activeInlineField,
+            fieldMeta: activeInlineFieldMeta as TTextFieldMeta | TNumberFieldMeta | null,
+          }}
+          scale={scale}
+          onCommit={handleInlineFieldCommit}
+          onCancel={() => setActiveInlineFieldId(null)}
+        />
+      )}
+
+      {activeInlineField && isInlineDropdown && (
+        <InlineDropdownOverlay
+          key={activeInlineField.id}
+          field={{
+            ...activeInlineField,
+            fieldMeta: activeInlineFieldMeta as TDropdownFieldMeta | null,
+          }}
+          onCommit={handleInlineFieldCommit}
+          onCancel={() => setActiveInlineFieldId(null)}
+        />
+      )}
+
+      {activeInlineField && isInlineDate && (
+        <InlineDateOverlay
+          key={activeInlineField.id}
+          field={{
+            ...activeInlineField,
+            fieldMeta: activeInlineFieldMeta as TDateFieldMeta | null,
+          }}
+          dateFormat={envelope.documentMeta.dateFormat ?? undefined}
+          onCommit={handleInlineFieldCommit}
+          onCancel={() => setActiveInlineFieldId(null)}
+        />
+      )}
 
       {/* The element Konva will inject it's canvas into. */}
       <div className="konva-container absolute inset-0 z-10 w-full" ref={konvaContainer}></div>

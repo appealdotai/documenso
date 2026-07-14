@@ -30,6 +30,48 @@ export type ExtractFieldInsertionValuesOptions = {
   documentMeta: Pick<TDocumentMeta, 'timezone' | 'dateFormat' | 'typedSignatureEnabled'>;
 };
 
+/**
+ * Formats a DATE field value for insertion into the document.
+ * Accepts an ISO date string; falls back to "now" when parsing fails.
+ * Empty / null clears the field.
+ */
+export const formatDateFieldCustomText = ({
+  value,
+  documentMeta,
+}: {
+  value: string | null | undefined;
+  documentMeta:
+    | Pick<TDocumentMeta, 'timezone' | 'dateFormat'>
+    | {
+        timezone?: string | null;
+        dateFormat?: string | null;
+      };
+}): { customText: string; inserted: boolean } => {
+  if (!value) {
+    return {
+      customText: '',
+      inserted: false,
+    };
+  }
+
+  const dateFormat = documentMeta.dateFormat ?? DEFAULT_DOCUMENT_DATE_FORMAT;
+  const timezone = documentMeta.timezone ?? DEFAULT_DOCUMENT_TIME_ZONE;
+
+  const parsedDate = DateTime.fromISO(value, { zone: timezone });
+
+  if (parsedDate.isValid) {
+    return {
+      customText: parsedDate.toFormat(dateFormat),
+      inserted: true,
+    };
+  }
+
+  return {
+    customText: DateTime.now().setZone(timezone).toFormat(dateFormat),
+    inserted: true,
+  };
+};
+
 export const extractFieldInsertionValues = ({
   fieldValue,
   field,
@@ -79,29 +121,10 @@ export const extractFieldInsertionValues = ({
       };
     })
     .with({ type: FieldType.DATE }, (fieldValue) => {
-      if (!fieldValue.value) {
-        return {
-          customText: '',
-          inserted: false,
-        };
-      }
-
-      const dateFormat = documentMeta.dateFormat ?? DEFAULT_DOCUMENT_DATE_FORMAT;
-      const timezone = documentMeta.timezone ?? DEFAULT_DOCUMENT_TIME_ZONE;
-
-      const parsedDate = DateTime.fromISO(fieldValue.value, { zone: timezone });
-
-      if (parsedDate.isValid) {
-        return {
-          customText: parsedDate.toFormat(dateFormat),
-          inserted: true,
-        };
-      }
-
-      return {
-        customText: DateTime.now().setZone(timezone).toFormat(dateFormat),
-        inserted: true,
-      };
+      return formatDateFieldCustomText({
+        value: fieldValue.value,
+        documentMeta,
+      });
     })
     .with({ type: FieldType.NUMBER }, (fieldValue) => {
       if (!fieldValue.value) {
