@@ -104,6 +104,7 @@ export const EnvelopeSignerPageRenderer = ({ pageData }: { pageData: PageRenderD
 
   const [activeInlineFieldId, setActiveInlineFieldId] = useState<number | null>(null);
   const activeInlineFieldIdRef = useRef(activeInlineFieldId);
+  const previousActiveInlineFieldIdRef = useRef<number | null>(null);
   const setActiveInlineFieldIdRef = useRef(setActiveInlineFieldId);
 
   useEffect(() => {
@@ -190,6 +191,7 @@ export const EnvelopeSignerPageRenderer = ({ pageData }: { pageData: PageRenderD
         positionX: Number(fieldToRender.positionX),
         positionY: Number(fieldToRender.positionY),
         isValidating,
+        isEditing: activeInlineFieldIdRef.current === fieldToRender.id,
         signature: unparsedField.signature,
       },
       translations: getClientSideFieldTranslations(i18n),
@@ -570,10 +572,38 @@ export const EnvelopeSignerPageRenderer = ({ pageData }: { pageData: PageRenderD
 
   /**
    * Hide the Konva field content while the HTML overlay is editing it so the
-   * typed value is not doubled underneath the input.
+   * typed value is not doubled underneath the input. Also force a re-render so
+   * required fields pick up the editing accent ring.
    */
   useEffect(() => {
-    if (!pageLayer.current || !activeInlineFieldId) {
+    if (!pageLayer.current) {
+      return;
+    }
+
+    const previousActiveInlineFieldId = previousActiveInlineFieldIdRef.current;
+    previousActiveInlineFieldIdRef.current = activeInlineFieldId;
+
+    const fieldIdsToRefresh = [previousActiveInlineFieldId, activeInlineFieldId].filter(
+      (fieldId): fieldId is number => fieldId != null,
+    );
+
+    if (fieldIdsToRefresh.length > 0) {
+      const fieldCanvasStyleCache = createFieldCanvasStyleCache();
+
+      for (const fieldId of fieldIdsToRefresh) {
+        cachedRenderFields.current.delete(fieldId);
+        const field = localPageFields.find((pageField) => pageField.id === fieldId);
+
+        if (field) {
+          renderFieldOnLayer(field, fieldCanvasStyleCache);
+          cachedRenderFields.current.set(fieldId, field);
+        }
+      }
+
+      pageLayer.current.batchDraw();
+    }
+
+    if (!activeInlineFieldId) {
       return;
     }
 

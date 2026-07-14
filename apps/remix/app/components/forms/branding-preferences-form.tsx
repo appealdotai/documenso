@@ -584,6 +584,7 @@ export function BrandingPreferencesForm({
                       data-inserted="false"
                       data-readonly="false"
                       data-field-required="true"
+                      data-editing="false"
                       data-validate="false"
                     >
                       <Trans>Required</Trans>
@@ -591,9 +592,21 @@ export function BrandingPreferencesForm({
 
                     <div
                       className="field--FieldRootContainer field-card-container flex h-12 min-w-[8rem] cursor-pointer items-center justify-center rounded-[2px] px-3 text-sm"
+                      data-inserted="true"
+                      data-readonly="false"
+                      data-field-required="true"
+                      data-editing="false"
+                      data-validate="false"
+                    >
+                      <Trans>Required filled</Trans>
+                    </div>
+
+                    <div
+                      className="field--FieldRootContainer field-card-container flex h-12 min-w-[8rem] cursor-pointer items-center justify-center rounded-[2px] px-3 text-sm"
                       data-inserted="false"
                       data-readonly="false"
                       data-field-required="false"
+                      data-editing="false"
                       data-validate="false"
                     >
                       <Trans>Optional</Trans>
@@ -604,6 +617,7 @@ export function BrandingPreferencesForm({
                       data-inserted="false"
                       data-readonly="false"
                       data-field-required="true"
+                      data-editing="false"
                       data-validate="true"
                     >
                       <Trans>Missing</Trans>

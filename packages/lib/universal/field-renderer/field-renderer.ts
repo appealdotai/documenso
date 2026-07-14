@@ -17,6 +17,11 @@ export type FieldToRender = Pick<
   positionX: number;
   positionY: number;
   isValidating?: boolean;
+  /**
+   * When true, the field is actively being edited inline (text/number).
+   * Applies the same accent ring treatment as hover for required fields.
+   */
+  isEditing?: boolean;
   fieldMeta?: TFieldMetaSchema | null;
   signature?: Pick<Signature, 'signatureImageAsBase64' | 'typedSignature'> | null;
 };
@@ -62,6 +67,12 @@ export type FieldCanvasStyle = {
   borderRightWidth?: number;
   borderBottomWidth?: number;
   borderLeftWidth?: number;
+  /**
+   * When true, draw an outer accent ring (hover / editing) without changing
+   * the field's layout box.
+   */
+  showAccentRing?: boolean;
+  accentRingColor?: string;
   opacity?: number;
 };
 

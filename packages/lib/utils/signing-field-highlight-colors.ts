@@ -103,9 +103,12 @@ const colorToCanvasColor = (value: string | undefined, alpha?: number) => {
 type SigningFieldStateInput = {
   inserted: boolean;
   isValidating?: boolean;
+  isEditing?: boolean;
   fieldMeta?: { readOnly?: boolean } | null;
   type: Field['type'];
 };
+
+const FILLED_FIELD_BACKGROUND = 'rgba(255, 255, 255, 0.9)';
 
 /**
  * Resolve Konva field styles directly from branding colour tokens.
@@ -116,25 +119,46 @@ export const resolveFieldCanvasStyleFromBrandingColors = (
   brandingColors: TCssVarsSchema | null | undefined,
 ): FieldCanvasStyle | undefined => {
   const colors = resolveSigningFieldHighlightColors(brandingColors);
-
-  if (field.inserted || field.fieldMeta?.readOnly) {
-    return {
-      backgroundColor: colorToCanvasColor(colors.fieldOptionalCard, 0.9),
-      borderColor: colorToCanvasColor(colors.fieldOptionalCardBorder),
-      borderHoverColor: colorToCanvasColor(colors.fieldOptionalCardBorderHover),
-      borderWidth: parsePixelValue(
-        colors.fieldOptionalCardBorderWidth ?? DEFAULT_BRAND_LENGTHS.fieldOptionalCardBorderWidth,
-      ),
-      borderRadius: 2,
-    };
-  }
-
   const isRequired = isRequiredField({ type: field.type, fieldMeta: field.fieldMeta ?? null } as Field);
-  const isValidating = Boolean(field.isValidating && isRequired);
+  const isEditing = Boolean(field.isEditing);
   const requiredBorderWidth =
     parsePixelValue(colors.fieldRequiredCardBorderWidth ?? DEFAULT_BRAND_LENGTHS.fieldRequiredCardBorderWidth) ?? 2;
   const optionalBorderWidth =
     parsePixelValue(colors.fieldOptionalCardBorderWidth ?? DEFAULT_BRAND_LENGTHS.fieldOptionalCardBorderWidth) ?? 2;
+  const requiredBorderColor = colorToCanvasColor(colors.fieldRequiredCardBorder);
+  const requiredBorderHoverColor = colorToCanvasColor(colors.fieldRequiredCardBorderHover);
+
+  if (field.fieldMeta?.readOnly) {
+    return {
+      backgroundColor: FILLED_FIELD_BACKGROUND,
+      borderColor: 'rgb(176, 176, 176)',
+      borderWidth: 2,
+      borderRadius: 2,
+    };
+  }
+
+  if (field.inserted) {
+    if (isRequired) {
+      return {
+        backgroundColor: FILLED_FIELD_BACKGROUND,
+        borderColor: isEditing ? requiredBorderHoverColor : requiredBorderColor,
+        borderHoverColor: requiredBorderHoverColor,
+        borderWidth: requiredBorderWidth,
+        borderRadius: 2,
+        showAccentRing: isEditing,
+        accentRingColor: isEditing ? requiredBorderHoverColor : undefined,
+      };
+    }
+
+    return {
+      backgroundColor: FILLED_FIELD_BACKGROUND,
+      borderColor: '#e5e7eb',
+      borderWidth: 2,
+      borderRadius: 2,
+    };
+  }
+
+  const isValidating = Boolean(field.isValidating && isRequired);
 
   if (isValidating) {
     return {
@@ -148,10 +172,12 @@ export const resolveFieldCanvasStyleFromBrandingColors = (
   if (isRequired) {
     return {
       backgroundColor: colorToCanvasColor(colors.fieldRequiredCard, 0.9),
-      borderColor: colorToCanvasColor(colors.fieldRequiredCardBorder),
-      borderHoverColor: colorToCanvasColor(colors.fieldRequiredCardBorderHover),
+      borderColor: isEditing ? requiredBorderHoverColor : requiredBorderColor,
+      borderHoverColor: requiredBorderHoverColor,
       borderWidth: requiredBorderWidth,
       borderRadius: 2,
+      showAccentRing: isEditing,
+      accentRingColor: isEditing ? requiredBorderHoverColor : undefined,
     };
   }
 

@@ -261,6 +261,13 @@
     border-width: 2px;
   }
 
+  .field--FieldRootContainer.field-card-container[data-inserted="true"][data-field-required="true"] {
+    background-color: rgb(255 255 255 / 0.9);
+    border-color: hsl(var(--field-required-card-border));
+    border-style: solid;
+    border-width: var(--field-required-card-border-width);
+  }
+
   .field--FieldRootContainer.field-card-container[data-readonly="true"] {
     background-color: rgb(255 255 255 / 0.9);
     border-color: rgb(176 176 176);
@@ -270,7 +277,7 @@
 
   .field--FieldRootContainer.field-card-container[data-inserted="false"][data-readonly="false"][data-field-required="true"]:not(
       [data-validate="true"]
-    ) {
+    ):not([data-editing="true"]) {
     background-color: hsl(var(--field-required-card) / 0.9);
     border-color: hsl(var(--field-required-card-border));
     border-style: solid;
@@ -279,8 +286,21 @@
 
   .field--FieldRootContainer.field-card-container[data-inserted="false"][data-readonly="false"][data-field-required="true"]:not(
       [data-validate="true"]
-    ):hover {
+    ):not([data-editing="true"]):hover,
+  .field--FieldRootContainer.field-card-container[data-field-required="true"][data-editing="true"] {
     border-color: hsl(var(--field-required-card-border-hover));
+    border-style: solid;
+    border-width: var(--field-required-card-border-width);
+    /* Outer ring approximates a thicker border without shifting layout. */
+    box-shadow: 0 0 0 1px hsl(var(--field-required-card-border-hover));
+  }
+
+  .field--FieldRootContainer.field-card-container[data-inserted="false"][data-readonly="false"][data-field-required="true"][data-editing="true"] {
+    background-color: hsl(var(--field-required-card) / 0.9);
+  }
+
+  .field--FieldRootContainer.field-card-container[data-inserted="true"][data-field-required="true"][data-editing="true"] {
+    background-color: rgb(255 255 255 / 0.9);
   }
 
   .field--FieldRootContainer.field-card-container[data-inserted="false"][data-readonly="false"][data-field-required="false"]:not(
@@ -303,6 +323,7 @@
     border-color: hsl(var(--field-validation-card-border));
     border-style: solid;
     border-width: calc(var(--field-required-card-border-width) + 1px);
+    box-shadow: none;
   }
 }
 

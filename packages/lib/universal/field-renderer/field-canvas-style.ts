@@ -17,9 +17,9 @@ export type FieldCanvasStyleCache = Map<string, FieldCanvasStyle | undefined>;
 export const createFieldCanvasStyleCache = (): FieldCanvasStyleCache => new Map();
 
 export const getFieldCanvasStyleCacheKey = (field: FieldToRender) => {
-  const isRequired = !field.inserted && !field.fieldMeta?.readOnly && isRequiredField(field as unknown as Field);
+  const isRequired = !field.fieldMeta?.readOnly && isRequiredField(field as unknown as Field);
 
-  return `${field.type}:${field.inserted}:${field.fieldMeta?.readOnly ?? false}:${field.isValidating ?? false}:${isRequired ? 'required' : 'optional'}`;
+  return `${field.type}:${field.inserted}:${field.fieldMeta?.readOnly ?? false}:${field.isValidating ?? false}:${field.isEditing ?? false}:${isRequired ? 'required' : 'optional'}`;
 };
 
 export const getPixelValue = (value: string) => {
@@ -93,12 +93,9 @@ const createFieldProbeElement = (field: FieldToRender): HTMLElement => {
   $probe.dataset.inserted = field.inserted ? 'true' : 'false';
   $probe.dataset.validate = field.isValidating ? 'true' : 'false';
   $probe.dataset.readonly = field.fieldMeta?.readOnly ? 'true' : 'false';
-
-  if (!field.inserted && !field.fieldMeta?.readOnly) {
-    $probe.dataset.fieldRequired = isRequiredField(field as unknown as Field) ? 'true' : 'false';
-  } else {
-    $probe.dataset.fieldRequired = 'false';
-  }
+  $probe.dataset.editing = field.isEditing ? 'true' : 'false';
+  $probe.dataset.fieldRequired =
+    !field.fieldMeta?.readOnly && isRequiredField(field as unknown as Field) ? 'true' : 'false';
 
   Object.assign($probe.style, {
     position: 'absolute',
@@ -133,20 +130,8 @@ const resolveFieldCanvasStyleFromCssVars = (field: FieldToRender): FieldCanvasSt
   }
 
   const $styleSource = document.querySelector('.documenso-branded') ?? document.documentElement;
-
-  if (field.inserted || field.fieldMeta?.readOnly) {
-    return {
-      backgroundColor: getRenderableColor(getCssVarHslColor($styleSource, '--field-optional-card', 0.9)),
-      borderColor: getRenderableColor(getCssVarHslColor($styleSource, '--field-optional-card-border')),
-      borderWidth: getPixelValue(
-        getComputedStyle($styleSource).getPropertyValue('--field-optional-card-border-width').trim() || '2px',
-      ),
-      borderRadius: 2,
-    };
-  }
-
   const isRequired = isRequiredField(field as unknown as Field);
-  const isValidating = Boolean(field.isValidating && isRequired);
+  const isEditing = Boolean(field.isEditing);
   const requiredBorderWidth =
     getPixelValue(
       getComputedStyle($styleSource).getPropertyValue('--field-required-card-border-width').trim() || '2px',
@@ -155,6 +140,43 @@ const resolveFieldCanvasStyleFromCssVars = (field: FieldToRender): FieldCanvasSt
     getPixelValue(
       getComputedStyle($styleSource).getPropertyValue('--field-optional-card-border-width').trim() || '2px',
     ) ?? 2;
+  const requiredBorderColor = getRenderableColor(getCssVarHslColor($styleSource, '--field-required-card-border'));
+  const requiredBorderHoverColor = getRenderableColor(
+    getCssVarHslColor($styleSource, '--field-required-card-border-hover'),
+  );
+  const filledBackground = 'rgba(255, 255, 255, 0.9)';
+
+  if (field.fieldMeta?.readOnly) {
+    return {
+      backgroundColor: filledBackground,
+      borderColor: 'rgb(176, 176, 176)',
+      borderWidth: 2,
+      borderRadius: 2,
+    };
+  }
+
+  if (field.inserted) {
+    if (isRequired) {
+      return {
+        backgroundColor: filledBackground,
+        borderColor: isEditing ? requiredBorderHoverColor : requiredBorderColor,
+        borderHoverColor: requiredBorderHoverColor,
+        borderWidth: requiredBorderWidth,
+        borderRadius: 2,
+        showAccentRing: isEditing,
+        accentRingColor: isEditing ? requiredBorderHoverColor : undefined,
+      };
+    }
+
+    return {
+      backgroundColor: filledBackground,
+      borderColor: '#e5e7eb',
+      borderWidth: 2,
+      borderRadius: 2,
+    };
+  }
+
+  const isValidating = Boolean(field.isValidating && isRequired);
 
   if (isValidating) {
     return {
@@ -168,10 +190,12 @@ const resolveFieldCanvasStyleFromCssVars = (field: FieldToRender): FieldCanvasSt
   if (isRequired) {
     return {
       backgroundColor: getRenderableColor(getCssVarHslColor($styleSource, '--field-required-card', 0.9)),
-      borderColor: getRenderableColor(getCssVarHslColor($styleSource, '--field-required-card-border')),
-      borderHoverColor: getRenderableColor(getCssVarHslColor($styleSource, '--field-required-card-border-hover')),
+      borderColor: isEditing ? requiredBorderHoverColor : requiredBorderColor,
+      borderHoverColor: requiredBorderHoverColor,
       borderWidth: requiredBorderWidth,
       borderRadius: 2,
+      showAccentRing: isEditing,
+      accentRingColor: isEditing ? requiredBorderHoverColor : undefined,
     };
   }
 
@@ -205,6 +229,8 @@ const mergeFieldCanvasStyles = (
     borderRightWidth: primary?.borderRightWidth ?? fallback?.borderRightWidth,
     borderBottomWidth: primary?.borderBottomWidth ?? fallback?.borderBottomWidth,
     borderLeftWidth: primary?.borderLeftWidth ?? fallback?.borderLeftWidth,
+    showAccentRing: primary?.showAccentRing ?? fallback?.showAccentRing,
+    accentRingColor: primary?.accentRingColor ?? fallback?.accentRingColor,
     opacity: primary?.opacity ?? fallback?.opacity,
   };
 };

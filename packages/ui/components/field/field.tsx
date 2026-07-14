@@ -65,9 +65,21 @@ export type FieldRootContainerProps = {
   children: React.ReactNode;
   className?: string;
   readonly?: boolean;
+  /**
+   * When true, the field is actively being edited inline (text/number).
+   * Used to apply the same accent ring treatment as hover.
+   */
+  isEditing?: boolean;
 };
 
-export function FieldRootContainer({ field, children, color, className, readonly }: FieldRootContainerProps) {
+export function FieldRootContainer({
+  field,
+  children,
+  color,
+  className,
+  readonly,
+  isEditing = false,
+}: FieldRootContainerProps) {
   const [isValidating, setIsValidating] = useState(false);
   const isPageInDom = useIsPageInDom(field.page);
 
@@ -110,7 +122,6 @@ export function FieldRootContainer({ field, children, color, className, readonly
   }
 
   const isReadOnly = Boolean(readonly);
-  const showSigningHighlight = !field.inserted && !isReadOnly;
 
   return (
     <FieldContainerPortal field={field}>
@@ -120,7 +131,8 @@ export function FieldRootContainer({ field, children, color, className, readonly
         data-field-type={field.type}
         data-inserted={field.inserted ? 'true' : 'false'}
         data-readonly={isReadOnly ? 'true' : 'false'}
-        data-field-required={showSigningHighlight && isRequiredField(field) ? 'true' : 'false'}
+        data-field-required={isRequiredField(field) ? 'true' : 'false'}
+        data-editing={isEditing ? 'true' : 'false'}
         data-validate={isValidating && isFieldUnsignedAndRequired(field) ? 'true' : 'false'}
         className={cn(
           FIELD_ROOT_CONTAINER_CLASS_NAME,

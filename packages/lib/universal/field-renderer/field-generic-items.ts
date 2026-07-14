@@ -142,6 +142,53 @@ const upsertFieldBorderLines = ({
   }
 };
 
+const upsertFieldAccentRing = ({
+  fieldGroup,
+  fieldWidth,
+  fieldHeight,
+  ringColor,
+  borderRadius,
+  visible,
+}: {
+  fieldGroup: Konva.Group;
+  fieldWidth: number;
+  fieldHeight: number;
+  ringColor: string;
+  borderRadius: number;
+  visible: boolean;
+}) => {
+  const existingRing = fieldGroup.findOne('.field-accent-ring') as Konva.Rect | undefined;
+
+  if (!visible) {
+    existingRing?.destroy();
+    return;
+  }
+
+  const ring =
+    existingRing ||
+    new Konva.Rect({
+      name: 'field-accent-ring',
+      listening: false,
+    });
+
+  ring.setAttrs({
+    x: -1,
+    y: -1,
+    width: fieldWidth + 2,
+    height: fieldHeight + 2,
+    stroke: ringColor,
+    strokeWidth: 1,
+    fillEnabled: false,
+    cornerRadius: borderRadius,
+    listening: false,
+  } satisfies Partial<Konva.RectConfig>);
+
+  if (!existingRing) {
+    fieldGroup.add(ring);
+    ring.moveToBottom();
+  }
+};
+
 export const upsertFieldRect = (
   field: FieldToRender,
   options: RenderFieldElementOptions,
@@ -162,6 +209,7 @@ export const upsertFieldRect = (
   const sideWidths = getFieldBorderSideWidths(fieldCanvasStyle);
   const borderColor = fieldCanvasStyle?.borderColor ?? (color ? getRecipientColorStyles(color).baseRing : '#e5e7eb');
   const isVisible = mode !== 'export';
+  const borderRadius = sideWidths.isUniform ? (fieldCanvasStyle?.borderRadius ?? 2) : 0;
 
   fieldRect.setAttrs({
     width: fieldWidth,
@@ -169,7 +217,7 @@ export const upsertFieldRect = (
     fill: fieldCanvasStyle?.backgroundColor ?? DEFAULT_RECT_BACKGROUND,
     stroke: borderColor,
     strokeWidth: sideWidths.isUniform ? sideWidths.top : 0,
-    cornerRadius: sideWidths.isUniform ? (fieldCanvasStyle?.borderRadius ?? 2) : 0,
+    cornerRadius: borderRadius,
     strokeScaleEnabled: false,
     visible: isVisible,
   } satisfies Partial<Konva.RectConfig>);
@@ -188,6 +236,17 @@ export const upsertFieldRect = (
       fieldGroup.findOne(`.${name}`)?.destroy();
     }
   }
+
+  const accentRingColor = fieldCanvasStyle?.accentRingColor ?? fieldCanvasStyle?.borderHoverColor ?? borderColor;
+
+  upsertFieldAccentRing({
+    fieldGroup,
+    fieldWidth,
+    fieldHeight,
+    ringColor: accentRingColor,
+    borderRadius: fieldCanvasStyle?.borderRadius ?? 2,
+    visible: Boolean(isVisible && fieldCanvasStyle?.showAccentRing && accentRingColor),
+  });
 
   return fieldRect;
 };
@@ -253,6 +312,11 @@ export const createFieldHoverInteraction = ({ options, fieldGroup, fieldRect }: 
     return;
   }
 
+  // Editing owns the accent ring; skip ephemeral hover while actively editing.
+  if (fieldCanvasStyle?.showAccentRing) {
+    return;
+  }
+
   const defaultStroke = fieldCanvasStyle?.borderColor;
   const hoverStroke = fieldCanvasStyle?.borderHoverColor;
 
@@ -260,12 +324,14 @@ export const createFieldHoverInteraction = ({ options, fieldGroup, fieldRect }: 
     return;
   }
 
-  const tweenBorderStroke = (stroke: string) => {
+  const applyHover = (isHovered: boolean) => {
     const layer = fieldRect.getLayer();
 
     if (!layer) {
       return;
     }
+
+    const stroke = isHovered ? hoverStroke : defaultStroke;
 
     new Konva.Tween({
       node: fieldRect,
@@ -286,13 +352,25 @@ export const createFieldHoverInteraction = ({ options, fieldGroup, fieldRect }: 
         stroke,
       }).play();
     }
+
+    upsertFieldAccentRing({
+      fieldGroup,
+      fieldWidth: fieldRect.width(),
+      fieldHeight: fieldRect.height(),
+      ringColor: hoverStroke,
+      borderRadius: fieldCanvasStyle?.borderRadius ?? 2,
+      visible: isHovered,
+    });
   };
 
+  fieldGroup.off('mouseover');
+  fieldGroup.off('mouseout');
+
   fieldGroup.on('mouseover', () => {
-    tweenBorderStroke(hoverStroke);
+    applyHover(true);
   });
 
   fieldGroup.on('mouseout', () => {
-    tweenBorderStroke(defaultStroke);
+    applyHover(false);
   });
 };
