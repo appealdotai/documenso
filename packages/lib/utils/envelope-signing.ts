@@ -2,7 +2,11 @@ import { validateCheckboxLength } from '@documenso/lib/advanced-fields-validatio
 import { validateDropdownField } from '@documenso/lib/advanced-fields-validation/validate-dropdown';
 import { validateNumberField } from '@documenso/lib/advanced-fields-validation/validate-number';
 import { validateTextField } from '@documenso/lib/advanced-fields-validation/validate-text';
-import { DEFAULT_DOCUMENT_DATE_FORMAT } from '@documenso/lib/constants/date-formats';
+import {
+  DEFAULT_DOCUMENT_DATE_FORMAT,
+  isIsoDateOnlyValue,
+  toDateOnlyFormat,
+} from '@documenso/lib/constants/date-formats';
 import { isBase64Image } from '@documenso/lib/constants/signatures';
 import { DEFAULT_DOCUMENT_TIME_ZONE } from '@documenso/lib/constants/time-zones';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
@@ -28,6 +32,49 @@ export type ExtractFieldInsertionValuesOptions = {
   fieldValue: TSignEnvelopeFieldValue;
   field: Field;
   documentMeta: Pick<TDocumentMeta, 'timezone' | 'dateFormat' | 'typedSignatureEnabled'>;
+};
+
+/**
+ * Formats a DATE field value for insertion into the document.
+ * Accepts an ISO date string; falls back to "now" when parsing fails.
+ * Empty / null clears the field.
+ */
+export const formatDateFieldCustomText = ({
+  value,
+  documentMeta,
+}: {
+  value: string | null | undefined;
+  documentMeta:
+    | Pick<TDocumentMeta, 'timezone' | 'dateFormat'>
+    | {
+        timezone?: string | null;
+        dateFormat?: string | null;
+      };
+}): { customText: string; inserted: boolean } => {
+  if (!value) {
+    return {
+      customText: '',
+      inserted: false,
+    };
+  }
+
+  const dateFormat = documentMeta.dateFormat ?? DEFAULT_DOCUMENT_DATE_FORMAT;
+  const timezone = documentMeta.timezone ?? DEFAULT_DOCUMENT_TIME_ZONE;
+  const outputFormat = isIsoDateOnlyValue(value) ? toDateOnlyFormat(dateFormat) : dateFormat;
+
+  const parsedDate = DateTime.fromISO(value, { zone: timezone });
+
+  if (parsedDate.isValid) {
+    return {
+      customText: parsedDate.toFormat(outputFormat),
+      inserted: true,
+    };
+  }
+
+  return {
+    customText: DateTime.now().setZone(timezone).toFormat(dateFormat),
+    inserted: true,
+  };
 };
 
 export const extractFieldInsertionValues = ({
@@ -79,29 +126,10 @@ export const extractFieldInsertionValues = ({
       };
     })
     .with({ type: FieldType.DATE }, (fieldValue) => {
-      if (!fieldValue.value) {
-        return {
-          customText: '',
-          inserted: false,
-        };
-      }
-
-      const dateFormat = documentMeta.dateFormat ?? DEFAULT_DOCUMENT_DATE_FORMAT;
-      const timezone = documentMeta.timezone ?? DEFAULT_DOCUMENT_TIME_ZONE;
-
-      const parsedDate = DateTime.fromISO(fieldValue.value, { zone: timezone });
-
-      if (parsedDate.isValid) {
-        return {
-          customText: parsedDate.toFormat(dateFormat),
-          inserted: true,
-        };
-      }
-
-      return {
-        customText: DateTime.now().setZone(timezone).toFormat(dateFormat),
-        inserted: true,
-      };
+      return formatDateFieldCustomText({
+        value: fieldValue.value,
+        documentMeta,
+      });
     })
     .with({ type: FieldType.NUMBER }, (fieldValue) => {
       if (!fieldValue.value) {

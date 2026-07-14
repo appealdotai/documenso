@@ -112,7 +112,10 @@ export const DocumentSigningFieldContainer = ({
       return;
     }
 
-    if (onActivateSignedField && (type === 'Signature' || type === 'Text' || type === 'Number')) {
+    if (
+      onActivateSignedField &&
+      (type === 'Signature' || type === 'Text' || type === 'Number' || type === 'Dropdown' || type === 'Date')
+    ) {
       await onActivateSignedField();
       return;
     }
@@ -128,7 +131,8 @@ export const DocumentSigningFieldContainer = ({
     await onRemove?.(fieldType);
   };
 
-  const showsChangeTooltip = type === 'Signature' || type === 'Text' || type === 'Number';
+  const showsChangeTooltip =
+    type === 'Signature' || type === 'Text' || type === 'Number' || type === 'Dropdown' || type === 'Date';
 
   return (
     <FieldRootContainer field={field} readonly={readOnlyField} isEditing={isEditing}>

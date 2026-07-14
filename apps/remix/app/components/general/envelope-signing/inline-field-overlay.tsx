@@ -1,5 +1,3 @@
-import { getBoundingClientRect } from '@documenso/lib/client-only/get-bounding-client-rect';
-import { PDF_VIEWER_PAGE_SELECTOR } from '@documenso/lib/constants/pdf-viewer';
 import type { TNumberFieldMeta, TTextFieldMeta } from '@documenso/lib/types/field-meta';
 import { cn } from '@documenso/ui/lib/utils';
 import { useLingui } from '@lingui/react/macro';
@@ -12,6 +10,7 @@ import { getTextFieldDefaultValue, validateInlineTextFieldValue } from '~/utils/
 
 import { InlineFieldInput } from '../document-signing/inline-field-input';
 import { useInlineFieldEditor } from '../document-signing/use-inline-field-editor';
+import { useFieldOverlayCoords } from './use-field-overlay-coords';
 
 type InlineFieldOverlayProps = {
   field: Pick<
@@ -33,11 +32,12 @@ export const InlineFieldOverlay = ({ field, scale, onCommit, onCancel }: InlineF
   const isCommittingRef = useRef(false);
   const [isCommitting, setIsCommitting] = useState(false);
 
-  const [coords, setCoords] = useState({
-    x: 0,
-    y: 0,
-    height: 0,
-    width: 0,
+  const coords = useFieldOverlayCoords({
+    page: field.page,
+    positionX: field.positionX,
+    positionY: field.positionY,
+    width: field.width,
+    height: field.height,
   });
 
   const isNumber = field.type === FieldType.NUMBER;
@@ -80,57 +80,6 @@ export const InlineFieldOverlay = ({ field, scale, onCommit, onCancel }: InlineF
     // Only re-seed when switching to a different field.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [field.id]);
-
-  const calculateCoords = useCallback(() => {
-    const $page = document.querySelector<HTMLElement>(`${PDF_VIEWER_PAGE_SELECTOR}[data-page-number="${field.page}"]`);
-
-    if (!$page) {
-      return;
-    }
-
-    const { height, width } = getBoundingClientRect($page);
-
-    setCoords({
-      x: (Number(field.positionX) / 100) * width,
-      y: (Number(field.positionY) / 100) * height,
-      height: (Number(field.height) / 100) * height,
-      width: (Number(field.width) / 100) * width,
-    });
-  }, [field.height, field.page, field.positionX, field.positionY, field.width]);
-
-  useEffect(() => {
-    calculateCoords();
-  }, [calculateCoords]);
-
-  useEffect(() => {
-    const onResize = () => {
-      calculateCoords();
-    };
-
-    window.addEventListener('resize', onResize);
-
-    return () => {
-      window.removeEventListener('resize', onResize);
-    };
-  }, [calculateCoords]);
-
-  useEffect(() => {
-    const $page = document.querySelector<HTMLElement>(`${PDF_VIEWER_PAGE_SELECTOR}[data-page-number="${field.page}"]`);
-
-    if (!$page) {
-      return;
-    }
-
-    const observer = new ResizeObserver(() => {
-      calculateCoords();
-    });
-
-    observer.observe($page);
-
-    return () => {
-      observer.disconnect();
-    };
-  }, [calculateCoords, field.page]);
 
   const handleCommit = async () => {
     if (isCommittingRef.current) {
