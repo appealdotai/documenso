@@ -271,7 +271,7 @@
   .field--FieldRootContainer.field-card-container[data-inserted="false"][data-readonly="false"][data-field-required="true"]:not(
       [data-validate="true"]
     ) {
-    background-color: hsl(var(--field-required-card) / 0.9);
+    background-color: transparent;
     border-color: hsl(var(--field-required-card-border));
     border-style: solid;
     border-width: var(--field-required-card-border-width);
@@ -286,10 +286,10 @@
   .field--FieldRootContainer.field-card-container[data-inserted="false"][data-readonly="false"][data-field-required="false"]:not(
       [data-validate="true"]
     ) {
-    background-color: hsl(var(--field-optional-card) / 0.9);
+    background-color: transparent;
     border-color: hsl(var(--field-optional-card-border));
     border-style: solid;
-    border-width: var(--field-optional-card-border-width);
+    border-width: 0 0 var(--field-optional-card-border-width) 0;
   }
 
   .field--FieldRootContainer.field-card-container[data-inserted="false"][data-readonly="false"][data-field-required="false"]:not(
@@ -299,10 +299,10 @@
   }
 
   .field--FieldRootContainer.field-card-container[data-inserted="false"][data-readonly="false"][data-validate="true"][data-field-required="true"] {
-    background-color: hsl(var(--field-required-card) / 0.9);
+    background-color: transparent;
     border-color: hsl(var(--field-validation-card-border));
     border-style: solid;
-    border-width: var(--field-required-card-border-width);
+    border-width: calc(var(--field-required-card-border-width) + 1px);
   }
 }
 

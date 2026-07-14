@@ -5,6 +5,8 @@ import type { TCssVarsSchema } from '../types/css-vars';
 import type { FieldCanvasStyle } from '../universal/field-renderer/field-renderer';
 import { isRequiredField } from './advanced-fields-helpers';
 
+const TRANSPARENT_BACKGROUND = 'rgba(0, 0, 0, 0)';
+
 export const SIGNING_FIELD_HIGHLIGHT_COLOR_KEYS = [
   'fieldRequiredCard',
   'fieldRequiredCardBorder',
@@ -129,37 +131,38 @@ export const resolveFieldCanvasStyleFromBrandingColors = (
 
   const isRequired = isRequiredField({ type: field.type, fieldMeta: field.fieldMeta ?? null } as Field);
   const isValidating = Boolean(field.isValidating && isRequired);
+  const requiredBorderWidth =
+    parsePixelValue(colors.fieldRequiredCardBorderWidth ?? DEFAULT_BRAND_LENGTHS.fieldRequiredCardBorderWidth) ?? 2;
+  const optionalBorderWidth =
+    parsePixelValue(colors.fieldOptionalCardBorderWidth ?? DEFAULT_BRAND_LENGTHS.fieldOptionalCardBorderWidth) ?? 2;
 
   if (isValidating) {
     return {
-      backgroundColor: colorToCanvasColor(colors.fieldRequiredCard, 0.9),
+      backgroundColor: TRANSPARENT_BACKGROUND,
       borderColor: colorToCanvasColor(colors.fieldValidationCardBorder),
-      borderWidth: parsePixelValue(
-        colors.fieldRequiredCardBorderWidth ?? DEFAULT_BRAND_LENGTHS.fieldRequiredCardBorderWidth,
-      ),
+      borderWidth: requiredBorderWidth + 1,
       borderRadius: 2,
     };
   }
 
   if (isRequired) {
     return {
-      backgroundColor: colorToCanvasColor(colors.fieldRequiredCard, 0.9),
+      backgroundColor: TRANSPARENT_BACKGROUND,
       borderColor: colorToCanvasColor(colors.fieldRequiredCardBorder),
       borderHoverColor: colorToCanvasColor(colors.fieldRequiredCardBorderHover),
-      borderWidth: parsePixelValue(
-        colors.fieldRequiredCardBorderWidth ?? DEFAULT_BRAND_LENGTHS.fieldRequiredCardBorderWidth,
-      ),
+      borderWidth: requiredBorderWidth,
       borderRadius: 2,
     };
   }
 
   return {
-    backgroundColor: colorToCanvasColor(colors.fieldOptionalCard, 0.9),
+    backgroundColor: TRANSPARENT_BACKGROUND,
     borderColor: colorToCanvasColor(colors.fieldOptionalCardBorder),
     borderHoverColor: colorToCanvasColor(colors.fieldOptionalCardBorderHover),
-    borderWidth: parsePixelValue(
-      colors.fieldOptionalCardBorderWidth ?? DEFAULT_BRAND_LENGTHS.fieldOptionalCardBorderWidth,
-    ),
+    borderTopWidth: 0,
+    borderRightWidth: 0,
+    borderBottomWidth: optionalBorderWidth,
+    borderLeftWidth: 0,
     borderRadius: 2,
   };
 };

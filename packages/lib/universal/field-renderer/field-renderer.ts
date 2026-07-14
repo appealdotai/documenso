@@ -56,7 +56,12 @@ export type FieldCanvasStyle = {
   borderColor?: string;
   borderHoverColor?: string;
   borderRadius?: number;
+  /** Uniform border width. Ignored when per-side widths are set. */
   borderWidth?: number;
+  borderTopWidth?: number;
+  borderRightWidth?: number;
+  borderBottomWidth?: number;
+  borderLeftWidth?: number;
   opacity?: number;
 };
 

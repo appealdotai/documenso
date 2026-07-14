@@ -147,37 +147,42 @@ const resolveFieldCanvasStyleFromCssVars = (field: FieldToRender): FieldCanvasSt
 
   const isRequired = isRequiredField(field as unknown as Field);
   const isValidating = Boolean(field.isValidating && isRequired);
+  const requiredBorderWidth =
+    getPixelValue(
+      getComputedStyle($styleSource).getPropertyValue('--field-required-card-border-width').trim() || '2px',
+    ) ?? 2;
+  const optionalBorderWidth =
+    getPixelValue(
+      getComputedStyle($styleSource).getPropertyValue('--field-optional-card-border-width').trim() || '2px',
+    ) ?? 2;
 
   if (isValidating) {
     return {
-      backgroundColor: getRenderableColor(getCssVarHslColor($styleSource, '--field-required-card', 0.9)),
+      backgroundColor: TRANSPARENT_COLOR,
       borderColor: getRenderableColor(getCssVarHslColor($styleSource, '--field-validation-card-border')),
-      borderWidth: getPixelValue(
-        getComputedStyle($styleSource).getPropertyValue('--field-required-card-border-width').trim() || '2px',
-      ),
+      borderWidth: requiredBorderWidth + 1,
       borderRadius: 2,
     };
   }
 
   if (isRequired) {
     return {
-      backgroundColor: getRenderableColor(getCssVarHslColor($styleSource, '--field-required-card', 0.9)),
+      backgroundColor: TRANSPARENT_COLOR,
       borderColor: getRenderableColor(getCssVarHslColor($styleSource, '--field-required-card-border')),
       borderHoverColor: getRenderableColor(getCssVarHslColor($styleSource, '--field-required-card-border-hover')),
-      borderWidth: getPixelValue(
-        getComputedStyle($styleSource).getPropertyValue('--field-required-card-border-width').trim() || '2px',
-      ),
+      borderWidth: requiredBorderWidth,
       borderRadius: 2,
     };
   }
 
   return {
-    backgroundColor: getRenderableColor(getCssVarHslColor($styleSource, '--field-optional-card', 0.9)),
+    backgroundColor: TRANSPARENT_COLOR,
     borderColor: getRenderableColor(getCssVarHslColor($styleSource, '--field-optional-card-border')),
     borderHoverColor: getRenderableColor(getCssVarHslColor($styleSource, '--field-optional-card-border-hover')),
-    borderWidth: getPixelValue(
-      getComputedStyle($styleSource).getPropertyValue('--field-optional-card-border-width').trim() || '2px',
-    ),
+    borderTopWidth: 0,
+    borderRightWidth: 0,
+    borderBottomWidth: optionalBorderWidth,
+    borderLeftWidth: 0,
     borderRadius: 2,
   };
 };
@@ -196,6 +201,10 @@ const mergeFieldCanvasStyles = (
     borderHoverColor: primary?.borderHoverColor ?? fallback?.borderHoverColor,
     borderRadius: primary?.borderRadius ?? fallback?.borderRadius,
     borderWidth: primary?.borderWidth ?? fallback?.borderWidth,
+    borderTopWidth: primary?.borderTopWidth ?? fallback?.borderTopWidth,
+    borderRightWidth: primary?.borderRightWidth ?? fallback?.borderRightWidth,
+    borderBottomWidth: primary?.borderBottomWidth ?? fallback?.borderBottomWidth,
+    borderLeftWidth: primary?.borderLeftWidth ?? fallback?.borderLeftWidth,
     opacity: primary?.opacity ?? fallback?.opacity,
   };
 };
@@ -222,16 +231,43 @@ const computeFieldCanvasStyleFromProbe = (field: FieldToRender): FieldCanvasStyl
 
   try {
     const computedStyle = window.getComputedStyle($probe);
-    const borderWidth = getPixelValue(computedStyle.borderTopWidth);
-    const borderColor = getRenderableColor(computedStyle.borderTopColor);
-    const hasBorderStyle = computedStyle.borderTopStyle !== 'none' && Boolean(borderWidth);
+    const borderTopWidth = getPixelValue(computedStyle.borderTopWidth) ?? 0;
+    const borderRightWidth = getPixelValue(computedStyle.borderRightWidth) ?? 0;
+    const borderBottomWidth = getPixelValue(computedStyle.borderBottomWidth) ?? 0;
+    const borderLeftWidth = getPixelValue(computedStyle.borderLeftWidth) ?? 0;
+    const maxBorderWidth = Math.max(borderTopWidth, borderRightWidth, borderBottomWidth, borderLeftWidth);
+    const isUniformBorder =
+      borderTopWidth === borderRightWidth &&
+      borderRightWidth === borderBottomWidth &&
+      borderBottomWidth === borderLeftWidth;
+    const borderColor = getRenderableColor(
+      borderBottomWidth > 0
+        ? computedStyle.borderBottomColor
+        : borderTopWidth > 0
+          ? computedStyle.borderTopColor
+          : borderRightWidth > 0
+            ? computedStyle.borderRightColor
+            : computedStyle.borderLeftColor,
+    );
+    const hasBorderStyle =
+      maxBorderWidth > 0 &&
+      [
+        computedStyle.borderTopStyle,
+        computedStyle.borderRightStyle,
+        computedStyle.borderBottomStyle,
+        computedStyle.borderLeftStyle,
+      ].some((style) => style !== 'none');
     const borderRadius = getPixelValue(computedStyle.borderTopLeftRadius);
 
     return {
       backgroundColor: getRenderableColor(computedStyle.backgroundColor),
       borderColor: hasBorderStyle ? borderColor : undefined,
       borderRadius,
-      borderWidth: hasBorderStyle ? borderWidth : undefined,
+      borderWidth: hasBorderStyle && isUniformBorder ? maxBorderWidth : undefined,
+      borderTopWidth: hasBorderStyle && !isUniformBorder ? borderTopWidth : undefined,
+      borderRightWidth: hasBorderStyle && !isUniformBorder ? borderRightWidth : undefined,
+      borderBottomWidth: hasBorderStyle && !isUniformBorder ? borderBottomWidth : undefined,
+      borderLeftWidth: hasBorderStyle && !isUniformBorder ? borderLeftWidth : undefined,
       opacity: getOpacityValue(computedStyle.opacity),
     };
   } finally {

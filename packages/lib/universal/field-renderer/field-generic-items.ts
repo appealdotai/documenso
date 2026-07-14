@@ -1,7 +1,7 @@
 import { DEFAULT_RECT_BACKGROUND, getRecipientColorStyles } from '@documenso/ui/lib/recipient-colors';
 import Konva from 'konva';
 
-import type { FieldToRender, RenderFieldElementOptions } from './field-renderer';
+import type { FieldCanvasStyle, FieldToRender, RenderFieldElementOptions } from './field-renderer';
 import { calculateFieldPosition } from './field-renderer';
 
 export const konvaTextFontFamily =
@@ -41,7 +41,112 @@ export const upsertFieldGroup = (field: FieldToRender, options: RenderFieldEleme
   return fieldGroup;
 };
 
-export const upsertFieldRect = (field: FieldToRender, options: RenderFieldElementOptions): Konva.Rect => {
+const getFieldBorderSideWidths = (fieldCanvasStyle: FieldCanvasStyle | undefined) => {
+  const hasPerSide =
+    fieldCanvasStyle?.borderTopWidth !== undefined ||
+    fieldCanvasStyle?.borderRightWidth !== undefined ||
+    fieldCanvasStyle?.borderBottomWidth !== undefined ||
+    fieldCanvasStyle?.borderLeftWidth !== undefined;
+
+  if (!hasPerSide) {
+    const uniformWidth = fieldCanvasStyle?.borderWidth ?? 2;
+
+    return {
+      top: uniformWidth,
+      right: uniformWidth,
+      bottom: uniformWidth,
+      left: uniformWidth,
+      isUniform: true,
+    };
+  }
+
+  const top = fieldCanvasStyle?.borderTopWidth ?? 0;
+  const right = fieldCanvasStyle?.borderRightWidth ?? 0;
+  const bottom = fieldCanvasStyle?.borderBottomWidth ?? 0;
+  const left = fieldCanvasStyle?.borderLeftWidth ?? 0;
+
+  return {
+    top,
+    right,
+    bottom,
+    left,
+    isUniform: top === right && right === bottom && bottom === left,
+  };
+};
+
+const upsertFieldBorderLines = ({
+  fieldGroup,
+  fieldWidth,
+  fieldHeight,
+  borderColor,
+  sideWidths,
+  visible,
+}: {
+  fieldGroup: Konva.Group;
+  fieldWidth: number;
+  fieldHeight: number;
+  borderColor: string;
+  sideWidths: ReturnType<typeof getFieldBorderSideWidths>;
+  visible: boolean;
+}) => {
+  const sides = [
+    {
+      name: 'field-border-top',
+      width: sideWidths.top,
+      points: [0, 0, fieldWidth, 0],
+    },
+    {
+      name: 'field-border-right',
+      width: sideWidths.right,
+      points: [fieldWidth, 0, fieldWidth, fieldHeight],
+    },
+    {
+      name: 'field-border-bottom',
+      width: sideWidths.bottom,
+      points: [0, fieldHeight, fieldWidth, fieldHeight],
+    },
+    {
+      name: 'field-border-left',
+      width: sideWidths.left,
+      points: [0, 0, 0, fieldHeight],
+    },
+  ] as const;
+
+  for (const side of sides) {
+    const existingLine = fieldGroup.findOne(`.${side.name}`) as Konva.Line | undefined;
+
+    if (side.width <= 0 || !visible) {
+      existingLine?.destroy();
+      continue;
+    }
+
+    const line =
+      existingLine ||
+      new Konva.Line({
+        name: side.name,
+        listening: false,
+      });
+
+    line.setAttrs({
+      name: side.name,
+      points: [...side.points],
+      stroke: borderColor,
+      strokeWidth: side.width,
+      lineCap: 'square',
+      listening: false,
+    } satisfies Partial<Konva.LineConfig>);
+
+    if (!existingLine) {
+      fieldGroup.add(line);
+    }
+  }
+};
+
+export const upsertFieldRect = (
+  field: FieldToRender,
+  options: RenderFieldElementOptions,
+  fieldGroup: Konva.Group,
+): Konva.Rect => {
   const { pageWidth, pageHeight, mode, pageLayer, color } = options;
   const { fieldCanvasStyle } = options;
 
@@ -54,16 +159,35 @@ export const upsertFieldRect = (field: FieldToRender, options: RenderFieldElemen
       name: 'field-rect',
     });
 
+  const sideWidths = getFieldBorderSideWidths(fieldCanvasStyle);
+  const borderColor = fieldCanvasStyle?.borderColor ?? (color ? getRecipientColorStyles(color).baseRing : '#e5e7eb');
+  const isVisible = mode !== 'export';
+
   fieldRect.setAttrs({
     width: fieldWidth,
     height: fieldHeight,
     fill: fieldCanvasStyle?.backgroundColor ?? DEFAULT_RECT_BACKGROUND,
-    stroke: fieldCanvasStyle?.borderColor ?? (color ? getRecipientColorStyles(color).baseRing : '#e5e7eb'),
-    strokeWidth: fieldCanvasStyle?.borderWidth ?? 2,
-    cornerRadius: fieldCanvasStyle?.borderRadius ?? 2,
+    stroke: borderColor,
+    strokeWidth: sideWidths.isUniform ? sideWidths.top : 0,
+    cornerRadius: sideWidths.isUniform ? (fieldCanvasStyle?.borderRadius ?? 2) : 0,
     strokeScaleEnabled: false,
-    visible: mode !== 'export',
+    visible: isVisible,
   } satisfies Partial<Konva.RectConfig>);
+
+  if (!sideWidths.isUniform) {
+    upsertFieldBorderLines({
+      fieldGroup,
+      fieldWidth,
+      fieldHeight,
+      borderColor,
+      sideWidths,
+      visible: isVisible,
+    });
+  } else {
+    for (const name of ['field-border-top', 'field-border-right', 'field-border-bottom', 'field-border-left']) {
+      fieldGroup.findOne(`.${name}`)?.destroy();
+    }
+  }
 
   return fieldRect;
 };
@@ -136,7 +260,7 @@ export const createFieldHoverInteraction = ({ options, fieldGroup, fieldRect }: 
     return;
   }
 
-  fieldGroup.on('mouseover', () => {
+  const tweenBorderStroke = (stroke: string) => {
     const layer = fieldRect.getLayer();
 
     if (!layer) {
@@ -146,21 +270,29 @@ export const createFieldHoverInteraction = ({ options, fieldGroup, fieldRect }: 
     new Konva.Tween({
       node: fieldRect,
       duration: 0.2,
-      stroke: hoverStroke,
+      stroke,
     }).play();
+
+    for (const name of ['field-border-top', 'field-border-right', 'field-border-bottom', 'field-border-left']) {
+      const line = fieldGroup.findOne(`.${name}`);
+
+      if (!line) {
+        continue;
+      }
+
+      new Konva.Tween({
+        node: line,
+        duration: 0.2,
+        stroke,
+      }).play();
+    }
+  };
+
+  fieldGroup.on('mouseover', () => {
+    tweenBorderStroke(hoverStroke);
   });
 
   fieldGroup.on('mouseout', () => {
-    const layer = fieldRect.getLayer();
-
-    if (!layer) {
-      return;
-    }
-
-    new Konva.Tween({
-      node: fieldRect,
-      duration: 0.2,
-      stroke: defaultStroke,
-    }).play();
+    tweenBorderStroke(defaultStroke);
   });
 };
