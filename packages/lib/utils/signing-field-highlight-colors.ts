@@ -147,7 +147,7 @@ export const resolveFieldCanvasStyleFromBrandingColors = (
 
   if (isRequired) {
     return {
-      backgroundColor: TRANSPARENT_BACKGROUND,
+      backgroundColor: colorToCanvasColor(colors.fieldRequiredCard, 0.9),
       borderColor: colorToCanvasColor(colors.fieldRequiredCardBorder),
       borderHoverColor: colorToCanvasColor(colors.fieldRequiredCardBorderHover),
       borderWidth: requiredBorderWidth,
@@ -156,7 +156,7 @@ export const resolveFieldCanvasStyleFromBrandingColors = (
   }
 
   return {
-    backgroundColor: TRANSPARENT_BACKGROUND,
+    backgroundColor: colorToCanvasColor(colors.fieldOptionalCard, 0.9),
     borderColor: colorToCanvasColor(colors.fieldOptionalCardBorder),
     borderHoverColor: colorToCanvasColor(colors.fieldOptionalCardBorderHover),
     borderTopWidth: 0,

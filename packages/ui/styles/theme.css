@@ -271,7 +271,7 @@
   .field--FieldRootContainer.field-card-container[data-inserted="false"][data-readonly="false"][data-field-required="true"]:not(
       [data-validate="true"]
     ) {
-    background-color: transparent;
+    background-color: hsl(var(--field-required-card) / 0.9);
     border-color: hsl(var(--field-required-card-border));
     border-style: solid;
     border-width: var(--field-required-card-border-width);
@@ -286,7 +286,7 @@
   .field--FieldRootContainer.field-card-container[data-inserted="false"][data-readonly="false"][data-field-required="false"]:not(
       [data-validate="true"]
     ) {
-    background-color: transparent;
+    background-color: hsl(var(--field-optional-card) / 0.9);
     border-color: hsl(var(--field-optional-card-border));
     border-style: solid;
     border-width: 0 0 var(--field-optional-card-border-width) 0;

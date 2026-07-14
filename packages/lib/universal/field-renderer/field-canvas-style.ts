@@ -167,7 +167,7 @@ const resolveFieldCanvasStyleFromCssVars = (field: FieldToRender): FieldCanvasSt
 
   if (isRequired) {
     return {
-      backgroundColor: TRANSPARENT_COLOR,
+      backgroundColor: getRenderableColor(getCssVarHslColor($styleSource, '--field-required-card', 0.9)),
       borderColor: getRenderableColor(getCssVarHslColor($styleSource, '--field-required-card-border')),
       borderHoverColor: getRenderableColor(getCssVarHslColor($styleSource, '--field-required-card-border-hover')),
       borderWidth: requiredBorderWidth,
@@ -176,7 +176,7 @@ const resolveFieldCanvasStyleFromCssVars = (field: FieldToRender): FieldCanvasSt
   }
 
   return {
-    backgroundColor: TRANSPARENT_COLOR,
+    backgroundColor: getRenderableColor(getCssVarHslColor($styleSource, '--field-optional-card', 0.9)),
     borderColor: getRenderableColor(getCssVarHslColor($styleSource, '--field-optional-card-border')),
     borderHoverColor: getRenderableColor(getCssVarHslColor($styleSource, '--field-optional-card-border-hover')),
     borderTopWidth: 0,
