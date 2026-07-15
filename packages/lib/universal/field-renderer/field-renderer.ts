@@ -194,7 +194,7 @@ export const calculateMultiItemPosition = (options: CalculateMultiItemPositionOp
   } = options;
 
   const innerFieldHeight = fieldHeight - fieldPadding * 2;
-  const innerFieldWidth = fieldWidth - fieldPadding; // This is purposefully not using fullPadding to allow flush text.
+  const innerFieldWidth = fieldWidth - fieldPadding * 2;
   const innerFieldX = fieldPadding;
   const innerFieldY = fieldPadding;
 

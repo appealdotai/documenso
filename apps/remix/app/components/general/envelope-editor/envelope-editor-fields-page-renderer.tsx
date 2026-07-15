@@ -12,6 +12,7 @@ import {
   MIN_FIELD_HEIGHT_PX,
   MIN_FIELD_WIDTH_PX,
 } from '@documenso/lib/universal/field-renderer/field-renderer';
+import { getCheckboxFieldMinSizePx } from '@documenso/lib/universal/field-renderer/render-checkbox-field';
 import { renderField } from '@documenso/lib/universal/field-renderer/render-field';
 import { getClientSideFieldTranslations } from '@documenso/lib/utils/fields';
 import { getOverlappingFieldPairs } from '@documenso/lib/utils/fields-overlap';
@@ -27,7 +28,7 @@ import {
 } from '@documenso/ui/primitives/command';
 import { FRIENDLY_FIELD_TYPE } from '@documenso/ui/primitives/document-flow/types';
 import { useLingui } from '@lingui/react/macro';
-import type { FieldType } from '@prisma/client';
+import { FieldType } from '@prisma/client';
 import Konva from 'konva';
 import type { KonvaEventObject } from 'konva/lib/Node';
 import type { Transformer } from 'konva/lib/shapes/Transformer';
@@ -43,6 +44,8 @@ export const EnvelopeEditorFieldsPageRenderer = ({ pageData }: { pageData: PageR
   const { currentEnvelopeItem, setRenderError } = useCurrentEnvelopeRender();
 
   const interactiveTransformer = useRef<Transformer | null>(null);
+  const editorFieldsRef = useRef(editorFields);
+  editorFieldsRef.current = editorFields;
 
   const [selectedKonvaFieldGroups, setSelectedKonvaFieldGroups] = useState<Konva.Group[]>([]);
 
@@ -351,8 +354,35 @@ export const EnvelopeEditorFieldsPageRenderer = ({ pageData }: { pageData: PageR
       ignoreStroke: true,
       flipEnabled: false,
       boundBoxFunc: (oldBox, newBox) => {
-        // Enforce minimum size
-        if (newBox.width < 30 || newBox.height < 20) {
+        const DEFAULT_MIN_WIDTH = 30;
+        const DEFAULT_MIN_HEIGHT = 20;
+
+        let minWidth = DEFAULT_MIN_WIDTH;
+        let minHeight = DEFAULT_MIN_HEIGHT;
+
+        const selectedNodes = transformer.nodes();
+
+        // Checkbox fields can shrink until left/right insets match the 2px padding.
+        // Bound box values are in stage (scaled) coordinates.
+        if (selectedNodes.length === 1) {
+          const field = editorFieldsRef.current.localFields.find(
+            (localField) => localField.formId === selectedNodes[0].id(),
+          );
+
+          if (field?.type === FieldType.CHECKBOX) {
+            const checkboxMeta = field.fieldMeta?.type === 'checkbox' ? field.fieldMeta : null;
+            const { minWidth: checkboxMinWidth, minHeight: checkboxMinHeight } = getCheckboxFieldMinSizePx({
+              fontSize: checkboxMeta?.fontSize,
+              itemCount: checkboxMeta?.values?.length ?? 1,
+              direction: checkboxMeta?.direction ?? 'vertical',
+            });
+
+            minWidth = checkboxMinWidth * scale;
+            minHeight = checkboxMinHeight * scale;
+          }
+        }
+
+        if (newBox.width < minWidth || newBox.height < minHeight) {
           return oldBox;
         }
 
