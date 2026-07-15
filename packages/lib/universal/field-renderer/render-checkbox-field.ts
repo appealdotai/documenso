@@ -15,7 +15,7 @@ import type { FieldToRender, RenderFieldElementOptions } from './field-renderer'
 import { calculateFieldPosition, calculateMultiItemPosition } from './field-renderer';
 
 // Do not change any of these values without consulting with the team.
-const checkboxFieldPadding = 8;
+const checkboxFieldPadding = 2;
 const spacingBetweenCheckboxAndText = 8;
 
 const calculateCheckboxSize = (fontSize: number) => {
