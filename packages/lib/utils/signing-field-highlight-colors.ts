@@ -21,6 +21,14 @@ export const SIGNING_FIELD_HIGHLIGHT_COLOR_KEYS = [
 
 export type SigningFieldHighlightColorKey = (typeof SIGNING_FIELD_HIGHLIGHT_COLOR_KEYS)[number];
 
+/** Background tokens that historically applied a hard-coded 0.9 alpha in CSS/canvas. */
+export const SIGNING_FIELD_BACKGROUND_COLOR_KEYS = [
+  'fieldRequiredCard',
+  'fieldOptionalCard',
+] as const satisfies readonly SigningFieldHighlightColorKey[];
+
+const DEFAULT_FIELD_BACKGROUND_ALPHA = 0.9;
+
 const DEFAULT_SIGNING_FIELD_HIGHLIGHT_COLORS: Pick<TCssVarsSchema, SigningFieldHighlightColorKey> = {
   fieldRequiredCard: DEFAULT_BRAND_COLORS.fieldRequiredCard,
   fieldRequiredCardBorder: DEFAULT_BRAND_COLORS.fieldRequiredCardBorder,
@@ -31,6 +39,63 @@ const DEFAULT_SIGNING_FIELD_HIGHLIGHT_COLORS: Pick<TCssVarsSchema, SigningFieldH
   fieldOptionalCardBorderHover: DEFAULT_BRAND_COLORS.fieldOptionalCardBorderHover,
   fieldOptionalCardBorderWidth: DEFAULT_BRAND_LENGTHS.fieldOptionalCardBorderWidth,
   fieldValidationCardBorder: DEFAULT_BRAND_COLORS.fieldValidationCardBorder,
+};
+
+const isSigningFieldBackgroundKey = (key: string): key is (typeof SIGNING_FIELD_BACKGROUND_COLOR_KEYS)[number] =>
+  SIGNING_FIELD_BACKGROUND_COLOR_KEYS.includes(key as (typeof SIGNING_FIELD_BACKGROUND_COLOR_KEYS)[number]);
+
+/**
+ * True when the stored colour includes an explicit alpha channel.
+ * Distinguishes `#rrggbbaa` (and rgba/hsla) from legacy opaque `#rrggbb`,
+ * which must keep the historical 0.9 background fade.
+ */
+export const hasExplicitAlphaChannel = (value: string): boolean => {
+  const trimmed = value.trim();
+
+  if (/^#(?:[0-9a-f]{4}|[0-9a-f]{8})$/i.test(trimmed)) {
+    return true;
+  }
+
+  if (/^(?:rgba|hsla)\(/i.test(trimmed)) {
+    return true;
+  }
+
+  if (/^(?:rgb|hsl)\([^/]*\/[^)]+\)$/i.test(trimmed)) {
+    return true;
+  }
+
+  return false;
+};
+
+const toHex2 = (value: number) => Math.round(value).toString(16).padStart(2, '0');
+
+const toHexWithAlpha = (color: ReturnType<typeof colord>, alpha: number) => {
+  const { r, g, b } = color.toRgb();
+
+  return `#${toHex2(r)}${toHex2(g)}${toHex2(b)}${toHex2(alpha * 255)}`;
+};
+
+/**
+ * Apply the legacy 0.9 background fade to opaque 6-digit hex values so
+ * existing branding data keeps looking the same after opacity became
+ * user-controllable.
+ */
+export const normalizeSigningFieldHighlightColor = (key: string, value: string): string => {
+  if (!isSigningFieldBackgroundKey(key)) {
+    return value;
+  }
+
+  if (hasExplicitAlphaChannel(value)) {
+    return value;
+  }
+
+  const color = colord(value);
+
+  if (!color.isValid() || color.alpha() < 1) {
+    return value;
+  }
+
+  return toHexWithAlpha(color, DEFAULT_FIELD_BACKGROUND_ALPHA);
 };
 
 /**
@@ -50,11 +115,26 @@ export const resolveSigningFieldHighlightColors = (
     const value = brandingColors[key];
 
     if (typeof value === 'string' && value.trim() !== '') {
-      resolved[key] = value;
+      resolved[key] = normalizeSigningFieldHighlightColor(key, value);
     }
   }
 
   return resolved;
+};
+
+/**
+ * Strip signing-field highlight tokens from a branding colour payload so they
+ * are only applied via {@link resolveSigningFieldHighlightColors} (which handles
+ * defaults + legacy background alpha).
+ */
+export const omitSigningFieldHighlightColors = (colors: TCssVarsSchema): TCssVarsSchema => {
+  const result: TCssVarsSchema = { ...colors };
+
+  for (const key of SIGNING_FIELD_HIGHLIGHT_COLOR_KEYS) {
+    delete result[key];
+  }
+
+  return result;
 };
 
 const parsePixelValue = (value: string | undefined) => {
@@ -208,7 +288,7 @@ export const resolveFieldCanvasStyleFromBrandingColors = (
 
   if (isRequired) {
     return {
-      backgroundColor: colorToCanvasColor(colors.fieldRequiredCard, 0.9),
+      backgroundColor: colorToCanvasColor(colors.fieldRequiredCard),
       borderColor: isEditing ? requiredBorderHoverColor : requiredBorderColor,
       borderHoverColor: requiredBorderHoverColor,
       borderWidth: requiredBorderWidth,
@@ -220,14 +300,14 @@ export const resolveFieldCanvasStyleFromBrandingColors = (
 
   if (isEditing) {
     return {
-      backgroundColor: colorToCanvasColor(colors.fieldOptionalCard, 0.9),
+      backgroundColor: colorToCanvasColor(colors.fieldOptionalCard),
       borderRadius: 2,
       ...optionalHoverSideStyle,
     };
   }
 
   return {
-    backgroundColor: colorToCanvasColor(colors.fieldOptionalCard, 0.9),
+    backgroundColor: colorToCanvasColor(colors.fieldOptionalCard),
     borderColor: optionalBorderColor,
     borderHoverColor: optionalBorderHoverColor,
     borderTopWidth: 0,
