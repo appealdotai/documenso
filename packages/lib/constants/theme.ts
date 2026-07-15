@@ -32,10 +32,12 @@ export const DEFAULT_BRAND_COLORS = {
   fieldCard: '#e2f8d3', //               95 74% 90%
   fieldCardBorder: '#a2e771', //         95.08 71.08% 67.45%
   fieldCardForeground: '#0f172a', //     222.2 47.4% 11.2%
-  fieldRequiredCard: '#e2f8d3', //       95 74% 90%
+  // Field card backgrounds default to 90% opacity (`e6`) so the PDF shows
+  // through — matches the historical `hsl(var(--token) / 0.9)` stylesheet rule.
+  fieldRequiredCard: '#e2f8d3e6', //       95 74% 90% / 0.9
   fieldRequiredCardBorder: '#a2e771', // 95.08 71.08% 67.45%
   fieldRequiredCardBorderHover: '#7db83a', // darker green
-  fieldOptionalCard: '#ffffff', //       0 0% 100%
+  fieldOptionalCard: '#ffffffe6', //       0 0% 100% / 0.9
   fieldOptionalCardBorder: '#e2e8f0', // 214.3 31.8% 91.4%
   fieldOptionalCardBorderHover: '#94a3b8', // slate-400
   fieldValidationCardBorder: '#fdba74', // orange-300

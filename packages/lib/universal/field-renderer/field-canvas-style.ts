@@ -117,6 +117,12 @@ const getCssVarHslColor = (element: Element, variableName: string, alpha?: numbe
     return undefined;
   }
 
+  // Variables that already carry alpha (`h s% l% / a`) must not gain a second
+  // `/ alpha` — that produces invalid CSS.
+  if (value.includes('/')) {
+    return `hsl(${value})`;
+  }
+
   if (alpha !== undefined) {
     return `hsl(${value} / ${alpha})`;
   }
@@ -213,7 +219,7 @@ const resolveFieldCanvasStyleFromCssVars = (field: FieldToRender): FieldCanvasSt
 
   if (isRequired) {
     return {
-      backgroundColor: getRenderableColor(getCssVarHslColor($styleSource, '--field-required-card', 0.9)),
+      backgroundColor: getRenderableColor(getCssVarHslColor($styleSource, '--field-required-card')),
       borderColor: isEditing ? requiredBorderHoverColor : requiredBorderColor,
       borderHoverColor: requiredBorderHoverColor,
       borderWidth: requiredBorderWidth,
@@ -225,14 +231,14 @@ const resolveFieldCanvasStyleFromCssVars = (field: FieldToRender): FieldCanvasSt
 
   if (isEditing) {
     return {
-      backgroundColor: getRenderableColor(getCssVarHslColor($styleSource, '--field-optional-card', 0.9)),
+      backgroundColor: getRenderableColor(getCssVarHslColor($styleSource, '--field-optional-card')),
       borderRadius: 2,
       ...optionalHoverSideStyle,
     };
   }
 
   return {
-    backgroundColor: getRenderableColor(getCssVarHslColor($styleSource, '--field-optional-card', 0.9)),
+    backgroundColor: getRenderableColor(getCssVarHslColor($styleSource, '--field-optional-card')),
     borderColor: optionalBorderColor,
     borderHoverColor: optionalBorderHoverColor,
     borderTopWidth: 0,

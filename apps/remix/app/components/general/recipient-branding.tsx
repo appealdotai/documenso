@@ -1,5 +1,8 @@
 import type { TCssVarsSchema } from '@documenso/lib/types/css-vars';
-import { resolveSigningFieldHighlightColors } from '@documenso/lib/utils/signing-field-highlight-colors';
+import {
+  omitSigningFieldHighlightColors,
+  resolveSigningFieldHighlightColors,
+} from '@documenso/lib/utils/signing-field-highlight-colors';
 import { useEffect } from 'react';
 
 import { toNativeCssVarsString } from '~/utils/css-vars';
@@ -52,7 +55,9 @@ export type RecipientBrandingProps = {
 export const RecipientBranding = ({ branding, cspNonce }: RecipientBrandingProps) => {
   const fieldHighlightVarsString = toNativeCssVarsString(resolveSigningFieldHighlightColors(branding?.colors));
 
-  const brandingVarsString = branding?.allowCustomBranding ? toNativeCssVarsString(branding?.colors ?? {}) : '';
+  const brandingVarsString = branding?.allowCustomBranding
+    ? toNativeCssVarsString(omitSigningFieldHighlightColors(branding?.colors ?? {}))
+    : '';
 
   const userCss = branding?.css ?? '';
 

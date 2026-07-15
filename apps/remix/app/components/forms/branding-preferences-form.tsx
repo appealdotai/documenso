@@ -2,6 +2,11 @@ import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/org
 import { NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
 import { DEFAULT_BRAND_COLORS, DEFAULT_BRAND_LENGTHS, DEFAULT_BRAND_RADIUS } from '@documenso/lib/constants/theme';
 import { ZCssVarsSchema } from '@documenso/lib/types/css-vars';
+import {
+  normalizeSigningFieldHighlightColor,
+  resolveSigningFieldHighlightColors,
+  SIGNING_FIELD_BACKGROUND_COLOR_KEYS,
+} from '@documenso/lib/utils/signing-field-highlight-colors';
 import { cn } from '@documenso/ui/lib/utils';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@documenso/ui/primitives/accordion';
 import { Button } from '@documenso/ui/primitives/button';
@@ -77,7 +82,23 @@ export function BrandingPreferencesForm({
   const [hasLoadedPreview, setHasLoadedPreview] = useState(false);
 
   const parsedColors = ZCssVarsSchema.safeParse(settings.brandingColors);
-  const initialColors = parsedColors.success ? parsedColors.data : {};
+  const initialColors = (() => {
+    if (!parsedColors.success) {
+      return {};
+    }
+
+    const colors = { ...parsedColors.data };
+
+    for (const key of SIGNING_FIELD_BACKGROUND_COLOR_KEYS) {
+      const value = colors[key];
+
+      if (typeof value === 'string' && value.trim() !== '') {
+        colors[key] = normalizeSigningFieldHighlightColor(key, value);
+      }
+    }
+
+    return colors;
+  })();
 
   const form = useForm<TBrandingPreferencesFormSchema>({
     values: {
@@ -94,7 +115,7 @@ export function BrandingPreferencesForm({
 
   const isBrandingEnabled = form.watch('brandingEnabled');
   const brandingColors = form.watch('brandingColors');
-  const fieldHighlightPreviewVars = toNativeCssVars(brandingColors ?? {});
+  const fieldHighlightPreviewVars = toNativeCssVars(resolveSigningFieldHighlightColors(brandingColors));
 
   useEffect(() => {
     if (settings.brandingLogo) {
@@ -566,7 +587,7 @@ export function BrandingPreferencesForm({
                 <FormDescription className="mt-1 mb-4">
                   <Trans>
                     Customise how unsigned fields appear to recipients. Required and optional fields can use different
-                    colours and borders.
+                    colours, borders, and opacity.
                   </Trans>
                 </FormDescription>
 
@@ -663,6 +684,7 @@ export function BrandingPreferencesForm({
                                 nonce={nonce}
                                 value={field.value ?? ''}
                                 defaultValue={DEFAULT_BRAND_COLORS.fieldRequiredCard}
+                                enableAlpha
                                 onChange={(color) => field.onChange(color)}
                               />
                             </FormControl>
@@ -680,6 +702,7 @@ export function BrandingPreferencesForm({
                                 nonce={nonce}
                                 value={field.value ?? ''}
                                 defaultValue={DEFAULT_BRAND_COLORS.fieldRequiredCardBorder}
+                                enableAlpha
                                 onChange={(color) => field.onChange(color)}
                               />
                             </FormControl>
@@ -697,6 +720,7 @@ export function BrandingPreferencesForm({
                                 nonce={nonce}
                                 value={field.value ?? ''}
                                 defaultValue={DEFAULT_BRAND_COLORS.fieldRequiredCardBorderHover}
+                                enableAlpha
                                 onChange={(color) => field.onChange(color)}
                               />
                             </FormControl>
@@ -755,6 +779,7 @@ export function BrandingPreferencesForm({
                                 nonce={nonce}
                                 value={field.value ?? ''}
                                 defaultValue={DEFAULT_BRAND_COLORS.fieldOptionalCard}
+                                enableAlpha
                                 onChange={(color) => field.onChange(color)}
                               />
                             </FormControl>
@@ -772,6 +797,7 @@ export function BrandingPreferencesForm({
                                 nonce={nonce}
                                 value={field.value ?? ''}
                                 defaultValue={DEFAULT_BRAND_COLORS.fieldOptionalCardBorder}
+                                enableAlpha
                                 onChange={(color) => field.onChange(color)}
                               />
                             </FormControl>
@@ -789,6 +815,7 @@ export function BrandingPreferencesForm({
                                 nonce={nonce}
                                 value={field.value ?? ''}
                                 defaultValue={DEFAULT_BRAND_COLORS.fieldOptionalCardBorderHover}
+                                enableAlpha
                                 onChange={(color) => field.onChange(color)}
                               />
                             </FormControl>
@@ -845,6 +872,7 @@ export function BrandingPreferencesForm({
                                 nonce={nonce}
                                 value={field.value ?? ''}
                                 defaultValue={DEFAULT_BRAND_COLORS.fieldValidationCardBorder}
+                                enableAlpha
                                 onChange={(color) => field.onChange(color)}
                               />
                             </FormControl>

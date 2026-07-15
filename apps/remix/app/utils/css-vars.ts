@@ -25,14 +25,18 @@ export const toNativeCssVars = (vars: TCssVarsSchema) => {
     }
 
     const color = colord(value);
-    const { h, s, l } = color.toHsl();
+    const { h, s, l, a } = color.toHsl();
 
     // Tailwind's theme.css consumes these via `hsl(var(--token))`. CSS
     // Color 4 space-separated `hsl()` requires `%` on saturation and
     // lightness — without it, the function is invalid and the property
     // falls back to its initial value (which is why bare numeric output
     // here used to silently break customer colours).
-    cssVars[`--${toKebabCase(key)}`] = `${h} ${s}% ${l}%`;
+    //
+    // Alpha is included when < 1 so tokens like field backgrounds can
+    // carry opacity inside the variable (`hsl(var(--token))`) instead of
+    // hard-coding `/ 0.9` at every call site.
+    cssVars[`--${toKebabCase(key)}`] = a < 1 ? `${h} ${s}% ${l}% / ${a}` : `${h} ${s}% ${l}%`;
   }
 
   return cssVars;

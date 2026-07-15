@@ -23,11 +23,11 @@
     --field-card-border: 95.08 71.08% 67.45%;
     --field-card-foreground: 222.2 47.4% 11.2%;
 
-    --field-required-card: 95 74% 90%;
+    --field-required-card: 95 74% 90% / 0.9;
     --field-required-card-border: 95.08 71.08% 67.45%;
     --field-required-card-border-hover: 94.5 62% 48%;
     --field-required-card-border-width: 2px;
-    --field-optional-card: 0 0% 100%;
+    --field-optional-card: 0 0% 100% / 0.9;
     --field-optional-card-border: 214.3 31.8% 91.4%;
     --field-optional-card-border-hover: 215 16% 47%;
     --field-optional-card-border-width: 2px;
@@ -287,7 +287,7 @@
   .field--FieldRootContainer.field-card-container[data-inserted="false"][data-readonly="false"][data-field-required="true"]:not(
       [data-validate="true"]
     ):not([data-editing="true"]) {
-    background-color: hsl(var(--field-required-card) / 0.9);
+    background-color: hsl(var(--field-required-card));
     border-color: hsl(var(--field-required-card-border));
     border-style: solid;
     border-width: var(--field-required-card-border-width);
@@ -305,7 +305,7 @@
   }
 
   .field--FieldRootContainer.field-card-container[data-inserted="false"][data-readonly="false"][data-field-required="true"][data-editing="true"] {
-    background-color: hsl(var(--field-required-card) / 0.9);
+    background-color: hsl(var(--field-required-card));
   }
 
   .field--FieldRootContainer.field-card-container[data-inserted="true"][data-field-required="true"][data-editing="true"] {
@@ -315,7 +315,7 @@
   .field--FieldRootContainer.field-card-container[data-inserted="false"][data-readonly="false"][data-field-required="false"]:not(
       [data-validate="true"]
     ):not([data-editing="true"]) {
-    background-color: hsl(var(--field-optional-card) / 0.9);
+    background-color: hsl(var(--field-optional-card));
     border-color: hsl(var(--field-optional-card-border));
     border-style: solid;
     border-width: 0 0 var(--field-optional-card-border-width) 0;
@@ -340,7 +340,7 @@
   }
 
   .field--FieldRootContainer.field-card-container[data-inserted="false"][data-readonly="false"][data-field-required="false"][data-editing="true"] {
-    background-color: hsl(var(--field-optional-card) / 0.9);
+    background-color: hsl(var(--field-optional-card));
   }
 
   .field--FieldRootContainer.field-card-container[data-inserted="true"][data-field-required="false"][data-editing="true"] {
