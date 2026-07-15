@@ -15,11 +15,44 @@ import type { FieldToRender, RenderFieldElementOptions } from './field-renderer'
 import { calculateFieldPosition, calculateMultiItemPosition } from './field-renderer';
 
 // Do not change any of these values without consulting with the team.
-const checkboxFieldPadding = 8;
-const spacingBetweenCheckboxAndText = 8;
+export const CHECKBOX_FIELD_PADDING = 2;
+export const CHECKBOX_SPACING_BETWEEN_ITEM_AND_TEXT = 2;
+
+const checkboxFieldPadding = CHECKBOX_FIELD_PADDING;
+const spacingBetweenCheckboxAndText = CHECKBOX_SPACING_BETWEEN_ITEM_AND_TEXT;
 
 const calculateCheckboxSize = (fontSize: number) => {
   return fontSize;
+};
+
+/**
+ * Minimum pixel size so the field can shrink until left/right (and top/bottom)
+ * insets match `CHECKBOX_FIELD_PADDING` around the checkbox square(s).
+ */
+export const getCheckboxFieldMinSizePx = ({
+  fontSize = DEFAULT_STANDARD_FONT_SIZE,
+  itemCount = 1,
+  direction = 'vertical',
+}: {
+  fontSize?: number;
+  itemCount?: number;
+  direction?: 'vertical' | 'horizontal';
+}) => {
+  const itemSize = calculateCheckboxSize(fontSize);
+  const padding = checkboxFieldPadding * 2;
+  const count = Math.max(1, itemCount);
+
+  if (direction === 'horizontal') {
+    return {
+      minWidth: padding + itemSize * count,
+      minHeight: padding + itemSize,
+    };
+  }
+
+  return {
+    minWidth: padding + itemSize,
+    minHeight: padding + itemSize * count,
+  };
 };
 
 export const renderCheckboxFieldElement = (field: FieldToRender, options: RenderFieldElementOptions) => {
@@ -41,7 +74,7 @@ export const renderCheckboxFieldElement = (field: FieldToRender, options: Render
     pageLayer.add(fieldGroup);
   }
 
-  const fieldRect = upsertFieldRect(field, options);
+  const fieldRect = upsertFieldRect(field, options, fieldGroup);
   fieldGroup.add(fieldRect);
 
   const fontSize = checkboxMeta?.fontSize || DEFAULT_STANDARD_FONT_SIZE;

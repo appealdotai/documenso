@@ -37,7 +37,7 @@ test('[DOCUMENT_AUTH]: should allow signing when no auth setup', async ({ page }
 
       if (field.type === FieldType.TEXT) {
         await page.locator('#custom-text').fill('TEXT');
-        await page.getByRole('button', { name: 'Save' }).click();
+        await page.locator('#custom-text').press('Enter');
       }
 
       await expect(page.locator(`#field-${field.id}`)).toHaveAttribute('data-inserted', 'true');
@@ -87,7 +87,7 @@ test('[DOCUMENT_AUTH]: should allow signing with valid global auth', async ({ pa
 
     if (field.type === FieldType.TEXT) {
       await page.locator('#custom-text').fill('TEXT');
-      await page.getByRole('button', { name: 'Save' }).click();
+      await page.locator('#custom-text').press('Enter');
     }
 
     await expect(page.locator(`#field-${field.id}`)).toHaveAttribute('data-inserted', 'true');
@@ -237,7 +237,7 @@ test('[DOCUMENT_AUTH]: should allow field signing when required for recipient au
 
       if (field.type === FieldType.TEXT) {
         await page.locator('#custom-text').fill('TEXT');
-        await page.getByRole('button', { name: 'Save' }).click();
+        await page.locator('#custom-text').press('Enter');
       }
 
       await expect(page.locator(`#field-${field.id}`)).toHaveAttribute('data-inserted', 'true', {
@@ -335,7 +335,7 @@ test('[DOCUMENT_AUTH]: should allow field signing when required for recipient an
 
       if (field.type === FieldType.TEXT) {
         await page.locator('#custom-text').fill('TEXT');
-        await page.getByRole('button', { name: 'Save' }).click();
+        await page.locator('#custom-text').press('Enter');
       }
 
       await expect(page.locator(`#field-${field.id}`)).toHaveAttribute('data-inserted', 'true', {

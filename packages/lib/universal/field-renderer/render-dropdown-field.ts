@@ -63,7 +63,7 @@ export const renderDropdownFieldElement = (field: FieldToRender, options: Render
   fieldGroup.removeChildren();
   fieldGroup.off('transform');
 
-  const fieldRect = upsertFieldRect(field, options);
+  const fieldRect = upsertFieldRect(field, options, fieldGroup);
   fieldGroup.add(fieldRect);
 
   if (isFirstRender) {

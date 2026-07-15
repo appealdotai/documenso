@@ -2,7 +2,6 @@ import type { TRecipientActionAuth } from '@documenso/lib/types/document-auth';
 import { ZFieldMetaSchema } from '@documenso/lib/types/field-meta';
 import type { FieldWithSignature } from '@documenso/prisma/types/field-with-signature';
 import { FieldRootContainer } from '@documenso/ui/components/field/field';
-import { getRecipientColorStyles } from '@documenso/ui/lib/recipient-colors';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@documenso/ui/primitives/tooltip';
 import { Trans } from '@lingui/react/macro';
 import { FieldType } from '@prisma/client';
@@ -16,6 +15,12 @@ export type DocumentSigningFieldContainerProps = {
   field: FieldWithSignature;
   loading?: boolean;
   children: React.ReactNode;
+
+  /**
+   * When true, the full-field click capture layer is hidden so an inline
+   * input can receive pointer events.
+   */
+  isEditing?: boolean;
 
   /**
    * A function that is called before the field requires to be signed, or reauthed.
@@ -45,6 +50,7 @@ export type DocumentSigningFieldContainerProps = {
 export const DocumentSigningFieldContainer = ({
   field,
   loading,
+  isEditing = false,
   onPreSign,
   onSign,
   onRemove,
@@ -106,7 +112,10 @@ export const DocumentSigningFieldContainer = ({
       return;
     }
 
-    if (type === 'Signature' && onActivateSignedField) {
+    if (
+      onActivateSignedField &&
+      (type === 'Signature' || type === 'Text' || type === 'Number' || type === 'Dropdown' || type === 'Date')
+    ) {
       await onActivateSignedField();
       return;
     }
@@ -122,9 +131,12 @@ export const DocumentSigningFieldContainer = ({
     await onRemove?.(fieldType);
   };
 
+  const showsChangeTooltip =
+    type === 'Signature' || type === 'Text' || type === 'Number' || type === 'Dropdown' || type === 'Date';
+
   return (
-    <FieldRootContainer color={getRecipientColorStyles(field.fieldMeta?.readOnly ? 'readOnly' : 0)} field={field}>
-      {!field.inserted && !loading && !readOnlyField && (
+    <FieldRootContainer field={field} readonly={readOnlyField} isEditing={isEditing}>
+      {!field.inserted && !loading && !readOnlyField && !isEditing && (
         <button
           type="submit"
           className="absolute inset-0 z-10 h-full w-full rounded-[2px]"
@@ -132,7 +144,7 @@ export const DocumentSigningFieldContainer = ({
         />
       )}
 
-      {type === 'Checkbox' && field.inserted && !loading && !readOnlyField && (
+      {type === 'Checkbox' && field.inserted && !loading && !readOnlyField && !isEditing && (
         <button
           className="absolute -bottom-10 flex items-center justify-evenly rounded-md border bg-gray-900 opacity-0 group-hover:opacity-100"
           onClick={() => void onClearCheckBoxValues(type)}
@@ -143,7 +155,7 @@ export const DocumentSigningFieldContainer = ({
         </button>
       )}
 
-      {type !== 'Checkbox' && field.inserted && !loading && !readOnlyField && (
+      {type !== 'Checkbox' && field.inserted && !loading && !readOnlyField && !isEditing && (
         <Tooltip delayDuration={0}>
           <TooltipTrigger asChild>
             <button className="absolute inset-0 z-10" onClick={onSignedFieldClick}></button>
@@ -152,7 +164,7 @@ export const DocumentSigningFieldContainer = ({
           <TooltipContent className="border-0 bg-orange-300 fill-orange-300 text-orange-900" sideOffset={2}>
             {tooltipText && <p>{tooltipText}</p>}
 
-            {type === 'Signature' ? <Trans>Change</Trans> : <Trans>Remove</Trans>}
+            {showsChangeTooltip ? <Trans>Change</Trans> : <Trans>Remove</Trans>}
             <TooltipArrow />
           </TooltipContent>
         </Tooltip>

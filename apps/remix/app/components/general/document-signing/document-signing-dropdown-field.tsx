@@ -9,16 +9,20 @@ import type {
   TSignFieldWithTokenMutationSchema,
 } from '@documenso/trpc/server/field-router/schema';
 import { cn } from '@documenso/ui/lib/utils';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@documenso/ui/primitives/select';
 import { useToast } from '@documenso/ui/primitives/use-toast';
-import { msg } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react';
-import { Loader } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Trans, useLingui } from '@lingui/react/macro';
+import { useEffect, useRef, useState } from 'react';
 import { useRevalidator } from 'react-router';
+
+import { getDropdownFieldDefaultValue } from '~/utils/field-signing/commit-dropdown-field';
 
 import { useRequiredDocumentSigningAuthContext } from './document-signing-auth-provider';
 import { DocumentSigningFieldContainer } from './document-signing-field-container';
+import {
+  DocumentSigningFieldsInserted,
+  DocumentSigningFieldsLoader,
+  DocumentSigningFieldsUninserted,
+} from './document-signing-fields';
 import { useDocumentSigningRecipientContext } from './document-signing-recipient-provider';
 
 export type DocumentSigningDropdownFieldProps = {
@@ -32,18 +36,17 @@ export const DocumentSigningDropdownField = ({
   onSignField,
   onUnsignField,
 }: DocumentSigningDropdownFieldProps) => {
-  const { _ } = useLingui();
+  const { t } = useLingui();
   const { toast } = useToast();
   const { revalidate } = useRevalidator();
 
   const { recipient, isAssistantMode } = useDocumentSigningRecipientContext();
-
   const { executeActionAuthProcedure } = useRequiredDocumentSigningAuthContext();
 
-  const parsedFieldMeta = ZDropdownFieldMeta.parse(field.fieldMeta);
-  const isReadOnly = parsedFieldMeta?.readOnly;
-  const defaultValue = parsedFieldMeta?.defaultValue;
-  const [localChoice, setLocalChoice] = useState(parsedFieldMeta.defaultValue ?? '');
+  const listRef = useRef<HTMLDivElement>(null);
+  const isCommittingRef = useRef(false);
+  const hasAutoSignedRef = useRef(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   const { mutateAsync: signFieldWithToken, isPending: isSignFieldWithTokenLoading } =
     trpc.field.signFieldWithToken.useMutation(DO_NOT_INVALIDATE_QUERY_ON_MUTATION);
@@ -51,31 +54,56 @@ export const DocumentSigningDropdownField = ({
   const { mutateAsync: removeSignedFieldWithToken, isPending: isRemoveSignedFieldWithTokenLoading } =
     trpc.field.removeSignedFieldWithToken.useMutation(DO_NOT_INVALIDATE_QUERY_ON_MUTATION);
 
-  const isLoading = isSignFieldWithTokenLoading || isRemoveSignedFieldWithTokenLoading;
-  const shouldAutoSignField = (!field.inserted && localChoice) || (!field.inserted && isReadOnly && defaultValue);
+  const parsedFieldMeta = ZDropdownFieldMeta.parse(field.fieldMeta);
+  const isReadOnly = parsedFieldMeta?.readOnly ?? false;
+  const defaultValue = parsedFieldMeta?.defaultValue;
+  const values = parsedFieldMeta?.values?.map((item) => item.value) ?? [];
 
-  const onSign = async (authOptions?: TRecipientActionAuth) => {
+  const isLoading = isSignFieldWithTokenLoading || isRemoveSignedFieldWithTokenLoading;
+  const shouldAutoSignField = !field.inserted && !!defaultValue;
+
+  const selectedValue = getDropdownFieldDefaultValue({
+    field: {
+      customText: field.customText,
+      fieldMeta: parsedFieldMeta,
+    },
+  });
+
+  const onSign = async (authOptions?: TRecipientActionAuth, value = selectedValue) => {
     try {
-      if (!localChoice) {
+      if (!value) {
         return;
+      }
+
+      if (field.inserted) {
+        const removePayload: TRemovedSignedFieldWithTokenMutationSchema = {
+          token: recipient.token,
+          fieldId: field.id,
+        };
+
+        if (onUnsignField) {
+          await onUnsignField(removePayload);
+        } else {
+          await removeSignedFieldWithToken(removePayload);
+        }
       }
 
       const payload: TSignFieldWithTokenMutationSchema = {
         token: recipient.token,
         fieldId: field.id,
-        value: localChoice,
+        value,
         isBase64: true,
         authOptions,
       };
 
       if (onSignField) {
         await onSignField(payload);
-      } else {
-        await signFieldWithToken(payload);
+        setIsEditing(false);
+        return;
       }
 
-      setLocalChoice('');
-
+      await signFieldWithToken(payload);
+      setIsEditing(false);
       await revalidate();
     } catch (err) {
       const error = AppError.parseError(err);
@@ -87,17 +115,13 @@ export const DocumentSigningDropdownField = ({
       console.error(err);
 
       toast({
-        title: _(msg`Error`),
+        title: t`Error`,
         description: isAssistantMode
-          ? _(msg`An error occurred while signing as assistant.`)
-          : _(msg`An error occurred while signing the document.`),
+          ? t`An error occurred while signing as assistant.`
+          : t`An error occurred while signing the document.`,
         variant: 'destructive',
       });
     }
-  };
-
-  const onPreSign = () => {
-    return true;
   };
 
   const onRemove = async () => {
@@ -110,84 +134,170 @@ export const DocumentSigningDropdownField = ({
       if (onUnsignField) {
         await onUnsignField(payload);
         return;
-      } else {
-        await removeSignedFieldWithToken(payload);
       }
 
-      setLocalChoice('');
-
+      await removeSignedFieldWithToken(payload);
       await revalidate();
     } catch (err) {
       console.error(err);
 
       toast({
-        title: _(msg`Error`),
-        description: _(msg`An error occurred while removing the field.`),
+        title: t`Error`,
+        description: t`An error occurred while removing the field.`,
         variant: 'destructive',
       });
     }
   };
 
-  const handleSelectItem = (val: string) => {
-    setLocalChoice(val);
+  const onPreSign = () => {
+    if (isReadOnly) {
+      return false;
+    }
+
+    setIsEditing(true);
+    return false;
+  };
+
+  const onActivateSignedField = () => {
+    if (isReadOnly) {
+      return;
+    }
+
+    setIsEditing(true);
+  };
+
+  const handleSelect = async (value: string) => {
+    if (isCommittingRef.current || isLoading) {
+      return;
+    }
+
+    if (field.inserted && value === field.customText) {
+      setIsEditing(false);
+      return;
+    }
+
+    isCommittingRef.current = true;
+
+    try {
+      await executeActionAuthProcedure({
+        onReauthFormSubmit: async (authOptions) => await onSign(authOptions, value),
+        actionTarget: field.type,
+      });
+    } finally {
+      isCommittingRef.current = false;
+    }
   };
 
   useEffect(() => {
-    if (!field.inserted && localChoice) {
-      void executeActionAuthProcedure({
-        onReauthFormSubmit: async (authOptions) => await onSign(authOptions),
-        actionTarget: field.type,
-      });
+    if (!isEditing) {
+      return;
     }
-  }, [localChoice]);
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (isCommittingRef.current) {
+        return;
+      }
+
+      if (listRef.current?.contains(event.target as Node)) {
+        return;
+      }
+
+      setIsEditing(false);
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setIsEditing(false);
+      }
+    };
+
+    const timeoutId = window.setTimeout(() => {
+      document.addEventListener('pointerdown', handlePointerDown);
+    }, 0);
+
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      document.removeEventListener('pointerdown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isEditing]);
 
   useEffect(() => {
-    if (shouldAutoSignField) {
-      void executeActionAuthProcedure({
-        onReauthFormSubmit: async (authOptions) => await onSign(authOptions),
-        actionTarget: field.type,
-      });
+    if (!shouldAutoSignField || hasAutoSignedRef.current) {
+      return;
     }
+
+    hasAutoSignedRef.current = true;
+
+    void executeActionAuthProcedure({
+      onReauthFormSubmit: async (authOptions) => await onSign(authOptions, defaultValue ?? ''),
+      actionTarget: field.type,
+    });
+    // Intentionally run once on mount for prefilled/read-only auto-sign.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
-    <div className="pointer-events-none">
-      <DocumentSigningFieldContainer
-        field={field}
-        onPreSign={onPreSign}
-        onSign={onSign}
-        onRemove={onRemove}
-        type="Dropdown"
-      >
-        {isLoading && (
-          <div className="absolute inset-0 flex items-center justify-center rounded-md bg-background">
-            <Loader className="h-5 w-5 animate-spin text-primary md:h-8 md:w-8" />
+    <DocumentSigningFieldContainer
+      field={field}
+      onPreSign={onPreSign}
+      onSign={onSign}
+      onRemove={onRemove}
+      onActivateSignedField={onActivateSignedField}
+      isEditing={isEditing}
+      type="Dropdown"
+    >
+      {isLoading && <DocumentSigningFieldsLoader />}
+
+      {isEditing && !isLoading && (
+        <div ref={listRef} className="absolute inset-x-0 top-0 z-20">
+          <div className="pointer-events-none mb-0.5 flex h-full min-h-[100%] items-center rounded-[2px] border border-primary/40 bg-white px-1.5 text-[clamp(0.425rem,25cqw,0.825rem)] text-foreground">
+            <span className="truncate">{selectedValue || t`Select`}</span>
           </div>
-        )}
 
-        {!field.inserted && (
-          <p className="flex flex-col items-center justify-center text-foreground duration-200 group-hover:text-primary">
-            <Select value={localChoice} onValueChange={handleSelectItem}>
-              <SelectTrigger
-                className={cn('z-10 h-full w-full border-none text-foreground ring-0 focus:border-none focus:ring-0')}
+          <div
+            role="listbox"
+            aria-label={t`Dropdown options`}
+            className="max-h-48 overflow-y-auto rounded-md border bg-background shadow-md"
+          >
+            {values.map((value) => (
+              <button
+                key={value}
+                type="button"
+                role="option"
+                aria-selected={value === selectedValue}
+                disabled={isLoading}
+                className={cn(
+                  'flex w-full cursor-pointer items-center px-3 py-2 text-left text-sm outline-none',
+                  'hover:bg-accent hover:text-accent-foreground',
+                  'focus-visible:bg-accent focus-visible:text-accent-foreground',
+                  'disabled:pointer-events-none disabled:opacity-50',
+                  {
+                    'bg-accent text-accent-foreground': value === selectedValue,
+                  },
+                )}
+                onClick={() => void handleSelect(value)}
+                onPointerDown={(event) => event.stopPropagation()}
               >
-                <SelectValue className="text-[clamp(0.425rem,25cqw,0.825rem)]" placeholder={`${_(msg`Select`)}`} />
-              </SelectTrigger>
-              <SelectContent className="w-full ring-0 focus:ring-0" position="popper">
-                {parsedFieldMeta?.values?.map((item, index) => (
-                  <SelectItem key={index} value={item.value} className="ring-0 focus:ring-0">
-                    {item.value}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </p>
-        )}
+                {value}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
-        {field.inserted && (
-          <p className="text-[clamp(0.425rem,25cqw,0.825rem)] text-foreground duration-200">{field.customText}</p>
-        )}
-      </DocumentSigningFieldContainer>
-    </div>
+      {!isEditing && !field.inserted && (
+        <DocumentSigningFieldsUninserted>
+          <Trans>Select</Trans>
+        </DocumentSigningFieldsUninserted>
+      )}
+
+      {!isEditing && field.inserted && (
+        <DocumentSigningFieldsInserted>{field.customText}</DocumentSigningFieldsInserted>
+      )}
+    </DocumentSigningFieldContainer>
   );
 };

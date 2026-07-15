@@ -1,4 +1,3 @@
-import { validateNumberField } from '@documenso/lib/advanced-fields-validation/validate-number';
 import { DO_NOT_INVALIDATE_QUERY_ON_MUTATION } from '@documenso/lib/constants/trpc';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import type { TRecipientActionAuth } from '@documenso/lib/types/document-auth';
@@ -10,15 +9,12 @@ import type {
   TSignFieldWithTokenMutationSchema,
 } from '@documenso/trpc/server/field-router/schema';
 import { cn } from '@documenso/ui/lib/utils';
-import { Button } from '@documenso/ui/primitives/button';
-import { Dialog, DialogContent, DialogFooter, DialogTitle } from '@documenso/ui/primitives/dialog';
-import { Input } from '@documenso/ui/primitives/input';
 import { useToast } from '@documenso/ui/primitives/use-toast';
-import { msg } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react';
-import { Trans } from '@lingui/react/macro';
-import { useEffect, useState } from 'react';
+import { Trans, useLingui } from '@lingui/react/macro';
+import { useCallback, useEffect, useRef } from 'react';
 import { useRevalidator } from 'react-router';
+
+import { getNumberFieldDefaultValue, validateInlineNumberFieldValue } from '~/utils/field-signing/commit-number-field';
 
 import { useRequiredDocumentSigningAuthContext } from './document-signing-auth-provider';
 import { DocumentSigningFieldContainer } from './document-signing-field-container';
@@ -28,14 +24,8 @@ import {
   DocumentSigningFieldsUninserted,
 } from './document-signing-fields';
 import { useDocumentSigningRecipientContext } from './document-signing-recipient-provider';
-
-type ValidationErrors = {
-  isNumber: string[];
-  required: string[];
-  minValue: string[];
-  maxValue: string[];
-  numberFormat: string[];
-};
+import { InlineFieldInput } from './inline-field-input';
+import { useInlineFieldEditor } from './use-inline-field-editor';
 
 export type DocumentSigningNumberFieldProps = {
   field: FieldWithSignature;
@@ -44,30 +34,11 @@ export type DocumentSigningNumberFieldProps = {
 };
 
 export const DocumentSigningNumberField = ({ field, onSignField, onUnsignField }: DocumentSigningNumberFieldProps) => {
-  const { _ } = useLingui();
+  const { t } = useLingui();
   const { toast } = useToast();
   const { revalidate } = useRevalidator();
 
   const { recipient, isAssistantMode } = useDocumentSigningRecipientContext();
-
-  const [showNumberModal, setShowNumberModal] = useState(false);
-
-  const safeFieldMeta = ZNumberFieldMeta.safeParse(field.fieldMeta);
-  const parsedFieldMeta = safeFieldMeta.success ? safeFieldMeta.data : null;
-
-  const defaultValue = parsedFieldMeta?.value;
-  const [localNumber, setLocalNumber] = useState(() => (parsedFieldMeta?.value ? String(parsedFieldMeta.value) : ''));
-
-  const initialErrors: ValidationErrors = {
-    isNumber: [],
-    required: [],
-    minValue: [],
-    maxValue: [],
-    numberFormat: [],
-  };
-
-  const [errors, setErrors] = useState(initialErrors);
-
   const { executeActionAuthProcedure } = useRequiredDocumentSigningAuthContext();
 
   const { mutateAsync: signFieldWithToken, isPending: isSignFieldWithTokenLoading } =
@@ -76,62 +47,83 @@ export const DocumentSigningNumberField = ({ field, onSignField, onUnsignField }
   const { mutateAsync: removeSignedFieldWithToken, isPending: isRemoveSignedFieldWithTokenLoading } =
     trpc.field.removeSignedFieldWithToken.useMutation(DO_NOT_INVALIDATE_QUERY_ON_MUTATION);
 
+  const safeFieldMeta = ZNumberFieldMeta.safeParse(field.fieldMeta);
+  const parsedFieldMeta = safeFieldMeta.success ? safeFieldMeta.data : null;
+
   const isLoading = isSignFieldWithTokenLoading || isRemoveSignedFieldWithTokenLoading;
+  const isReadOnly = parsedFieldMeta?.readOnly ?? false;
+  const defaultValue = parsedFieldMeta?.value;
 
-  const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const text = e.target.value;
-    setLocalNumber(text);
+  const shouldAutoSignField = !field.inserted && !!defaultValue;
 
-    if (parsedFieldMeta) {
-      const validationErrors = validateNumberField(text, parsedFieldMeta, true);
-      setErrors({
-        isNumber: validationErrors.filter((error) => error.includes('valid number')),
-        required: validationErrors.filter((error) => error.includes('required')),
-        minValue: validationErrors.filter((error) => error.includes('minimum value')),
-        maxValue: validationErrors.filter((error) => error.includes('maximum value')),
-        numberFormat: validationErrors.filter((error) => error.includes('number format')),
-      });
-    } else {
-      const validationErrors = validateNumberField(text);
-      setErrors((prevErrors) => ({
-        ...prevErrors,
-        isNumber: validationErrors.filter((error) => error.includes('valid number')),
-      }));
-    }
-  };
+  const initialValue = getNumberFieldDefaultValue({
+    field: {
+      customText: field.customText,
+      fieldMeta: parsedFieldMeta,
+    },
+  });
 
-  const onDialogSignClick = () => {
-    setShowNumberModal(false);
+  const validate = useCallback(
+    (value: string) => validateInlineNumberFieldValue(value, parsedFieldMeta),
+    [parsedFieldMeta],
+  );
 
-    void executeActionAuthProcedure({
-      onReauthFormSubmit: async (authOptions) => await onSign(authOptions),
-      actionTarget: field.type,
-    });
-  };
+  const {
+    draftValue,
+    errors,
+    hasErrors,
+    isEditing,
+    startEditing,
+    stopEditing,
+    updateDraft,
+    tryValidateForCommit,
+    resetDraft,
+  } = useInlineFieldEditor({
+    initialValue,
+    validate,
+  });
 
-  const onSign = async (authOptions?: TRecipientActionAuth) => {
+  const isCommittingRef = useRef(false);
+  const hasAutoSignedRef = useRef(false);
+
+  const onSign = async (authOptions?: TRecipientActionAuth, value = draftValue) => {
     try {
-      if (!localNumber || Object.values(errors).some((error) => error.length > 0)) {
+      const validationErrors = validateInlineNumberFieldValue(value, parsedFieldMeta);
+
+      if (validationErrors.length > 0 || !value) {
         return;
+      }
+
+      // V1 rejects signing an already-inserted field — clear it first when re-editing.
+      if (field.inserted) {
+        const removePayload: TRemovedSignedFieldWithTokenMutationSchema = {
+          token: recipient.token,
+          fieldId: field.id,
+        };
+
+        if (onUnsignField) {
+          await onUnsignField(removePayload);
+        } else {
+          await removeSignedFieldWithToken(removePayload);
+        }
       }
 
       const payload: TSignFieldWithTokenMutationSchema = {
         token: recipient.token,
         fieldId: field.id,
-        value: localNumber,
+        value,
         isBase64: true,
         authOptions,
       };
 
       if (onSignField) {
         await onSignField(payload);
+        stopEditing();
         return;
       }
 
       await signFieldWithToken(payload);
-
-      setLocalNumber('');
-
+      stopEditing();
       await revalidate();
     } catch (err) {
       const error = AppError.parseError(err);
@@ -143,34 +135,13 @@ export const DocumentSigningNumberField = ({ field, onSignField, onUnsignField }
       console.error(err);
 
       toast({
-        title: _(msg`Error`),
+        title: t`Error`,
         description: isAssistantMode
-          ? _(msg`An error occurred while signing as assistant.`)
-          : _(msg`An error occurred while signing the document.`),
+          ? t`An error occurred while signing as assistant.`
+          : t`An error occurred while signing the document.`,
         variant: 'destructive',
       });
     }
-  };
-
-  const onPreSign = () => {
-    if (isAssistantMode) {
-      return true;
-    }
-
-    setShowNumberModal(true);
-
-    if (localNumber && parsedFieldMeta) {
-      const validationErrors = validateNumberField(localNumber, parsedFieldMeta, true);
-      setErrors({
-        isNumber: validationErrors.filter((error) => error.includes('valid number')),
-        required: validationErrors.filter((error) => error.includes('required')),
-        minValue: validationErrors.filter((error) => error.includes('minimum value')),
-        maxValue: validationErrors.filter((error) => error.includes('maximum value')),
-        numberFormat: validationErrors.filter((error) => error.includes('number format')),
-      });
-    }
-
-    return false;
   };
 
   const onRemove = async () => {
@@ -180,44 +151,120 @@ export const DocumentSigningNumberField = ({ field, onSignField, onUnsignField }
         fieldId: field.id,
       };
 
+      const resetValue = parsedFieldMeta?.value ? String(parsedFieldMeta.value) : '';
+
       if (onUnsignField) {
         await onUnsignField(payload);
+        resetDraft(resetValue);
         return;
       }
 
       await removeSignedFieldWithToken(payload);
-
-      setLocalNumber(parsedFieldMeta?.value ? String(parsedFieldMeta?.value) : '');
-
+      resetDraft(resetValue);
       await revalidate();
     } catch (err) {
       console.error(err);
 
       toast({
-        title: _(msg`Error`),
-        description: _(msg`An error occurred while removing the field.`),
+        title: t`Error`,
+        description: t`An error occurred while removing the field.`,
         variant: 'destructive',
       });
     }
   };
 
-  useEffect(() => {
-    if (!showNumberModal) {
-      setLocalNumber(parsedFieldMeta?.value ? String(parsedFieldMeta.value) : '');
-      setErrors(initialErrors);
+  const onPreSign = () => {
+    if (isReadOnly) {
+      return false;
     }
-  }, [showNumberModal]);
 
-  useEffect(() => {
-    if (!field.inserted && defaultValue) {
-      void executeActionAuthProcedure({
-        onReauthFormSubmit: async (authOptions) => await onSign(authOptions),
+    startEditing(initialValue);
+    return false;
+  };
+
+  const onActivateSignedField = async () => {
+    if (isReadOnly) {
+      return;
+    }
+
+    startEditing(field.customText || initialValue);
+  };
+
+  const handleCommit = async () => {
+    if (isCommittingRef.current || isLoading || !isEditing) {
+      return;
+    }
+
+    const trimmed = draftValue;
+    const previousValue = field.inserted ? field.customText : '';
+
+    if (field.inserted && trimmed === previousValue) {
+      stopEditing();
+      return;
+    }
+
+    if (!trimmed) {
+      if (field.inserted) {
+        if (!tryValidateForCommit()) {
+          return;
+        }
+
+        isCommittingRef.current = true;
+
+        try {
+          await onRemove();
+          stopEditing();
+        } finally {
+          isCommittingRef.current = false;
+        }
+
+        return;
+      }
+
+      if (!tryValidateForCommit()) {
+        return;
+      }
+
+      stopEditing();
+      return;
+    }
+
+    if (!tryValidateForCommit()) {
+      return;
+    }
+
+    isCommittingRef.current = true;
+
+    try {
+      await executeActionAuthProcedure({
+        onReauthFormSubmit: async (authOptions) => await onSign(authOptions, trimmed),
         actionTarget: field.type,
       });
+    } finally {
+      isCommittingRef.current = false;
     }
-  }, []);
+  };
 
-  const userInputHasErrors = Object.values(errors).some((error) => error.length > 0);
+  const handleCancel = () => {
+    resetDraft(field.inserted ? field.customText || initialValue : initialValue);
+    stopEditing();
+  };
+
+  useEffect(() => {
+    if (!shouldAutoSignField || hasAutoSignedRef.current) {
+      return;
+    }
+
+    hasAutoSignedRef.current = true;
+
+    void executeActionAuthProcedure({
+      onReauthFormSubmit: async (authOptions) =>
+        await onSign(authOptions, parsedFieldMeta?.value ? String(parsedFieldMeta.value) : ''),
+      actionTarget: field.type,
+    });
+    // Intentionally run once on mount for prefilled auto-sign.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <DocumentSigningFieldContainer
@@ -225,97 +272,54 @@ export const DocumentSigningNumberField = ({ field, onSignField, onUnsignField }
       onPreSign={onPreSign}
       onSign={onSign}
       onRemove={onRemove}
+      onActivateSignedField={onActivateSignedField}
+      isEditing={isEditing}
       type="Number"
     >
       {isLoading && <DocumentSigningFieldsLoader />}
 
-      {!field.inserted && (
+      {isEditing && !isLoading && (
+        <div
+          className={cn('absolute inset-0 z-20 flex h-full w-full', {
+            'ring-2 ring-red-300 ring-offset-1': hasErrors,
+          })}
+        >
+          <InlineFieldInput
+            variant="number"
+            value={draftValue}
+            onChange={updateDraft}
+            onCommit={() => void handleCommit()}
+            onCancel={handleCancel}
+            placeholder={parsedFieldMeta?.placeholder ?? t`Enter your number here`}
+            textAlign={parsedFieldMeta?.textAlign}
+            overflow={parsedFieldMeta?.overflow}
+            fontSize={parsedFieldMeta?.fontSize}
+            hasError={hasErrors}
+            disabled={isLoading}
+            aria-label={t`Number field`}
+          />
+
+          {hasErrors && (
+            <div className="pointer-events-none absolute top-full left-0 z-30 mt-1 max-w-[240px] rounded bg-background/95 px-1.5 py-1 text-red-500 text-xs shadow-sm">
+              {errors.map((error) => (
+                <p key={error}>{error}</p>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {!isEditing && !field.inserted && (
         <DocumentSigningFieldsUninserted>
           <Trans>Enter Number</Trans>
         </DocumentSigningFieldsUninserted>
       )}
 
-      {field.inserted && (
-        <DocumentSigningFieldsInserted textAlign={parsedFieldMeta?.textAlign}>
+      {!isEditing && field.inserted && (
+        <DocumentSigningFieldsInserted textAlign={parsedFieldMeta?.textAlign} overflow={parsedFieldMeta?.overflow}>
           {field.customText}
         </DocumentSigningFieldsInserted>
       )}
-
-      <Dialog open={showNumberModal} onOpenChange={setShowNumberModal}>
-        <DialogContent>
-          <DialogTitle>
-            <Trans>Enter Number</Trans>
-          </DialogTitle>
-
-          <div>
-            <Input
-              type="text"
-              placeholder={parsedFieldMeta?.placeholder ?? ''}
-              className={cn('mt-2 w-full rounded-md', {
-                'border-2 border-red-300 ring-2 ring-red-200 ring-offset-2 ring-offset-red-200 focus-visible:border-red-400 focus-visible:ring-4 focus-visible:ring-red-200 focus-visible:ring-offset-2 focus-visible:ring-offset-red-200':
-                  userInputHasErrors,
-              })}
-              value={localNumber}
-              onChange={handleNumberChange}
-            />
-          </div>
-
-          {userInputHasErrors && (
-            <div>
-              {errors.isNumber?.map((error, index) => (
-                <p key={index} className="mt-2 text-red-500 text-sm">
-                  {error}
-                </p>
-              ))}
-              {errors.required?.map((error, index) => (
-                <p key={index} className="mt-2 text-red-500 text-sm">
-                  {error}
-                </p>
-              ))}
-              {errors.minValue?.map((error, index) => (
-                <p key={index} className="mt-2 text-red-500 text-sm">
-                  {error}
-                </p>
-              ))}
-              {errors.maxValue?.map((error, index) => (
-                <p key={index} className="mt-2 text-red-500 text-sm">
-                  {error}
-                </p>
-              ))}
-              {errors.numberFormat?.map((error, index) => (
-                <p key={index} className="mt-2 text-red-500 text-sm">
-                  {error}
-                </p>
-              ))}
-            </div>
-          )}
-
-          <DialogFooter>
-            <div className="flex w-full flex-1 flex-nowrap gap-4">
-              <Button
-                type="button"
-                className="flex-1"
-                variant="secondary"
-                onClick={() => {
-                  setShowNumberModal(false);
-                  setLocalNumber(parsedFieldMeta?.value ? String(parsedFieldMeta.value) : '');
-                }}
-              >
-                <Trans>Cancel</Trans>
-              </Button>
-
-              <Button
-                type="button"
-                className="flex-1"
-                disabled={!localNumber || userInputHasErrors}
-                onClick={() => onDialogSignClick()}
-              >
-                <Trans>Save</Trans>
-              </Button>
-            </div>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </DocumentSigningFieldContainer>
   );
 };

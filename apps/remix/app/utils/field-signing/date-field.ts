@@ -2,17 +2,22 @@ import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import type { TFieldDate } from '@documenso/lib/types/field';
 import type { TSignEnvelopeFieldValue } from '@documenso/trpc/server/envelope-router/sign-envelope-field.types';
 import { FieldType } from '@prisma/client';
+import { DateTime } from 'luxon';
 
-import { SignFieldDateDialog } from '~/components/dialogs/sign-field-date-dialog';
+import { buildDateFieldSignPayload, getDateFieldInitialJsDate, jsDateToIsoDate } from './commit-date-field';
 
 type HandleDateFieldClickOptions = {
   field: TFieldDate;
   dateFormat?: string;
 };
 
-export const handleDateFieldClick = async (
+/**
+ * Builds a DATE sign payload from the field's existing/default value.
+ * Inline overlay handles interactive selection; this remains for programmatic paths.
+ */
+export const handleDateFieldClick = (
   options: HandleDateFieldClickOptions,
-): Promise<Extract<TSignEnvelopeFieldValue, { type: typeof FieldType.DATE }> | null> => {
+): Extract<TSignEnvelopeFieldValue, { type: typeof FieldType.DATE }> | null => {
   const { field, dateFormat } = options;
 
   if (field.type !== FieldType.DATE) {
@@ -21,20 +26,19 @@ export const handleDateFieldClick = async (
     });
   }
 
-  const defaultValue = field.customText || field.fieldMeta?.value || '';
-
-  const dateToInsert = await SignFieldDateDialog.call({
-    fieldMeta: field.fieldMeta,
-    defaultValue,
+  const initialDate = getDateFieldInitialJsDate({
+    field: {
+      customText: field.customText,
+      fieldMeta: field.fieldMeta,
+    },
     dateFormat,
   });
+
+  const dateToInsert = initialDate ? jsDateToIsoDate(initialDate) : DateTime.now().toISODate();
 
   if (!dateToInsert) {
     return null;
   }
 
-  return {
-    type: FieldType.DATE,
-    value: dateToInsert,
-  };
+  return buildDateFieldSignPayload(dateToInsert);
 };

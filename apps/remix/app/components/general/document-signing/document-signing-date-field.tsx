@@ -10,15 +10,22 @@ import type {
   TRemovedSignedFieldWithTokenMutationSchema,
   TSignFieldWithTokenMutationSchema,
 } from '@documenso/trpc/server/field-router/schema';
-import { cn } from '@documenso/ui/lib/utils';
+import { Calendar } from '@documenso/ui/primitives/calendar';
 import { useToast } from '@documenso/ui/primitives/use-toast';
-import { msg } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react';
-import { Trans } from '@lingui/react/macro';
-import { Loader } from 'lucide-react';
+import { Trans, useLingui } from '@lingui/react/macro';
+import { DateTime } from 'luxon';
+import { useEffect, useRef, useState } from 'react';
 import { useRevalidator } from 'react-router';
 
+import { getDateFieldInitialJsDate, jsDateToIsoDate } from '~/utils/field-signing/commit-date-field';
+
+import { useRequiredDocumentSigningAuthContext } from './document-signing-auth-provider';
 import { DocumentSigningFieldContainer } from './document-signing-field-container';
+import {
+  DocumentSigningFieldsInserted,
+  DocumentSigningFieldsLoader,
+  DocumentSigningFieldsUninserted,
+} from './document-signing-fields';
 import { useDocumentSigningRecipientContext } from './document-signing-recipient-provider';
 
 export type DocumentSigningDateFieldProps = {
@@ -36,11 +43,16 @@ export const DocumentSigningDateField = ({
   onSignField,
   onUnsignField,
 }: DocumentSigningDateFieldProps) => {
-  const { _ } = useLingui();
+  const { t } = useLingui();
   const { toast } = useToast();
   const { revalidate } = useRevalidator();
 
   const { recipient, isAssistantMode } = useDocumentSigningRecipientContext();
+  const { executeActionAuthProcedure } = useRequiredDocumentSigningAuthContext();
+
+  const panelRef = useRef<HTMLDivElement>(null);
+  const isCommittingRef = useRef(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   const { mutateAsync: signFieldWithToken, isPending: isSignFieldWithTokenLoading } =
     trpc.field.signFieldWithToken.useMutation(DO_NOT_INVALIDATE_QUERY_ON_MUTATION);
@@ -52,29 +64,58 @@ export const DocumentSigningDateField = ({
 
   const safeFieldMeta = ZDateFieldMeta.safeParse(field.fieldMeta);
   const parsedFieldMeta = safeFieldMeta.success ? safeFieldMeta.data : null;
+  const isReadOnly = parsedFieldMeta?.readOnly ?? false;
+
+  const resolvedDateFormat = dateFormat ?? DEFAULT_DOCUMENT_DATE_FORMAT;
 
   const localDateString = convertToLocalSystemFormat(field.customText, dateFormat, timezone);
   const isDifferentTime = field.inserted && localDateString !== field.customText;
-  const tooltipText = _(
-    msg`"${field.customText}" will appear on the document as it has a timezone of "${timezone || ''}".`,
-  );
+  const tooltipText = t`"${field.customText}" will appear on the document as it has a timezone of "${timezone || ''}".`;
 
-  const onSign = async (authOptions?: TRecipientActionAuth) => {
+  const initialDate = getDateFieldInitialJsDate({
+    field: {
+      customText: field.customText,
+      fieldMeta: parsedFieldMeta,
+    },
+    dateFormat: resolvedDateFormat,
+  });
+
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(initialDate);
+
+  const onSign = async (authOptions?: TRecipientActionAuth, isoDate?: string) => {
     try {
+      if (!isoDate) {
+        return;
+      }
+
+      if (field.inserted) {
+        const removePayload: TRemovedSignedFieldWithTokenMutationSchema = {
+          token: recipient.token,
+          fieldId: field.id,
+        };
+
+        if (onUnsignField) {
+          await onUnsignField(removePayload);
+        } else {
+          await removeSignedFieldWithToken(removePayload);
+        }
+      }
+
       const payload: TSignFieldWithTokenMutationSchema = {
         token: recipient.token,
         fieldId: field.id,
-        value: dateFormat ?? DEFAULT_DOCUMENT_DATE_FORMAT,
+        value: isoDate,
         authOptions,
       };
 
       if (onSignField) {
         await onSignField(payload);
+        setIsEditing(false);
         return;
       }
 
       await signFieldWithToken(payload);
-
+      setIsEditing(false);
       await revalidate();
     } catch (err) {
       const error = AppError.parseError(err);
@@ -86,10 +127,10 @@ export const DocumentSigningDateField = ({
       console.error(err);
 
       toast({
-        title: _(msg`Error`),
+        title: t`Error`,
         description: isAssistantMode
-          ? _(msg`An error occurred while signing as assistant.`)
-          : _(msg`An error occurred while signing the document.`),
+          ? t`An error occurred while signing as assistant.`
+          : t`An error occurred while signing the document.`,
         variant: 'destructive',
       });
     }
@@ -108,53 +149,135 @@ export const DocumentSigningDateField = ({
       }
 
       await removeSignedFieldWithToken(payload);
-
       await revalidate();
     } catch (err) {
       console.error(err);
 
       toast({
-        title: _(msg`Error`),
-        description: _(msg`An error occurred while removing the field.`),
+        title: t`Error`,
+        description: t`An error occurred while removing the field.`,
         variant: 'destructive',
       });
     }
   };
 
+  const onPreSign = () => {
+    if (isReadOnly) {
+      return false;
+    }
+
+    setSelectedDate(initialDate);
+    setIsEditing(true);
+    return false;
+  };
+
+  const onActivateSignedField = () => {
+    if (isReadOnly) {
+      return;
+    }
+
+    setSelectedDate(initialDate);
+    setIsEditing(true);
+  };
+
+  const handleSelect = async (date: Date | undefined) => {
+    if (isCommittingRef.current || isLoading || !date) {
+      return;
+    }
+
+    setSelectedDate(date);
+
+    const isoDate = jsDateToIsoDate(date);
+
+    if (!isoDate) {
+      return;
+    }
+
+    if (field.inserted && initialDate && DateTime.fromJSDate(initialDate).toISODate() === isoDate) {
+      setIsEditing(false);
+      return;
+    }
+
+    isCommittingRef.current = true;
+
+    try {
+      await executeActionAuthProcedure({
+        onReauthFormSubmit: async (authOptions) => await onSign(authOptions, isoDate),
+        actionTarget: field.type,
+      });
+    } finally {
+      isCommittingRef.current = false;
+    }
+  };
+
+  useEffect(() => {
+    if (!isEditing) {
+      return;
+    }
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (isCommittingRef.current) {
+        return;
+      }
+
+      if (panelRef.current?.contains(event.target as Node)) {
+        return;
+      }
+
+      setIsEditing(false);
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setIsEditing(false);
+      }
+    };
+
+    const timeoutId = window.setTimeout(() => {
+      document.addEventListener('pointerdown', handlePointerDown);
+    }, 0);
+
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      document.removeEventListener('pointerdown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isEditing]);
+
   return (
     <DocumentSigningFieldContainer
       field={field}
+      onPreSign={onPreSign}
       onSign={onSign}
       onRemove={onRemove}
+      onActivateSignedField={onActivateSignedField}
+      isEditing={isEditing}
       type="Date"
       tooltipText={isDifferentTime ? tooltipText : undefined}
     >
-      {isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center rounded-md bg-background">
-          <Loader className="h-5 w-5 animate-spin text-primary md:h-8 md:w-8" />
+      {isLoading && <DocumentSigningFieldsLoader />}
+
+      {isEditing && !isLoading && (
+        <div ref={panelRef} className="absolute top-full left-0 z-30 mt-1">
+          <div className="rounded-md border bg-background shadow-md" onPointerDown={(event) => event.stopPropagation()}>
+            <Calendar mode="single" selected={selectedDate} onSelect={(date) => void handleSelect(date)} initialFocus />
+          </div>
         </div>
       )}
 
-      {!field.inserted && (
-        <p className="text-[clamp(0.425rem,25cqw,0.825rem)] text-foreground duration-200 group-hover:text-primary group-hover:text-recipient-green">
+      {!isEditing && !field.inserted && (
+        <DocumentSigningFieldsUninserted>
           <Trans>Date</Trans>
-        </p>
+        </DocumentSigningFieldsUninserted>
       )}
 
-      {field.inserted && (
-        <div className="flex h-full w-full items-center">
-          <p
-            className={cn(
-              'w-full whitespace-nowrap text-left text-[clamp(0.425rem,25cqw,0.825rem)] text-foreground duration-200',
-              {
-                '!text-center': parsedFieldMeta?.textAlign === 'center',
-                '!text-right': parsedFieldMeta?.textAlign === 'right',
-              },
-            )}
-          >
-            {localDateString}
-          </p>
-        </div>
+      {!isEditing && field.inserted && (
+        <DocumentSigningFieldsInserted textAlign={parsedFieldMeta?.textAlign} overflow={parsedFieldMeta?.overflow}>
+          {localDateString}
+        </DocumentSigningFieldsInserted>
       )}
     </DocumentSigningFieldContainer>
   );

@@ -243,7 +243,7 @@ export const renderSignatureFieldElement = (field: FieldToRender, options: Rende
   }
 
   // Render the field background and text.
-  const fieldRect = upsertFieldRect(field, options);
+  const fieldRect = upsertFieldRect(field, options, fieldGroup);
   const { node: fieldSignature, isImageSignature, isLabel } = createFieldSignature(field, options);
 
   fieldGroup.add(fieldRect);
