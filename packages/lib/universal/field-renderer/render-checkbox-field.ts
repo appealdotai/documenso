@@ -16,7 +16,7 @@ import { calculateFieldPosition, calculateMultiItemPosition } from './field-rend
 
 // Do not change any of these values without consulting with the team.
 const checkboxFieldPadding = 2;
-const spacingBetweenCheckboxAndText = 8;
+const spacingBetweenCheckboxAndText = 2;
 
 const calculateCheckboxSize = (fontSize: number) => {
   return fontSize;
