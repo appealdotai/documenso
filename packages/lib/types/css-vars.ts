@@ -31,6 +31,14 @@ export const ZCssVarsSchema = z
       .regex(CSS_LENGTH_REGEX, 'Must be a CSS length such as 2px, 0.125rem, or 0')
       .optional()
       .describe('Required unsigned field border width'),
+    fieldRequiredFilledCard: z.string().optional().describe('Required filled field background color'),
+    fieldRequiredFilledCardBorder: z.string().optional().describe('Required filled field border color'),
+    fieldRequiredFilledCardBorderHover: z.string().optional().describe('Required filled field border color on hover'),
+    fieldRequiredFilledCardBorderWidth: z
+      .string()
+      .regex(CSS_LENGTH_REGEX, 'Must be a CSS length such as 2px, 0.125rem, or 0')
+      .optional()
+      .describe('Required filled field border width'),
     fieldOptionalCard: z.string().optional().describe('Optional unsigned field background color'),
     fieldOptionalCardBorder: z.string().optional().describe('Optional unsigned field border color'),
     fieldOptionalCardBorderHover: z.string().optional().describe('Optional unsigned field border color on hover'),
@@ -39,6 +47,14 @@ export const ZCssVarsSchema = z
       .regex(CSS_LENGTH_REGEX, 'Must be a CSS length such as 2px, 0.125rem, or 0')
       .optional()
       .describe('Optional unsigned field border width'),
+    fieldOptionalFilledCard: z.string().optional().describe('Optional filled field background color'),
+    fieldOptionalFilledCardBorder: z.string().optional().describe('Optional filled field border color'),
+    fieldOptionalFilledCardBorderHover: z.string().optional().describe('Optional filled field border color on hover'),
+    fieldOptionalFilledCardBorderWidth: z
+      .string()
+      .regex(CSS_LENGTH_REGEX, 'Must be a CSS length such as 2px, 0.125rem, or 0')
+      .optional()
+      .describe('Optional filled field border width'),
     fieldValidationCardBorder: z
       .string()
       .optional()

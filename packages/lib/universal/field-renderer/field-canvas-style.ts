@@ -144,22 +144,45 @@ const resolveFieldCanvasStyleFromCssVars = (field: FieldToRender): FieldCanvasSt
     getPixelValue(
       getComputedStyle($styleSource).getPropertyValue('--field-required-card-border-width').trim() || '2px',
     ) ?? 2;
+  const requiredFilledBorderWidth =
+    getPixelValue(
+      getComputedStyle($styleSource).getPropertyValue('--field-required-filled-card-border-width').trim() || '2px',
+    ) ?? 2;
   const optionalBorderWidth =
     getPixelValue(
       getComputedStyle($styleSource).getPropertyValue('--field-optional-card-border-width').trim() || '2px',
+    ) ?? 2;
+  const optionalFilledBorderWidth =
+    getPixelValue(
+      getComputedStyle($styleSource).getPropertyValue('--field-optional-filled-card-border-width').trim() || '2px',
     ) ?? 2;
   const requiredBorderColor = getRenderableColor(getCssVarHslColor($styleSource, '--field-required-card-border'));
   const requiredBorderHoverColor = getRenderableColor(
     getCssVarHslColor($styleSource, '--field-required-card-border-hover'),
   );
+  const requiredFilledBorderColor = getRenderableColor(
+    getCssVarHslColor($styleSource, '--field-required-filled-card-border'),
+  );
+  const requiredFilledBorderHoverColor = getRenderableColor(
+    getCssVarHslColor($styleSource, '--field-required-filled-card-border-hover'),
+  );
   const optionalBorderColor = getRenderableColor(getCssVarHslColor($styleSource, '--field-optional-card-border'));
   const optionalBorderHoverColor = getRenderableColor(
     getCssVarHslColor($styleSource, '--field-optional-card-border-hover'),
   );
+  const optionalFilledBorderColor = getRenderableColor(
+    getCssVarHslColor($styleSource, '--field-optional-filled-card-border'),
+  );
+  const optionalFilledBorderHoverColor = getRenderableColor(
+    getCssVarHslColor($styleSource, '--field-optional-filled-card-border-hover'),
+  );
   const optionalSideHoverColor = getRenderableColor(
     getCssVarHslColor($styleSource, '--field-optional-card-border-hover', OPTIONAL_FIELD_SIDE_BORDER_OPACITY),
   );
-  const filledBackground = 'rgba(255, 255, 255, 0.9)';
+  const optionalFilledSideHoverColor = getRenderableColor(
+    getCssVarHslColor($styleSource, '--field-optional-filled-card-border-hover', OPTIONAL_FIELD_SIDE_BORDER_OPACITY),
+  );
+  const readOnlyBackground = 'rgba(255, 255, 255, 0.9)';
   const optionalHoverSideStyle = {
     borderTopWidth: 1,
     borderRightWidth: 1,
@@ -175,7 +198,7 @@ const resolveFieldCanvasStyleFromCssVars = (field: FieldToRender): FieldCanvasSt
 
   if (field.fieldMeta?.readOnly) {
     return {
-      backgroundColor: filledBackground,
+      backgroundColor: readOnlyBackground,
       borderColor: 'rgb(176, 176, 176)',
       borderWidth: 2,
       borderRadius: 2,
@@ -185,24 +208,24 @@ const resolveFieldCanvasStyleFromCssVars = (field: FieldToRender): FieldCanvasSt
   if (field.inserted) {
     if (isRequired) {
       return {
-        backgroundColor: filledBackground,
-        borderColor: isEditing ? requiredBorderHoverColor : requiredBorderColor,
-        borderHoverColor: requiredBorderHoverColor,
-        borderWidth: requiredBorderWidth,
+        backgroundColor: getRenderableColor(getCssVarHslColor($styleSource, '--field-required-filled-card')),
+        borderColor: isEditing ? requiredFilledBorderHoverColor : requiredFilledBorderColor,
+        borderHoverColor: requiredFilledBorderHoverColor,
+        borderWidth: requiredFilledBorderWidth,
         borderRadius: 2,
         showAccentRing: isEditing,
-        accentRingColor: isEditing ? requiredBorderHoverColor : undefined,
+        accentRingColor: isEditing ? requiredFilledBorderHoverColor : undefined,
       };
     }
 
     return {
-      backgroundColor: filledBackground,
-      borderColor: isEditing ? optionalBorderHoverColor : optionalBorderColor,
-      borderHoverColor: optionalBorderHoverColor,
-      borderWidth: optionalBorderWidth,
+      backgroundColor: getRenderableColor(getCssVarHslColor($styleSource, '--field-optional-filled-card')),
+      borderColor: isEditing ? optionalFilledBorderHoverColor : optionalFilledBorderColor,
+      borderHoverColor: optionalFilledBorderHoverColor,
+      borderWidth: optionalFilledBorderWidth,
       borderRadius: 2,
       showAccentRing: isEditing,
-      accentRingColor: isEditing ? optionalSideHoverColor : undefined,
+      accentRingColor: isEditing ? optionalFilledSideHoverColor : undefined,
     };
   }
 
