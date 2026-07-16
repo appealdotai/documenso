@@ -291,16 +291,36 @@ export const resolveFieldCanvasStyleFromBrandingColors = (
       };
     }
 
+    const optionalFilledHoverSideStyle = getOptionalHoverSideStyle({
+      optionalBorderWidth: optionalFilledBorderWidth,
+      optionalBorderHoverColor: optionalFilledBorderHoverColor,
+    });
+
+    if (isEditing) {
+      return {
+        backgroundColor: colorToCanvasColor(colors.fieldOptionalFilledCard),
+        borderRadius: 2,
+        ...optionalFilledHoverSideStyle,
+      };
+    }
+
     return {
       backgroundColor: colorToCanvasColor(colors.fieldOptionalFilledCard),
-      borderColor: isEditing ? optionalFilledBorderHoverColor : optionalFilledBorderColor,
+      borderColor: optionalFilledBorderColor,
       borderHoverColor: optionalFilledBorderHoverColor,
-      borderWidth: optionalFilledBorderWidth,
+      borderTopWidth: 0,
+      borderRightWidth: 0,
+      borderBottomWidth: optionalFilledBorderWidth,
+      borderLeftWidth: 0,
       borderRadius: 2,
-      showAccentRing: isEditing,
-      accentRingColor: isEditing
-        ? colorToCanvasColor(colors.fieldOptionalFilledCardBorderHover, OPTIONAL_FIELD_SIDE_BORDER_OPACITY)
-        : undefined,
+      hoverBorderTopWidth: optionalFilledHoverSideStyle.borderTopWidth,
+      hoverBorderRightWidth: optionalFilledHoverSideStyle.borderRightWidth,
+      hoverBorderBottomWidth: optionalFilledHoverSideStyle.borderBottomWidth,
+      hoverBorderLeftWidth: optionalFilledHoverSideStyle.borderLeftWidth,
+      hoverBorderTopColor: optionalFilledHoverSideStyle.borderTopColor,
+      hoverBorderRightColor: optionalFilledHoverSideStyle.borderRightColor,
+      hoverBorderBottomColor: optionalFilledHoverSideStyle.borderBottomColor,
+      hoverBorderLeftColor: optionalFilledHoverSideStyle.borderLeftColor,
     };
   }
 

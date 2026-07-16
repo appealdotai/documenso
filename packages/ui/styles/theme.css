@@ -262,13 +262,6 @@
 }
 
 @layer components {
-  .field--FieldRootContainer.field-card-container[data-inserted="true"] {
-    background-color: hsl(var(--field-optional-filled-card));
-    border-color: hsl(var(--field-optional-filled-card-border));
-    border-style: solid;
-    border-width: var(--field-optional-filled-card-border-width);
-  }
-
   .field--FieldRootContainer.field-card-container[data-inserted="true"][data-field-required="true"] {
     background-color: hsl(var(--field-required-filled-card));
     border-color: hsl(var(--field-required-filled-card-border));
@@ -278,11 +271,12 @@
 
   .field--FieldRootContainer.field-card-container[data-inserted="true"][data-field-required="false"]:not(
       [data-readonly="true"]
-    ) {
+    ):not([data-editing="true"]) {
     background-color: hsl(var(--field-optional-filled-card));
     border-color: hsl(var(--field-optional-filled-card-border));
     border-style: solid;
-    border-width: var(--field-optional-filled-card-border-width);
+    border-width: 0 0 var(--field-optional-filled-card-border-width) 0;
+    box-shadow: none;
   }
 
   .field--FieldRootContainer.field-card-container[data-readonly="true"] {
@@ -358,14 +352,19 @@
 
   .field--FieldRootContainer.field-card-container[data-inserted="true"][data-field-required="false"]:not(
       [data-readonly="true"]
-    ):hover,
+    ):not([data-editing="true"]):hover,
   .field--FieldRootContainer.field-card-container[data-inserted="true"][data-field-required="false"][data-editing="true"]:not(
       [data-readonly="true"]
     ) {
     background-color: hsl(var(--field-optional-filled-card));
     border-color: hsl(var(--field-optional-filled-card-border-hover));
-    border-width: var(--field-optional-filled-card-border-width);
-    box-shadow: 0 0 0 1px hsl(var(--field-optional-filled-card-border-hover) / 0.4);
+    border-style: solid;
+    border-width: 0 0 var(--field-optional-filled-card-border-width) 0;
+    box-shadow:
+      0 -1px 0 0 hsl(var(--field-optional-filled-card-border-hover) / 0.4),
+      1px 0 0 0 hsl(var(--field-optional-filled-card-border-hover) / 0.4),
+      -1px 0 0 0 hsl(var(--field-optional-filled-card-border-hover) / 0.4),
+      0 1px 0 0 hsl(var(--field-optional-filled-card-border-hover));
   }
 
   .field--FieldRootContainer.field-card-container[data-inserted="false"][data-readonly="false"][data-validate="true"][data-field-required="true"] {

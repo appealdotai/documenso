@@ -135,6 +135,9 @@ describe('resolveFieldCanvasStyleFromBrandingColors', () => {
 
     expect(style?.backgroundColor).toBe('rgba(0, 0, 255, 0.5)');
     expect(style?.borderColor).toBe('rgb(255, 0, 255)');
-    expect(style?.borderWidth).toBe(3);
+    expect(style?.borderTopWidth).toBe(0);
+    expect(style?.borderRightWidth).toBe(0);
+    expect(style?.borderBottomWidth).toBe(3);
+    expect(style?.borderLeftWidth).toBe(0);
   });
 });

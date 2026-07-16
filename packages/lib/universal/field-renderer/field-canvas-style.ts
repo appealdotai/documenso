@@ -218,14 +218,44 @@ const resolveFieldCanvasStyleFromCssVars = (field: FieldToRender): FieldCanvasSt
       };
     }
 
+    const optionalFilledHoverSideStyle = {
+      borderTopWidth: 1,
+      borderRightWidth: 1,
+      borderBottomWidth: optionalFilledBorderWidth + 1,
+      borderLeftWidth: 1,
+      borderTopColor: optionalFilledSideHoverColor,
+      borderRightColor: optionalFilledSideHoverColor,
+      borderBottomColor: optionalFilledBorderHoverColor,
+      borderLeftColor: optionalFilledSideHoverColor,
+      borderColor: optionalFilledBorderHoverColor,
+      borderHoverColor: optionalFilledBorderHoverColor,
+    };
+
+    if (isEditing) {
+      return {
+        backgroundColor: getRenderableColor(getCssVarHslColor($styleSource, '--field-optional-filled-card')),
+        borderRadius: 2,
+        ...optionalFilledHoverSideStyle,
+      };
+    }
+
     return {
       backgroundColor: getRenderableColor(getCssVarHslColor($styleSource, '--field-optional-filled-card')),
-      borderColor: isEditing ? optionalFilledBorderHoverColor : optionalFilledBorderColor,
+      borderColor: optionalFilledBorderColor,
       borderHoverColor: optionalFilledBorderHoverColor,
-      borderWidth: optionalFilledBorderWidth,
+      borderTopWidth: 0,
+      borderRightWidth: 0,
+      borderBottomWidth: optionalFilledBorderWidth,
+      borderLeftWidth: 0,
       borderRadius: 2,
-      showAccentRing: isEditing,
-      accentRingColor: isEditing ? optionalFilledSideHoverColor : undefined,
+      hoverBorderTopWidth: optionalFilledHoverSideStyle.borderTopWidth,
+      hoverBorderRightWidth: optionalFilledHoverSideStyle.borderRightWidth,
+      hoverBorderBottomWidth: optionalFilledHoverSideStyle.borderBottomWidth,
+      hoverBorderLeftWidth: optionalFilledHoverSideStyle.borderLeftWidth,
+      hoverBorderTopColor: optionalFilledHoverSideStyle.borderTopColor,
+      hoverBorderRightColor: optionalFilledHoverSideStyle.borderRightColor,
+      hoverBorderBottomColor: optionalFilledHoverSideStyle.borderBottomColor,
+      hoverBorderLeftColor: optionalFilledHoverSideStyle.borderLeftColor,
     };
   }
 
