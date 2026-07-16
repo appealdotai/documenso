@@ -5,7 +5,9 @@ import { toKebabCase } from 'remeda';
 const CSS_LENGTH_KEYS = new Set<keyof TCssVarsSchema>([
   'radius',
   'fieldRequiredCardBorderWidth',
+  'fieldRequiredFilledCardBorderWidth',
   'fieldOptionalCardBorderWidth',
+  'fieldOptionalFilledCardBorderWidth',
 ]);
 
 export const toNativeCssVars = (vars: TCssVarsSchema) => {
