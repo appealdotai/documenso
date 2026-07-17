@@ -229,8 +229,11 @@ export const insertFieldInPDFV1 = async (pdf: PDFDocument, field: FieldWithSigna
 
       const topPadding = 12;
       const leftCheckboxPadding = 8;
-      const leftCheckboxLabelPadding = 12;
       const checkboxSpaceY = 13;
+
+      // Option wording lives on the PDF; Documenso only seals the tick.
+      const checkboxSize = 8;
+      const horizontalItemWidth = checkboxSize + 8;
 
       if (direction === 'horizontal') {
         // Horizontal layout: arrange checkboxes side by side with wrapping
@@ -245,32 +248,20 @@ export const insertFieldInPDFV1 = async (pdf: PDFDocument, field: FieldWithSigna
             checkbox.check();
           }
 
-          const labelText = item.value.includes('empty-value-') ? '' : item.value;
-          const labelWidth = font.widthOfTextAtSize(labelText, 12);
-          const itemWidth = leftCheckboxLabelPadding + labelWidth + 16; // checkbox + padding + label + margin
-
           // Check if item fits on current line, if not wrap to next line
-          if (currentX + itemWidth > maxWidth && index > 0) {
+          if (currentX + horizontalItemWidth > maxWidth && index > 0) {
             currentX = leftCheckboxPadding;
             currentY += checkboxSpaceY;
           }
 
-          page.drawText(labelText, {
-            x: fieldX + currentX + leftCheckboxLabelPadding,
-            y: pageHeight - (fieldY + currentY),
-            size: 12,
-            font,
-            rotate: degrees(pageRotationInDegrees),
-          });
-
           checkbox.addToPage(page, {
             x: fieldX + currentX,
             y: pageHeight - (fieldY + currentY),
-            height: 8,
-            width: 8,
+            height: checkboxSize,
+            width: checkboxSize,
           });
 
-          currentX += itemWidth;
+          currentX += horizontalItemWidth;
         }
       } else {
         // Vertical layout: original behavior
@@ -283,19 +274,11 @@ export const insertFieldInPDFV1 = async (pdf: PDFDocument, field: FieldWithSigna
             checkbox.check();
           }
 
-          page.drawText(item.value.includes('empty-value-') ? '' : item.value, {
-            x: fieldX + leftCheckboxPadding + leftCheckboxLabelPadding,
-            y: pageHeight - (fieldY + offsetY),
-            size: 12,
-            font,
-            rotate: degrees(pageRotationInDegrees),
-          });
-
           checkbox.addToPage(page, {
             x: fieldX + leftCheckboxPadding,
             y: pageHeight - (fieldY + offsetY),
-            height: 8,
-            width: 8,
+            height: checkboxSize,
+            width: checkboxSize,
           });
         }
       }
