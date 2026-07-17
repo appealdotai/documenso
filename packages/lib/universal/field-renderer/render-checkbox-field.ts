@@ -58,15 +58,35 @@ export const getCheckboxFieldMinSizePx = ({
 export const renderCheckboxFieldElement = (field: FieldToRender, options: RenderFieldElementOptions) => {
   const { pageWidth, pageHeight, pageLayer, mode, color } = options;
 
-  const { fieldWidth, fieldHeight } = calculateFieldPosition(field, pageWidth, pageHeight);
-
   const checkboxMeta: TCheckboxFieldMeta | null = (field.fieldMeta as TCheckboxFieldMeta) || null;
   const checkboxValues = checkboxMeta?.values || [];
+  const fontSize = checkboxMeta?.fontSize || DEFAULT_STANDARD_FONT_SIZE;
+  const direction = checkboxMeta?.direction || 'vertical';
+
+  // Recipient signing and sealed PDF hug the checkbox square(s); editor keeps the authored size for labels.
+  const shouldShrinkToCheckbox = mode === 'sign' || mode === 'export';
+  const fieldToRender: FieldToRender = shouldShrinkToCheckbox
+    ? (() => {
+        const { minWidth, minHeight } = getCheckboxFieldMinSizePx({
+          fontSize,
+          itemCount: checkboxValues.length || 1,
+          direction,
+        });
+
+        return {
+          ...field,
+          width: (minWidth / pageWidth) * 100,
+          height: (minHeight / pageHeight) * 100,
+        };
+      })()
+    : field;
+
+  const { fieldWidth, fieldHeight } = calculateFieldPosition(fieldToRender, pageWidth, pageHeight);
 
   const isFirstRender = !pageLayer.findOne(`#${field.renderId}`);
 
   // Clear previous children and listeners to re-render fresh.
-  const fieldGroup = upsertFieldGroup(field, options);
+  const fieldGroup = upsertFieldGroup(fieldToRender, options);
   fieldGroup.removeChildren();
   fieldGroup.off('transform');
 
@@ -74,10 +94,8 @@ export const renderCheckboxFieldElement = (field: FieldToRender, options: Render
     pageLayer.add(fieldGroup);
   }
 
-  const fieldRect = upsertFieldRect(field, options, fieldGroup);
+  const fieldRect = upsertFieldRect(fieldToRender, options, fieldGroup);
   fieldGroup.add(fieldRect);
-
-  const fontSize = checkboxMeta?.fontSize || DEFAULT_STANDARD_FONT_SIZE;
 
   // Handle rescaling items during transforms.
   fieldGroup.on('transform', () => {
@@ -120,7 +138,7 @@ export const renderCheckboxFieldElement = (field: FieldToRender, options: Render
         itemSize: calculateCheckboxSize(fontSize),
         spacingBetweenItemAndText: spacingBetweenCheckboxAndText,
         fieldPadding: checkboxFieldPadding,
-        direction: checkboxMeta?.direction || 'vertical',
+        direction,
         type: 'checkbox',
       });
 
@@ -170,7 +188,7 @@ export const renderCheckboxFieldElement = (field: FieldToRender, options: Render
       .with('sign', () => checkedValues.includes(index))
       .with('export', () => {
         // If it's read-only, check the originally checked state.
-        if (checkboxMeta.readOnly) {
+        if (checkboxMeta?.readOnly) {
           return checked;
         }
 
@@ -188,7 +206,7 @@ export const renderCheckboxFieldElement = (field: FieldToRender, options: Render
       itemSize,
       spacingBetweenItemAndText: spacingBetweenCheckboxAndText,
       fieldPadding: checkboxFieldPadding,
-      direction: checkboxMeta?.direction || 'vertical',
+      direction,
       type: 'checkbox',
     });
 
