@@ -136,7 +136,7 @@ export const renderCheckboxFieldElement = (field: FieldToRender, options: Render
         y: itemInputY,
       });
 
-      textElement.setAttrs({
+      textElement?.setAttrs({
         x: textX,
         y: textY,
         scaleX: 1,
@@ -160,6 +160,9 @@ export const renderCheckboxFieldElement = (field: FieldToRender, options: Render
   });
 
   const checkedValues: number[] = field.customText ? parseCheckboxCustomText(field.customText) : [];
+
+  // Recipient signing and sealed PDF only render the tick; option wording lives on the PDF.
+  const shouldRenderOptionText = mode === 'edit';
 
   checkboxValues.forEach(({ value, checked }, index) => {
     const isCheckboxChecked = match(mode)
@@ -218,24 +221,27 @@ export const renderCheckboxFieldElement = (field: FieldToRender, options: Render
       visible: isCheckboxChecked,
     });
 
-    const text = new Konva.Text({
-      internalCheckboxIndex: index,
-      id: `checkbox-text-${index}`,
-      name: 'checkbox-text',
-      x: textX,
-      y: textY,
-      text: value,
-      width: textWidth,
-      height: textHeight,
-      fontSize,
-      fontFamily: konvaTextFontFamily,
-      fill: konvaTextFill,
-      verticalAlign: 'middle',
-    });
-
     fieldGroup.add(square);
     fieldGroup.add(checkmark);
-    fieldGroup.add(text);
+
+    if (shouldRenderOptionText) {
+      const text = new Konva.Text({
+        internalCheckboxIndex: index,
+        id: `checkbox-text-${index}`,
+        name: 'checkbox-text',
+        x: textX,
+        y: textY,
+        text: value,
+        width: textWidth,
+        height: textHeight,
+        fontSize,
+        fontFamily: konvaTextFontFamily,
+        fill: konvaTextFill,
+        verticalAlign: 'middle',
+      });
+
+      fieldGroup.add(text);
+    }
   });
 
   if (color !== 'readOnly' && mode !== 'export') {
