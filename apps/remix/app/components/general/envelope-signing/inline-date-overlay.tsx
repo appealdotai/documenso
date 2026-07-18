@@ -3,11 +3,15 @@ import { Calendar } from '@documenso/ui/primitives/calendar';
 import { useLingui } from '@lingui/react/macro';
 import type { Field } from '@prisma/client';
 import { DateTime } from 'luxon';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import { getDateFieldInitialJsDate, jsDateToIsoDate } from '~/utils/field-signing/commit-date-field';
 
 import { useFieldOverlayCoords } from './use-field-overlay-coords';
+
+const OVERLAY_GAP_PX = 4;
+/** Approximate calendar height used before the panel is measured. */
+const FALLBACK_CALENDAR_HEIGHT_PX = 310;
 
 type InlineDateOverlayProps = {
   field: Pick<Field, 'id' | 'page' | 'positionX' | 'positionY' | 'width' | 'height' | 'inserted' | 'customText'> & {
@@ -18,8 +22,51 @@ type InlineDateOverlayProps = {
   onCancel: () => void;
 };
 
+type OverlayPlacement = {
+  top: number;
+  left: number;
+};
+
+const getOverlayPlacement = ({
+  fieldY,
+  fieldHeight,
+  fieldX,
+  pageHeight,
+  pageWidth,
+  panelHeight,
+  panelWidth,
+}: {
+  fieldY: number;
+  fieldHeight: number;
+  fieldX: number;
+  pageHeight: number;
+  pageWidth: number;
+  panelHeight: number;
+  panelWidth: number;
+}): OverlayPlacement => {
+  const spaceBelow = pageHeight - (fieldY + fieldHeight);
+  const spaceAbove = fieldY;
+
+  const fitsBelow = spaceBelow >= panelHeight + OVERLAY_GAP_PX;
+  const fitsAbove = spaceAbove >= panelHeight + OVERLAY_GAP_PX;
+
+  let top = fieldY + fieldHeight + OVERLAY_GAP_PX;
+
+  if (!fitsBelow && fitsAbove) {
+    top = fieldY - panelHeight - OVERLAY_GAP_PX;
+  } else if (!fitsBelow && !fitsAbove && spaceAbove > spaceBelow) {
+    top = Math.max(0, fieldY - panelHeight - OVERLAY_GAP_PX);
+  }
+
+  const maxLeft = Math.max(0, pageWidth - panelWidth);
+  const left = Math.min(Math.max(0, fieldX), maxLeft);
+
+  return { top, left };
+};
+
 /**
  * Calendar overlay positioned next to a Konva date field during inline signing.
+ * Prefers opening below the field; flips above when there is not enough room on the page.
  */
 export const InlineDateOverlay = ({ field, dateFormat, onCommit, onCancel }: InlineDateOverlayProps) => {
   const { t } = useLingui();
@@ -43,6 +90,34 @@ export const InlineDateOverlay = ({ field, dateFormat, onCommit, onCancel }: Inl
   });
 
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(initialDate);
+  const [placement, setPlacement] = useState<OverlayPlacement>(() =>
+    getOverlayPlacement({
+      fieldY: coords.y,
+      fieldHeight: coords.height,
+      fieldX: coords.x,
+      pageHeight: coords.pageHeight,
+      pageWidth: coords.pageWidth,
+      panelHeight: FALLBACK_CALENDAR_HEIGHT_PX,
+      panelWidth: 0,
+    }),
+  );
+
+  useLayoutEffect(() => {
+    const panelHeight = panelRef.current?.offsetHeight ?? FALLBACK_CALENDAR_HEIGHT_PX;
+    const panelWidth = panelRef.current?.offsetWidth ?? 0;
+
+    setPlacement(
+      getOverlayPlacement({
+        fieldY: coords.y,
+        fieldHeight: coords.height,
+        fieldX: coords.x,
+        pageHeight: coords.pageHeight,
+        pageWidth: coords.pageWidth,
+        panelHeight,
+        panelWidth,
+      }),
+    );
+  }, [coords.height, coords.pageHeight, coords.pageWidth, coords.width, coords.x, coords.y]);
 
   useEffect(() => {
     const handlePointerDown = (event: PointerEvent) => {
@@ -108,8 +183,8 @@ export const InlineDateOverlay = ({ field, dateFormat, onCommit, onCancel }: Inl
     <div
       className="absolute z-20"
       style={{
-        top: `${coords.y + coords.height + 4}px`,
-        left: `${coords.x}px`,
+        top: `${placement.top}px`,
+        left: `${placement.left}px`,
       }}
     >
       <div
