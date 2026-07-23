@@ -71,7 +71,7 @@ export const adminSuperDeleteDocument = async ({ envelopeId, requestMetadata }: 
         const template = createElement(DocumentCancelTemplate, {
           documentName: envelope.title,
           inviterName: user.name || undefined,
-          inviterEmail: user.email,
+          inviterEmail: settings?.brandingEnabled && settings?.brandingEmail ? settings.brandingEmail : user.email,
           assetBaseUrl,
         });
 

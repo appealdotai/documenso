@@ -169,6 +169,7 @@ export const resendDocument = async ({ id, userId, recipients, teamId, requestMe
   const {
     branding,
     emailLanguage,
+    settings,
     organisationType,
     senderEmail,
     replyToEmail,
@@ -244,11 +245,14 @@ export const resendDocument = async ({ id, userId, recipients, teamId, requestMe
 
       const template = createElement(DocumentInviteEmailTemplate, {
         documentName: envelope.title,
-        inviterName: user.name || undefined,
+        inviterName:
+          settings?.brandingEnabled && settings?.brandingName ? settings.brandingName : user.name || undefined,
         inviterEmail:
-          organisationType === OrganisationType.ORGANISATION
-            ? envelope.team?.teamEmail?.email || user.email
-            : user.email,
+          settings?.brandingEnabled && settings?.brandingEmail
+            ? settings.brandingEmail
+            : organisationType === OrganisationType.ORGANISATION
+              ? envelope.team?.teamEmail?.email || user.email
+              : user.email,
         assetBaseUrl,
         signDocumentLink,
         customBody: renderCustomEmailTemplate(emailMessage, customEmailTemplate),

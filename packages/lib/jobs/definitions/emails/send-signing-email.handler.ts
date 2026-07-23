@@ -170,9 +170,13 @@ export const run = async ({ payload, io }: { payload: TSendSigningEmailJobDefini
 
   const template = createElement(DocumentInviteEmailTemplate, {
     documentName: envelope.title,
-    inviterName: user.name || undefined,
+    inviterName: settings?.brandingEnabled && settings?.brandingName ? settings.brandingName : user.name || undefined,
     inviterEmail:
-      organisationType === OrganisationType.ORGANISATION ? team?.teamEmail?.email || user.email : user.email,
+      settings?.brandingEnabled && settings?.brandingEmail
+        ? settings.brandingEmail
+        : organisationType === OrganisationType.ORGANISATION
+          ? team?.teamEmail?.email || user.email
+          : user.email,
     assetBaseUrl,
     signDocumentLink,
     customBody: renderCustomEmailTemplate(emailMessage, customEmailTemplate),

@@ -131,7 +131,7 @@ const handleDocumentOwnerDelete = async ({ envelope, user, requestMetadata }: Ha
     return;
   }
 
-  const { emailLanguage, emailsDisabled } = await getEmailContext({
+  const { emailLanguage, emailsDisabled, settings } = await getEmailContext({
     emailType: 'RECIPIENT',
     source: {
       type: 'team',
@@ -220,7 +220,7 @@ const handleDocumentOwnerDelete = async ({ envelope, user, requestMetadata }: Ha
         teamId: envelope.teamId,
         documentName: envelope.title,
         inviterName: user.name || undefined,
-        inviterEmail: user.email,
+        inviterEmail: settings?.brandingEnabled && settings?.brandingEmail ? settings.brandingEmail : user.email,
         meta: envelope.documentMeta
           ? {
               emailId: envelope.documentMeta.emailId,
