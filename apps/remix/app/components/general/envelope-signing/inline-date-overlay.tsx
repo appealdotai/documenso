@@ -179,6 +179,25 @@ export const InlineDateOverlay = ({ field, dateFormat, onCommit, onCancel }: Inl
     }
   };
 
+  const handleClear = async () => {
+    if (isCommittingRef.current) {
+      return;
+    }
+
+    if (!field.inserted) {
+      onCancel();
+      return;
+    }
+
+    isCommittingRef.current = true;
+
+    try {
+      await onCommit(null);
+    } finally {
+      isCommittingRef.current = false;
+    }
+  };
+
   return (
     <div
       className="absolute z-20"
@@ -191,10 +210,19 @@ export const InlineDateOverlay = ({ field, dateFormat, onCommit, onCancel }: Inl
         ref={panelRef}
         role="dialog"
         aria-label={t`Select date`}
-        className="rounded-md border bg-background shadow-md"
+        className="flex flex-col rounded-md border bg-background shadow-md"
         onPointerDown={(event) => event.stopPropagation()}
       >
-        <Calendar mode="single" selected={selectedDate} onSelect={(date) => void handleSelect(date)} initialFocus />
+        <Calendar mode="single" selected={selectedDate} onSelect={(date) => void handleSelect(date)} />
+        <div className="border-t p-2">
+          <button
+            type="button"
+            className="flex w-full cursor-pointer items-center justify-center rounded-sm px-3 py-2 font-medium text-muted-foreground text-sm outline-none hover:bg-accent hover:text-accent-foreground"
+            onClick={() => void handleClear()}
+          >
+            {t`Clear`}
+          </button>
+        </div>
       </div>
     </div>
   );

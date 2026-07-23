@@ -141,7 +141,7 @@ export const InlineFieldInput = ({
       return;
     }
 
-    node.focus();
+    node.focus({ preventScroll: true });
 
     if (typeof node.setSelectionRange === 'function') {
       const length = node.value.length;
@@ -158,7 +158,7 @@ export const InlineFieldInput = ({
     // Re-focus instead of closing when the opening click steals focus back.
     if (!canCommitOnBlurRef.current) {
       requestAnimationFrame(() => {
-        inputRef.current?.focus();
+        inputRef.current?.focus({ preventScroll: true });
       });
       return;
     }
