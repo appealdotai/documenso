@@ -8,6 +8,8 @@ export type FieldOverlayCoords = {
   y: number;
   height: number;
   width: number;
+  pageWidth: number;
+  pageHeight: number;
 };
 
 type UseFieldOverlayCoordsOptions = {
@@ -33,6 +35,8 @@ export const useFieldOverlayCoords = ({
     y: 0,
     height: 0,
     width: 0,
+    pageWidth: 0,
+    pageHeight: 0,
   });
 
   const calculateCoords = useCallback(() => {
@@ -49,6 +53,8 @@ export const useFieldOverlayCoords = ({
       y: (Number(positionY) / 100) * pageHeight,
       height: (Number(height) / 100) * pageHeight,
       width: (Number(width) / 100) * pageWidth,
+      pageWidth,
+      pageHeight,
     });
   }, [height, page, positionX, positionY, width]);
 

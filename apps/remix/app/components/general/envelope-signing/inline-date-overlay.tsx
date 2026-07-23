@@ -123,12 +123,17 @@ export const InlineDateOverlay = ({ field, dateFormat, onCommit, onCancel }: Inl
     }
   };
 
+  const isPastHalfway = coords.pageWidth > 0 && coords.x > coords.pageWidth / 2;
+  const isPastVerticalHalfway = coords.pageHeight > 0 && coords.y > coords.pageHeight / 2;
+
   return (
     <div
       className="absolute z-20"
       style={{
-        top: `${coords.y + coords.height + 4}px`,
-        left: `${coords.x}px`,
+        ...(isPastVerticalHalfway
+          ? { bottom: `${coords.pageHeight - coords.y + 4}px` }
+          : { top: `${coords.y + coords.height + 4}px` }),
+        ...(isPastHalfway ? { right: `calc(100% - ${coords.x + coords.width}px)` } : { left: `${coords.x}px` }),
       }}
     >
       <div
@@ -136,6 +141,10 @@ export const InlineDateOverlay = ({ field, dateFormat, onCommit, onCancel }: Inl
         role="dialog"
         aria-label={t`Select date`}
         className="flex flex-col rounded-md border bg-background shadow-md"
+        style={{
+          transformOrigin: `${isPastVerticalHalfway ? 'bottom' : 'top'} ${isPastHalfway ? 'right' : 'left'}`,
+          transform: typeof window !== 'undefined' && window.innerWidth < 640 ? 'scale(0.85)' : 'none',
+        }}
         onPointerDown={(event) => event.stopPropagation()}
       >
         <Calendar mode="single" selected={selectedDate} onSelect={(date) => void handleSelect(date)} />
