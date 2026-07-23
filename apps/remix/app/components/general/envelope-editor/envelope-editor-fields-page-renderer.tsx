@@ -14,6 +14,15 @@ import {
 } from '@documenso/lib/universal/field-renderer/field-renderer';
 import { getCheckboxFieldMinSizePx } from '@documenso/lib/universal/field-renderer/render-checkbox-field';
 import { renderField } from '@documenso/lib/universal/field-renderer/render-field';
+import {
+  getSnappedPosition,
+  getSnappedResize,
+  hideSnapGuides,
+  initializeSnapGuides,
+  renderRuler,
+  showMultipleSnapGuides,
+  showSnapGuides,
+} from '@documenso/lib/universal/field-renderer/render-grid-lines';
 import { getClientSideFieldTranslations } from '@documenso/lib/utils/fields';
 import { getOverlappingFieldPairs } from '@documenso/lib/utils/fields-overlap';
 import { canRecipientFieldsBeModified } from '@documenso/lib/utils/recipients';
@@ -44,6 +53,7 @@ export const EnvelopeEditorFieldsPageRenderer = ({ pageData }: { pageData: PageR
   const { currentEnvelopeItem, setRenderError } = useCurrentEnvelopeRender();
 
   const interactiveTransformer = useRef<Transformer | null>(null);
+  const snapGuideLayer = useRef<Konva.Layer | null>(null);
   const editorFieldsRef = useRef(editorFields);
   editorFieldsRef.current = editorFields;
 
@@ -153,6 +163,28 @@ export const EnvelopeEditorFieldsPageRenderer = ({ pageData }: { pageData: PageR
     }
 
     pageLayer.current?.batchDraw();
+  };
+
+  const handleFieldDragMove = (event: KonvaEventObject<DragEvent>) => {
+    const fieldGroup = event.target as Konva.Group;
+
+    if (!stage.current || !snapGuideLayer.current || !fieldGroup.hasName('field-group')) {
+      return;
+    }
+
+    const snappedPosition = getSnappedPosition(stage.current, fieldGroup, fieldGroup.x(), fieldGroup.y());
+
+    if (snappedPosition.x !== fieldGroup.x() || snappedPosition.y !== fieldGroup.y()) {
+      fieldGroup.position({ x: snappedPosition.x, y: snappedPosition.y });
+    }
+
+    showSnapGuides(snapGuideLayer.current, snappedPosition.horizontalGuide, snappedPosition.verticalGuide);
+    pageLayer.current?.batchDraw();
+  };
+
+  const handleFieldDragEnd = (event: KonvaEventObject<DragEvent>) => {
+    handleFieldDragMove(event);
+    hideSnapGuides(snapGuideLayer.current!);
   };
 
   /**
@@ -271,7 +303,11 @@ export const EnvelopeEditorFieldsPageRenderer = ({ pageData }: { pageData: PageR
     });
 
     fieldGroup.on('transformend', handleResizeOrMove);
-    fieldGroup.on('dragend', handleResizeOrMove);
+    fieldGroup.on('dragmove', handleFieldDragMove);
+    fieldGroup.on('dragend', (event) => {
+      handleFieldDragEnd(event);
+      handleResizeOrMove(event);
+    });
   };
 
   const renderFieldOnLayer = (field: TLocalField) => {
@@ -288,7 +324,10 @@ export const EnvelopeEditorFieldsPageRenderer = ({ pageData }: { pageData: PageR
    */
   const createPageCanvas = (currentStage: Konva.Stage, currentPageLayer: Konva.Layer) => {
     // Initialize snap guides layer
-    // snapGuideLayer.current = initializeSnapGuides(stage.current);
+    snapGuideLayer.current = initializeSnapGuides(currentStage);
+
+    // Initialize ruler
+    renderRuler(currentStage, unscaledViewport.width, unscaledViewport.height, scale);
 
     // Add transformer for resizing and rotating.
     interactiveTransformer.current = createInteractiveTransformer(currentStage, currentPageLayer);
@@ -386,8 +425,35 @@ export const EnvelopeEditorFieldsPageRenderer = ({ pageData }: { pageData: PageR
           return oldBox;
         }
 
+        if (selectedNodes.length === 1 && currentStage && snapGuideLayer.current) {
+          const snapped = getSnappedResize(currentStage, selectedNodes[0] as Konva.Group, oldBox, newBox);
+
+          showMultipleSnapGuides(
+            snapGuideLayer.current,
+            snapped.horizontalGuides,
+            snapped.verticalGuides,
+            currentStage.width(),
+            currentStage.height(),
+          );
+
+          return {
+            ...newBox,
+            x: snapped.x,
+            y: snapped.y,
+            width: snapped.width,
+            height: snapped.height,
+          };
+        }
+
         return newBox;
       },
+    });
+
+    // Make sure we clear snapping guides when transform ends
+    transformer.on('transformend', () => {
+      if (snapGuideLayer.current) {
+        hideSnapGuides(snapGuideLayer.current);
+      }
     });
 
     currentPageLayer.add(transformer);
