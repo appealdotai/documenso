@@ -13,7 +13,6 @@ import { FieldToolTip } from '@documenso/ui/components/field/field-tooltip';
 import { cn } from '@documenso/ui/lib/utils';
 import { Checkbox } from '@documenso/ui/primitives/checkbox';
 import { checkboxValidationSigns } from '@documenso/ui/primitives/document-flow/field-items-advanced-settings/constants';
-import { Label } from '@documenso/ui/primitives/label';
 import { useToast } from '@documenso/ui/primitives/use-toast';
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
@@ -270,14 +269,6 @@ export const DocumentSigningCheckboxField = ({
                     disabled={isReadOnly}
                     onCheckedChange={() => handleCheckboxChange(item.value, item.id)}
                   />
-                  {!item.value.includes('empty-value-') && item.value && (
-                    <Label
-                      htmlFor={`checkbox-${field.id}-${item.id}`}
-                      className="ml-1.5 font-normal text-foreground text-xs"
-                    >
-                      {item.value}
-                    </Label>
-                  )}
                 </div>
               );
             })}
@@ -304,14 +295,6 @@ export const DocumentSigningCheckboxField = ({
                   disabled={isLoading || isReadOnly}
                   onCheckedChange={() => void handleCheckboxOptionClick(item)}
                 />
-                {!item.value.includes('empty-value-') && item.value && (
-                  <Label
-                    htmlFor={`checkbox-${field.id}-${item.id}`}
-                    className="ml-1.5 font-normal text-foreground text-xs"
-                  >
-                    {item.value}
-                  </Label>
-                )}
               </div>
             );
           })}
