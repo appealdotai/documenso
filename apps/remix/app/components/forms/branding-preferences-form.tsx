@@ -468,7 +468,7 @@ export function BrandingPreferencesForm({
               render={({ field }) => (
                 <FormItem className="flex-1">
                   <FormLabel>
-                    <Trans>Hide Email Watermark</Trans>
+                    <Trans>Hide Report Sender Warning</Trans>
                   </FormLabel>
 
                   <FormControl>
@@ -504,8 +504,8 @@ export function BrandingPreferencesForm({
 
                   <FormDescription>
                     <Trans>
-                      Hide the &quot;Report Sender&quot; warning and the &quot;Powered by Documenso&quot; text at the
-                      bottom of emails.
+                      Hide the &quot;Report Sender&quot; warning at the bottom of recipient emails. Hiding &quot;Powered
+                      by Documenso&quot; still requires the hide branding plan entitlement.
                     </Trans>
                   </FormDescription>
                 </FormItem>

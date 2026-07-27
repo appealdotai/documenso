@@ -29,7 +29,7 @@ export const TemplateFooter = ({ isDocument = true, reportUrl }: TemplateFooterP
         </Text>
       )}
 
-      {isDocument && !branding.brandingHidePoweredBy && !branding.brandingHideWatermark && (
+      {isDocument && !branding.brandingHidePoweredBy && (
         <Text className="my-4 text-base text-muted-foreground">
           <Trans>
             This document was sent using{' '}
