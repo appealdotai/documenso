@@ -13,6 +13,7 @@ import type { RequestMetadata } from '../../universal/extract-request-metadata';
 import { createDocumentAuditLogData } from '../../utils/document-audit-logs';
 import { isRecipientEmailValidForSending } from '../../utils/recipients';
 import { renderEmailWithI18N } from '../../utils/render-email-with-i18n';
+import { resolveBrandedInviter } from '../../utils/resolve-branded-inviter';
 import { getEmailContext } from '../email/get-email-context';
 
 export type AdminSuperDeleteDocumentOptions = {
@@ -68,10 +69,16 @@ export const adminSuperDeleteDocument = async ({ envelopeId, requestMetadata }: 
         }
 
         const assetBaseUrl = NEXT_PUBLIC_WEBAPP_URL() || 'http://localhost:3000';
+        const { inviterName, inviterEmail } = resolveBrandedInviter({
+          settings,
+          fallbackName: user.name,
+          fallbackEmail: user.email,
+        });
+
         const template = createElement(DocumentCancelTemplate, {
           documentName: envelope.title,
-          inviterName: user.name || undefined,
-          inviterEmail: settings?.brandingEnabled && settings?.brandingEmail ? settings.brandingEmail : user.email,
+          inviterName,
+          inviterEmail,
           assetBaseUrl,
         });
 

@@ -12,6 +12,7 @@ import { assertOrganisationRatesAndLimits } from '../../../server-only/rate-limi
 import { extractDerivedDocumentEmailSettings } from '../../../types/document-email';
 import { unsafeBuildEnvelopeIdQuery } from '../../../utils/envelope';
 import { renderEmailWithI18N } from '../../../utils/render-email-with-i18n';
+import { resolveBrandedInviter } from '../../../utils/resolve-branded-inviter';
 import type { JobRunIO } from '../../client/_internal/job';
 import type { TSendDocumentCancelledEmailsJobDefinition } from './send-document-cancelled-emails';
 
@@ -134,14 +135,16 @@ export const run = async ({ payload, io }: { payload: TSendDocumentCancelledEmai
           return;
         }
 
+        const { inviterName, inviterEmail } = resolveBrandedInviter({
+          settings,
+          fallbackName: documentOwner.name,
+          fallbackEmail: documentOwner.email,
+        });
+
         const template = createElement(DocumentCancelTemplate, {
           documentName: envelope.title,
-          inviterName:
-            settings?.brandingEnabled && settings?.brandingName
-              ? settings.brandingName
-              : documentOwner.name || undefined,
-          inviterEmail:
-            settings?.brandingEnabled && settings?.brandingEmail ? settings.brandingEmail : documentOwner.email,
+          inviterName,
+          inviterEmail,
           assetBaseUrl: NEXT_PUBLIC_WEBAPP_URL(),
           cancellationReason: cancellationReason || 'The document has been cancelled.',
         });
