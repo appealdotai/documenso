@@ -1,5 +1,5 @@
 import type { ImageLoadingState, PageRenderData } from '@documenso/lib/client-only/providers/envelope-render-provider';
-import { PDF_VIEWER_PAGE_CLASSNAME } from '@documenso/lib/constants/pdf-viewer';
+import { PDF_VIEWER_PAGE_CLASSNAME, PDF_VIEWER_RULER_SIZE } from '@documenso/lib/constants/pdf-viewer';
 import { cn } from '@documenso/ui/lib/utils';
 import { useToast } from '@documenso/ui/primitives/use-toast';
 import { Trans, useLingui } from '@lingui/react/macro';
@@ -12,6 +12,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ScrollTarget } from '../virtual-list/use-virtual-list';
 import { useVirtualList } from '../virtual-list/use-virtual-list';
 import { PdfViewerPageImage } from './pdf-viewer-page-image';
+import { PdfViewerPageRuler } from './pdf-viewer-page-ruler';
 import { PdfViewerErrorState, PdfViewerLoadingState } from './pdf-viewer-states';
 import { useScrollToPage } from './use-scroll-to-page';
 
@@ -56,6 +57,12 @@ export type PDFViewerProps = {
    * for rendering fields.
    */
   customPageRenderer?: React.FunctionComponent<{ pageData: PageRenderData }>;
+
+  /**
+   * When true, reserves top/left gutters outside each page for measurement rulers.
+   * Only used by the fields editor.
+   */
+  showRulers?: boolean;
 } & React.HTMLAttributes<HTMLDivElement>;
 
 export default function PDFViewer({
@@ -64,6 +71,7 @@ export default function PDFViewer({
   scrollParentRef,
   onDocumentLoad,
   customPageRenderer,
+  showRulers = false,
   ...props
 }: PDFViewerProps) {
   const { t } = useLingui();
@@ -207,6 +215,7 @@ export default function PDFViewer({
           pages={pages}
           pdf={pdfRef.current}
           customPageRenderer={customPageRenderer}
+          showRulers={showRulers}
         />
       )}
     </div>
@@ -220,6 +229,7 @@ type VirtualizedPageListProps = {
   numPages: number;
   pdf: pdfjsLib.PDFDocumentProxy;
   customPageRenderer?: React.FunctionComponent<{ pageData: PageRenderData }>;
+  showRulers?: boolean;
 };
 
 const VirtualizedPageList = ({
@@ -229,8 +239,10 @@ const VirtualizedPageList = ({
   numPages,
   pdf,
   customPageRenderer,
+  showRulers = false,
 }: VirtualizedPageListProps) => {
   const contentRef = useRef<HTMLDivElement>(null);
+  const rulerSize = showRulers ? PDF_VIEWER_RULER_SIZE : 0;
 
   const { virtualItems, totalSize, constraintWidth, scrollToItem } = useVirtualList({
     scrollRef: scrollParentRef,
@@ -239,14 +251,16 @@ const VirtualizedPageList = ({
     itemCount: numPages,
     itemSize: (index, width) => {
       const pageMeta = pages[index];
+      const pageWidth = Math.max(width - rulerSize, 1);
 
       // Calculate height based on aspect ratio and available width
       const aspectRatio = pageMeta.height / pageMeta.width;
-      const scaledHeight = width * aspectRatio;
+      const scaledHeight = pageWidth * aspectRatio;
 
       // Add 32px for the page number text and margins (my-2 = 8px * 2 + text height ~16px)
       // Add additional 2px for the top and bottom borders.
-      return scaledHeight + 32 + 2;
+      // Add rulerSize for the top gutter when rulers are enabled.
+      return scaledHeight + rulerSize + 32 + 2;
     },
     overscan: 5,
   });
@@ -270,8 +284,9 @@ const VirtualizedPageList = ({
         const pageMeta = pages[index];
         const pageNumber = index + 1;
 
-        // Calculate scale based on constraint width
-        const scale = constraintWidth / pageMeta.width;
+        // Reserve left gutter for rulers so the document itself stays clear.
+        const availableWidth = Math.max(constraintWidth - rulerSize, 1);
+        const scale = availableWidth / pageMeta.width;
 
         const scaledWidth = Math.floor(pageMeta.width * scale);
         const scaledHeight = Math.floor(pageMeta.height * scale);
@@ -297,6 +312,7 @@ const VirtualizedPageList = ({
               pdf={pdf}
               scale={scale}
               customPageRenderer={customPageRenderer}
+              showRulers={showRulers}
             />
 
             <p className="my-2 text-center text-[11px] text-muted-foreground/80">
@@ -320,6 +336,7 @@ type PdfViewerPageProps = {
   scaledHeight: number;
   scale: number;
   customPageRenderer?: React.FunctionComponent<{ pageData: PageRenderData }>;
+  showRulers?: boolean;
 };
 
 const PdfViewerPage = ({
@@ -331,6 +348,7 @@ const PdfViewerPage = ({
   scaledHeight,
   scale,
   customPageRenderer: CustomPageRenderer,
+  showRulers = false,
 }: PdfViewerPageProps) => {
   const { imageProps, imageLoadingState } = usePdfPageImage({
     pageNumber,
@@ -342,22 +360,51 @@ const PdfViewerPage = ({
     scale,
   });
 
+  const rulerSize = showRulers ? PDF_VIEWER_RULER_SIZE : 0;
+
   return (
-    <div className="relative w-full rounded border border-border" style={{ width: scaledWidth, height: scaledHeight }}>
-      {CustomPageRenderer && imageLoadingState === 'loaded' && (
-        <CustomPageRenderer
-          pageData={{
-            scale,
-            pageIndex: pageNumber - 1,
-            pageNumber,
-            pageWidth: unscaledWidth,
-            pageHeight: unscaledHeight,
-            imageLoadingState,
-          }}
+    <div
+      className="relative"
+      style={{
+        width: scaledWidth + rulerSize,
+        height: scaledHeight + rulerSize,
+      }}
+    >
+      {showRulers && (
+        <PdfViewerPageRuler
+          scaledWidth={scaledWidth}
+          scaledHeight={scaledHeight}
+          unscaledWidth={unscaledWidth}
+          unscaledHeight={unscaledHeight}
         />
       )}
 
-      <PdfViewerPageImage imageLoadingState={imageLoadingState} imageProps={imageProps} />
+      <div
+        className="absolute rounded border border-border"
+        style={{
+          top: rulerSize,
+          left: rulerSize,
+          width: scaledWidth,
+          height: scaledHeight,
+        }}
+      >
+        <div className="relative h-full w-full">
+          {CustomPageRenderer && imageLoadingState === 'loaded' && (
+            <CustomPageRenderer
+              pageData={{
+                scale,
+                pageIndex: pageNumber - 1,
+                pageNumber,
+                pageWidth: unscaledWidth,
+                pageHeight: unscaledHeight,
+                imageLoadingState,
+              }}
+            />
+          )}
+
+          <PdfViewerPageImage imageLoadingState={imageLoadingState} imageProps={imageProps} />
+        </div>
+      </div>
     </div>
   );
 };

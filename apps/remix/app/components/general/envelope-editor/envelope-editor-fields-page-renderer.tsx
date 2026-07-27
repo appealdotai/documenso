@@ -19,7 +19,6 @@ import {
   getSnappedResize,
   hideSnapGuides,
   initializeSnapGuides,
-  renderRuler,
   showMultipleSnapGuides,
   showSnapGuides,
 } from '@documenso/lib/universal/field-renderer/render-grid-lines';
@@ -184,7 +183,10 @@ export const EnvelopeEditorFieldsPageRenderer = ({ pageData }: { pageData: PageR
 
   const handleFieldDragEnd = (event: KonvaEventObject<DragEvent>) => {
     handleFieldDragMove(event);
-    hideSnapGuides(snapGuideLayer.current!);
+
+    if (snapGuideLayer.current) {
+      hideSnapGuides(snapGuideLayer.current);
+    }
   };
 
   /**
@@ -326,9 +328,6 @@ export const EnvelopeEditorFieldsPageRenderer = ({ pageData }: { pageData: PageR
     // Initialize snap guides layer
     snapGuideLayer.current = initializeSnapGuides(currentStage);
 
-    // Initialize ruler
-    renderRuler(currentStage, unscaledViewport.width, unscaledViewport.height, scale);
-
     // Add transformer for resizing and rotating.
     interactiveTransformer.current = createInteractiveTransformer(currentStage, currentPageLayer);
 
@@ -422,11 +421,21 @@ export const EnvelopeEditorFieldsPageRenderer = ({ pageData }: { pageData: PageR
         }
 
         if (newBox.width < minWidth || newBox.height < minHeight) {
+          if (snapGuideLayer.current) {
+            hideSnapGuides(snapGuideLayer.current);
+          }
+
           return oldBox;
         }
 
         if (selectedNodes.length === 1 && currentStage && snapGuideLayer.current) {
           const snapped = getSnappedResize(currentStage, selectedNodes[0] as Konva.Group, oldBox, newBox);
+
+          // Reject snaps that would shrink the field below its minimum size.
+          if (snapped.width < minWidth || snapped.height < minHeight) {
+            hideSnapGuides(snapGuideLayer.current);
+            return newBox;
+          }
 
           showMultipleSnapGuides(
             snapGuideLayer.current,

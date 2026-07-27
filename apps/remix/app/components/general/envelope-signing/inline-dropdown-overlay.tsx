@@ -96,16 +96,13 @@ export const InlineDropdownOverlay = ({ field, onCommit, onCancel }: InlineDropd
     }
   };
 
-  const isPastHalfway = coords.pageWidth > 0 && coords.x > coords.pageWidth / 2;
-  const isPastVerticalHalfway = coords.pageHeight > 0 && coords.y > coords.pageHeight / 2;
-
   return (
     <div
       className="absolute z-20"
       style={{
-        ...(isPastVerticalHalfway ? { bottom: `${coords.pageHeight - coords.y}px` } : { top: `${coords.y}px` }),
+        top: `${coords.y}px`,
+        left: `${coords.x}px`,
         width: `${Math.max(coords.width, 160)}px`,
-        ...(isPastHalfway ? { right: `calc(100% - ${coords.x + coords.width}px)` } : { left: `${coords.x}px` }),
       }}
     >
       <div
@@ -119,13 +116,7 @@ export const InlineDropdownOverlay = ({ field, onCommit, onCancel }: InlineDropd
         ref={listRef}
         role="listbox"
         aria-label={t`Dropdown options`}
-        className="absolute z-20 mt-1 max-h-60 overflow-y-auto rounded-md border bg-background shadow-md"
-        style={{
-          width: `${Math.max(coords.width, 160)}px`,
-          transformOrigin: `${isPastVerticalHalfway ? 'bottom' : 'top'} ${isPastHalfway ? 'right' : 'left'}`,
-          transform: typeof window !== 'undefined' && window.innerWidth < 640 ? 'scale(0.85)' : 'none',
-          ...(isPastVerticalHalfway ? { bottom: '100%', marginBottom: '4px' } : { top: '100%', marginTop: '4px' }),
-        }}
+        className="max-h-48 overflow-y-auto rounded-md border bg-background shadow-md"
       >
         {values.length === 0 && <p className="px-3 py-2 text-muted-foreground text-sm">{t`No options available`}</p>}
 

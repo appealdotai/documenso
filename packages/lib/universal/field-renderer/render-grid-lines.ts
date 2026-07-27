@@ -39,100 +39,6 @@ type ResizeSnapResult = {
   verticalGuides: number[];
 };
 
-export function renderRuler(stage: Konva.Stage, width: number, height: number, scale: number): Konva.Layer {
-  const existingRulerLayers = stage.find('.ruler-layer');
-  existingRulerLayers.forEach((layer) => {
-    layer.destroy();
-  });
-
-  const rulerLayer = new Konva.Layer({
-    name: 'ruler-layer',
-    listening: false,
-  });
-
-  const rulerSize = 24;
-
-  const topBg = new Konva.Rect({
-    x: 0,
-    y: 0,
-    width: width,
-    height: rulerSize / scale,
-    fill: 'rgba(240, 240, 240, 0.9)',
-    listening: false,
-  });
-
-  const leftBg = new Konva.Rect({
-    x: 0,
-    y: 0,
-    width: rulerSize / scale,
-    height: height,
-    fill: 'rgba(240, 240, 240, 0.9)',
-    listening: false,
-  });
-
-  rulerLayer.add(topBg, leftBg);
-
-  const majorTickSize = 100;
-  const minorTickSize = 10;
-
-  for (let x = 0; x <= width; x += minorTickSize) {
-    const isMajor = x % majorTickSize === 0;
-    const tickHeight = (isMajor ? rulerSize : rulerSize / 2) / scale;
-
-    rulerLayer.add(
-      new Konva.Line({
-        points: [x, 0, x, tickHeight],
-        stroke: '#aaa',
-        strokeWidth: 1 / scale,
-        listening: false,
-      }),
-    );
-
-    if (isMajor && x > 0) {
-      rulerLayer.add(
-        new Konva.Text({
-          x: x + 2 / scale,
-          y: 2 / scale,
-          text: x.toString(),
-          fontSize: 10 / scale,
-          fill: '#666',
-          listening: false,
-        }),
-      );
-    }
-  }
-
-  for (let y = 0; y <= height; y += minorTickSize) {
-    const isMajor = y % majorTickSize === 0;
-    const tickWidth = (isMajor ? rulerSize : rulerSize / 2) / scale;
-
-    rulerLayer.add(
-      new Konva.Line({
-        points: [0, y, tickWidth, y],
-        stroke: '#aaa',
-        strokeWidth: 1 / scale,
-        listening: false,
-      }),
-    );
-
-    if (isMajor && y > 0) {
-      rulerLayer.add(
-        new Konva.Text({
-          x: 2 / scale,
-          y: y + 2 / scale,
-          text: y.toString(),
-          fontSize: 10 / scale,
-          fill: '#666',
-          listening: false,
-        }),
-      );
-    }
-  }
-
-  stage.add(rulerLayer);
-  return rulerLayer;
-}
-
 export function initializeSnapGuides(stage: Konva.Stage): Konva.Layer {
   // Remove any existing snap guide layers from this stage
   const existingSnapLayers = stage.find('.snap-guide-layer');
@@ -360,10 +266,18 @@ export function getSnappedResize(
     }
   }
 
-  if (!closestVerticalSnap) {
+  // Only fall back to size-matching when no edge is within the snap threshold.
+  // Otherwise a distant "closest edge" would permanently block width matching.
+  if (!closestVerticalSnap || closestVerticalDist > SNAP_THRESHOLD) {
+    closestVerticalSnap = null;
+    closestVerticalDist = SNAP_THRESHOLD + 1;
+
     for (const width of widths) {
-      if (Math.abs(newBox.width - width) < closestVerticalDist) {
-        closestVerticalDist = Math.abs(newBox.width - width);
+      const dist = Math.abs(newBox.width - width);
+
+      if (dist < closestVerticalDist) {
+        closestVerticalDist = dist;
+
         if (isRightMoving) {
           closestVerticalSnap = { position: newBox.x + width, offset: width - newBox.width };
         } else if (isLeftMoving) {
@@ -406,10 +320,16 @@ export function getSnappedResize(
     }
   }
 
-  if (!closestHorizontalSnap) {
+  if (!closestHorizontalSnap || closestHorizontalDist > SNAP_THRESHOLD) {
+    closestHorizontalSnap = null;
+    closestHorizontalDist = SNAP_THRESHOLD + 1;
+
     for (const height of heights) {
-      if (Math.abs(newBox.height - height) < closestHorizontalDist) {
-        closestHorizontalDist = Math.abs(newBox.height - height);
+      const dist = Math.abs(newBox.height - height);
+
+      if (dist < closestHorizontalDist) {
+        closestHorizontalDist = dist;
+
         if (isBottomMoving) {
           closestHorizontalSnap = { position: newBox.y + height, offset: height - newBox.height };
         } else if (isTopMoving) {
