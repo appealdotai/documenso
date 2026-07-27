@@ -183,7 +183,10 @@ export const EnvelopeEditorFieldsPageRenderer = ({ pageData }: { pageData: PageR
 
   const handleFieldDragEnd = (event: KonvaEventObject<DragEvent>) => {
     handleFieldDragMove(event);
-    hideSnapGuides(snapGuideLayer.current!);
+
+    if (snapGuideLayer.current) {
+      hideSnapGuides(snapGuideLayer.current);
+    }
   };
 
   /**
@@ -418,6 +421,10 @@ export const EnvelopeEditorFieldsPageRenderer = ({ pageData }: { pageData: PageR
         }
 
         if (newBox.width < minWidth || newBox.height < minHeight) {
+          if (snapGuideLayer.current) {
+            hideSnapGuides(snapGuideLayer.current);
+          }
+
           return oldBox;
         }
 
@@ -426,6 +433,7 @@ export const EnvelopeEditorFieldsPageRenderer = ({ pageData }: { pageData: PageR
 
           // Reject snaps that would shrink the field below its minimum size.
           if (snapped.width < minWidth || snapped.height < minHeight) {
+            hideSnapGuides(snapGuideLayer.current);
             return newBox;
           }
 
