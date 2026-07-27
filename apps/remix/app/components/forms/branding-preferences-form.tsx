@@ -7,6 +7,7 @@ import {
   resolveSigningFieldHighlightColors,
   SIGNING_FIELD_BACKGROUND_COLOR_KEYS,
 } from '@documenso/lib/utils/signing-field-highlight-colors';
+import { zEmail } from '@documenso/lib/utils/zod';
 import { cn } from '@documenso/ui/lib/utils';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@documenso/ui/primitives/accordion';
 import { Button } from '@documenso/ui/primitives/button';
@@ -40,6 +41,9 @@ const ZBrandingPreferencesFormSchema = z.object({
     .nullish(),
   brandingUrl: z.string().url().optional().or(z.literal('')),
   brandingCompanyDetails: z.string().max(500).optional(),
+  brandingEmail: z.union([zEmail(), z.literal('')]).optional(),
+  brandingName: z.string().max(100).optional(),
+  brandingHideWatermark: z.boolean().nullable().optional(),
   brandingColors: ZCssVarsSchema.default({}),
   brandingCss: z.string().max(10_000).default(''),
 });
@@ -53,6 +57,9 @@ type SettingsSubset = Pick<
   | 'brandingLogo'
   | 'brandingUrl'
   | 'brandingCompanyDetails'
+  | 'brandingEmail'
+  | 'brandingName'
+  | 'brandingHideWatermark'
   | 'brandingColors'
   | 'brandingCss'
 >;
@@ -107,6 +114,9 @@ export function BrandingPreferencesForm({
       brandingUrl: settings.brandingUrl ?? '',
       brandingLogo: undefined,
       brandingCompanyDetails: settings.brandingCompanyDetails ?? '',
+      brandingEmail: settings.brandingEmail ?? '',
+      brandingName: settings.brandingName ?? '',
+      brandingHideWatermark: settings.brandingHideWatermark ?? null,
       brandingColors: initialColors,
       brandingCss: settings.brandingCss ?? '',
     },
@@ -394,6 +404,110 @@ export function BrandingPreferencesForm({
                         <Trans>Leave blank to inherit from the organisation.</Trans>
                       </span>
                     )}
+                  </FormDescription>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="brandingEmail"
+              render={({ field }) => (
+                <FormItem className="flex-1">
+                  <FormLabel>
+                    <Trans>Brand Email</Trans>
+                  </FormLabel>
+
+                  <FormControl>
+                    <Input type="email" placeholder="sender@example.com" disabled={!isBrandingEnabled} {...field} />
+                  </FormControl>
+
+                  <FormDescription>
+                    <Trans>Customize the email address that appears in the body of emails</Trans>
+
+                    {canInherit && (
+                      <span>
+                        {'. '}
+                        <Trans>Leave blank to inherit from the organisation.</Trans>
+                      </span>
+                    )}
+                  </FormDescription>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="brandingName"
+              render={({ field }) => (
+                <FormItem className="flex-1">
+                  <FormLabel>
+                    <Trans>Brand Name</Trans>
+                  </FormLabel>
+
+                  <FormControl>
+                    <Input type="text" placeholder="Acme Corp" disabled={!isBrandingEnabled} {...field} />
+                  </FormControl>
+
+                  <FormDescription>
+                    <Trans>Customize the sender name that appears in the body of emails</Trans>
+
+                    {canInherit && (
+                      <span>
+                        {'. '}
+                        <Trans>Leave blank to inherit from the organisation.</Trans>
+                      </span>
+                    )}
+                  </FormDescription>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="brandingHideWatermark"
+              render={({ field }) => (
+                <FormItem className="flex-1">
+                  <FormLabel>
+                    <Trans>Hide Report Sender Warning</Trans>
+                  </FormLabel>
+
+                  <FormControl>
+                    <Select
+                      {...field}
+                      value={field.value === null || field.value === undefined ? '-1' : field.value.toString()}
+                      disabled={!isBrandingEnabled}
+                      onValueChange={(value) =>
+                        field.onChange(value === 'true' ? true : value === 'false' ? false : null)
+                      }
+                    >
+                      <SelectTrigger className="bg-background text-muted-foreground">
+                        <SelectValue />
+                      </SelectTrigger>
+
+                      <SelectContent className="z-[9999]">
+                        <SelectItem value="true">
+                          <Trans>Yes</Trans>
+                        </SelectItem>
+
+                        <SelectItem value="false">
+                          <Trans>No</Trans>
+                        </SelectItem>
+
+                        {canInherit && (
+                          <SelectItem value={'-1'}>
+                            <Trans>Inherit from organisation</Trans>
+                          </SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </FormControl>
+
+                  <FormDescription>
+                    <Trans>
+                      Hide the &quot;Report Sender&quot; warning at the bottom of recipient emails. Hiding &quot;Powered
+                      by Documenso&quot; still requires the hide branding plan entitlement.
+                    </Trans>
                   </FormDescription>
                 </FormItem>
               )}

@@ -17,7 +17,7 @@ export const TemplateFooter = ({ isDocument = true, reportUrl }: TemplateFooterP
 
   return (
     <Section>
-      {reportUrl && (
+      {reportUrl && !branding.brandingHideWatermark && (
         <Text className="my-4 text-base text-muted-foreground">
           <Trans>
             Did not expect this email?{' '}
