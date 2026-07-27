@@ -214,6 +214,12 @@ export const EnvelopeSignerPageRenderer = ({ pageData }: { pageData: PageRenderD
     });
 
     const handleFieldGroupClick = (e: KonvaEventObject<Event>) => {
+      // Force any active HTML input (like inline fields) to blur and commit
+      // before processing the Konva click which might open a new field.
+      if (typeof document !== 'undefined' && document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+
       const currentTarget = e.currentTarget as Konva.Group;
       const target = e.target as Konva.Shape;
 
@@ -673,12 +679,14 @@ export const EnvelopeSignerPageRenderer = ({ pageData }: { pageData: PageRenderD
     return null;
   }, [activeInlineField]);
 
-  const handleInlineFieldCommit = async (value: string | null) => {
-    if (!activeInlineField) {
+  const handleInlineFieldCommit = async (fieldId: number, value: string | null) => {
+    const fieldToCommit = localPageFields.find((f) => f.id === fieldId);
+
+    if (!fieldToCommit) {
       return;
     }
 
-    const fieldGroup = pageLayer.current?.findOne(`#${activeInlineField.id}`) as Konva.Group | undefined;
+    const fieldGroup = pageLayer.current?.findOne(`#${fieldToCommit.id}`) as Konva.Group | undefined;
     const fieldRect = fieldGroup?.findOne('.field-rect');
     const fieldWidth = fieldRect ? fieldRect.width() : (fieldGroup?.width() ?? 0);
     const fieldHeight = fieldRect ? fieldRect.height() : (fieldGroup?.height() ?? 0);
@@ -691,19 +699,21 @@ export const EnvelopeSignerPageRenderer = ({ pageData }: { pageData: PageRenderD
     fieldGroup?.add(loadingSpinnerGroup);
 
     try {
-      if (activeInlineField.type === FieldType.NUMBER) {
-        await signField(activeInlineField.id, { type: FieldType.NUMBER, value });
-      } else if (activeInlineField.type === FieldType.TEXT) {
-        await signField(activeInlineField.id, { type: FieldType.TEXT, value });
-      } else if (activeInlineField.type === FieldType.DROPDOWN) {
-        await signField(activeInlineField.id, { type: FieldType.DROPDOWN, value });
-      } else if (activeInlineField.type === FieldType.DATE) {
-        await signField(activeInlineField.id, { type: FieldType.DATE, value });
+      if (fieldToCommit.type === FieldType.NUMBER) {
+        await signField(fieldToCommit.id, { type: FieldType.NUMBER, value });
+      } else if (fieldToCommit.type === FieldType.TEXT) {
+        await signField(fieldToCommit.id, { type: FieldType.TEXT, value });
+      } else if (fieldToCommit.type === FieldType.DROPDOWN) {
+        await signField(fieldToCommit.id, { type: FieldType.DROPDOWN, value });
+      } else if (fieldToCommit.type === FieldType.DATE) {
+        await signField(fieldToCommit.id, { type: FieldType.DATE, value });
       } else {
         return;
       }
 
-      setActiveInlineFieldId(null);
+      // Only close the field if the user hasn't already clicked into a different field
+      // while this commit was processing in the background.
+      setActiveInlineFieldIdRef.current((current) => (current === fieldId ? null : current));
     } finally {
       loadingSpinnerGroup.destroy();
     }
@@ -751,7 +761,7 @@ export const EnvelopeSignerPageRenderer = ({ pageData }: { pageData: PageRenderD
             fieldMeta: activeInlineFieldMeta as TTextFieldMeta | TNumberFieldMeta | null,
           }}
           scale={scale}
-          onCommit={handleInlineFieldCommit}
+          onCommit={(value) => handleInlineFieldCommit(activeInlineField.id, value)}
           onCancel={() => setActiveInlineFieldId(null)}
         />
       )}
@@ -763,7 +773,7 @@ export const EnvelopeSignerPageRenderer = ({ pageData }: { pageData: PageRenderD
             ...activeInlineField,
             fieldMeta: activeInlineFieldMeta as TDropdownFieldMeta | null,
           }}
-          onCommit={handleInlineFieldCommit}
+          onCommit={(value) => handleInlineFieldCommit(activeInlineField.id, value)}
           onCancel={() => setActiveInlineFieldId(null)}
         />
       )}
@@ -776,7 +786,7 @@ export const EnvelopeSignerPageRenderer = ({ pageData }: { pageData: PageRenderD
             fieldMeta: activeInlineFieldMeta as TDateFieldMeta | null,
           }}
           dateFormat={envelope.documentMeta.dateFormat ?? undefined}
-          onCommit={handleInlineFieldCommit}
+          onCommit={(value) => handleInlineFieldCommit(activeInlineField.id, value)}
           onCancel={() => setActiveInlineFieldId(null)}
         />
       )}
