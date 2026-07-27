@@ -7,6 +7,7 @@ import {
   resolveSigningFieldHighlightColors,
   SIGNING_FIELD_BACKGROUND_COLOR_KEYS,
 } from '@documenso/lib/utils/signing-field-highlight-colors';
+import { zEmail } from '@documenso/lib/utils/zod';
 import { cn } from '@documenso/ui/lib/utils';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@documenso/ui/primitives/accordion';
 import { Button } from '@documenso/ui/primitives/button';
@@ -40,7 +41,7 @@ const ZBrandingPreferencesFormSchema = z.object({
     .nullish(),
   brandingUrl: z.string().url().optional().or(z.literal('')),
   brandingCompanyDetails: z.string().max(500).optional(),
-  brandingEmail: z.string().email().optional().or(z.literal('')),
+  brandingEmail: z.union([zEmail(), z.literal('')]).optional(),
   brandingName: z.string().max(100).optional(),
   brandingHideWatermark: z.boolean().nullable().optional(),
   brandingColors: ZCssVarsSchema.default({}),
