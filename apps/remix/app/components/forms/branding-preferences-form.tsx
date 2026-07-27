@@ -474,7 +474,7 @@ export function BrandingPreferencesForm({
                   <FormControl>
                     <Select
                       {...field}
-                      value={field.value === null ? '-1' : field.value.toString()}
+                      value={field.value === null || field.value === undefined ? '-1' : field.value.toString()}
                       disabled={!isBrandingEnabled}
                       onValueChange={(value) =>
                         field.onChange(value === 'true' ? true : value === 'false' ? false : null)
