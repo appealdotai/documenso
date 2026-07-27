@@ -288,6 +288,7 @@ export const EnvelopeEditorFieldsPage = () => {
               customPageRenderer={EnvelopeEditorFieldsPageRenderer}
               scrollParentRef={scrollableContainerRef}
               errorMessage={PDF_VIEWER_ERROR_MESSAGES.editor}
+              showRulers
             />
           ) : (
             <div className="flex flex-col items-center justify-center py-32">
