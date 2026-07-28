@@ -61,6 +61,16 @@ const getFieldSignatureCacheKey = (field: Field & { signature?: Signature | null
   return field.signature?.signatureImageAsBase64 || field.signature?.typedSignature || '';
 };
 
+type InlineSignableFieldType =
+  | typeof FieldType.NUMBER
+  | typeof FieldType.TEXT
+  | typeof FieldType.DROPDOWN
+  | typeof FieldType.DATE;
+
+const isInlineSignableFieldType = (type: FieldType): type is InlineSignableFieldType => {
+  return type === FieldType.NUMBER || type === FieldType.TEXT || type === FieldType.DROPDOWN || type === FieldType.DATE;
+};
+
 export const EnvelopeSignerPageRenderer = ({ pageData }: { pageData: PageRenderData }) => {
   const { t, i18n } = useLingui();
   const { currentEnvelopeItem, setRenderError } = useCurrentEnvelopeRender();
@@ -682,7 +692,7 @@ export const EnvelopeSignerPageRenderer = ({ pageData }: { pageData: PageRenderD
   const handleInlineFieldCommit = async (fieldId: number, value: string | null) => {
     const fieldToCommit = localPageFields.find((f) => f.id === fieldId);
 
-    if (!fieldToCommit) {
+    if (!fieldToCommit || !isInlineSignableFieldType(fieldToCommit.type)) {
       return;
     }
 
@@ -699,17 +709,7 @@ export const EnvelopeSignerPageRenderer = ({ pageData }: { pageData: PageRenderD
     fieldGroup?.add(loadingSpinnerGroup);
 
     try {
-      if (fieldToCommit.type === FieldType.NUMBER) {
-        await signField(fieldToCommit.id, { type: FieldType.NUMBER, value });
-      } else if (fieldToCommit.type === FieldType.TEXT) {
-        await signField(fieldToCommit.id, { type: FieldType.TEXT, value });
-      } else if (fieldToCommit.type === FieldType.DROPDOWN) {
-        await signField(fieldToCommit.id, { type: FieldType.DROPDOWN, value });
-      } else if (fieldToCommit.type === FieldType.DATE) {
-        await signField(fieldToCommit.id, { type: FieldType.DATE, value });
-      } else {
-        return;
-      }
+      await signField(fieldToCommit.id, { type: fieldToCommit.type, value });
 
       // Only close the field if the user hasn't already clicked into a different field
       // while this commit was processing in the background.
