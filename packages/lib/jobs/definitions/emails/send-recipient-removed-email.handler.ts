@@ -10,6 +10,7 @@ import { assertOrganisationRatesAndLimits } from '../../../server-only/rate-limi
 import { extractDerivedDocumentEmailSettings } from '../../../types/document-email';
 import { isRecipientEmailValidForSending } from '../../../utils/recipients';
 import { renderEmailWithI18N } from '../../../utils/render-email-with-i18n';
+import { resolveBrandedInviter } from '../../../utils/resolve-branded-inviter';
 import type { JobRunIO } from '../../client/_internal/job';
 import type { TSendRecipientRemovedEmailJobDefinition } from './send-recipient-removed-email';
 
@@ -39,15 +40,24 @@ export const run = async ({ payload, io }: { payload: TSendRecipientRemovedEmail
     return;
   }
 
-  const { branding, emailLanguage, senderEmail, replyToEmail, organisationId, claims, emailsDisabled, emailTransport } =
-    await getEmailContext({
-      emailType: 'RECIPIENT',
-      source: {
-        type: 'team',
-        teamId: envelope.teamId,
-      },
-      meta: envelope.documentMeta,
-    });
+  const {
+    branding,
+    emailLanguage,
+    senderEmail,
+    replyToEmail,
+    organisationId,
+    claims,
+    emailsDisabled,
+    emailTransport,
+    settings,
+  } = await getEmailContext({
+    emailType: 'RECIPIENT',
+    source: {
+      type: 'team',
+      teamId: envelope.teamId,
+    },
+    meta: envelope.documentMeta,
+  });
 
   // Don't send the removal email if the organisation has email sending disabled.
   if (emailsDisabled) {
@@ -76,9 +86,15 @@ export const run = async ({ payload, io }: { payload: TSendRecipientRemovedEmail
 
   const assetBaseUrl = NEXT_PUBLIC_WEBAPP_URL() || 'http://localhost:3000';
 
+  const { inviterName: brandedInviterName } = resolveBrandedInviter({
+    settings,
+    fallbackName: inviterName,
+    fallbackEmail: '',
+  });
+
   const template = createElement(RecipientRemovedFromDocumentTemplate, {
     documentName: envelope.title,
-    inviterName: inviterName || undefined,
+    inviterName: brandedInviterName || undefined,
     assetBaseUrl,
   });
 

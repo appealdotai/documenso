@@ -19,6 +19,7 @@ export const teamGlobalSettingsToBranding = (
         ? `${NEXT_PUBLIC_WEBAPP_URL()}/api/branding/logo/team/${teamId}`
         : '',
     brandingHidePoweredBy: hidePoweredBy,
+    brandingHideWatermark: settings.brandingHideWatermark ?? false,
     brandingColors: resolvedBrandingColors ?? undefined,
   };
 };
@@ -38,6 +39,7 @@ export const organisationGlobalSettingsToBranding = (
         ? `${NEXT_PUBLIC_WEBAPP_URL()}/api/branding/logo/organisation/${organisationId}`
         : '',
     brandingHidePoweredBy: hidePoweredBy,
+    brandingHideWatermark: settings.brandingHideWatermark ?? false,
     brandingColors: resolvedBrandingColors ?? undefined,
   };
 };
