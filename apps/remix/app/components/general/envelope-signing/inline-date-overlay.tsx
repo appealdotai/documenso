@@ -7,11 +7,11 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import { getDateFieldInitialJsDate, jsDateToIsoDate } from '~/utils/field-signing/commit-date-field';
 
+import { getMobileOverlayScaleStyle, getOverlayPlacement, type OverlayPlacement } from './get-overlay-placement';
 import { useFieldOverlayCoords } from './use-field-overlay-coords';
 
-const OVERLAY_GAP_PX = 4;
 /** Approximate calendar height used before the panel is measured. */
-const FALLBACK_CALENDAR_HEIGHT_PX = 310;
+const FALLBACK_CALENDAR_HEIGHT_PX = 350;
 
 type InlineDateOverlayProps = {
   field: Pick<Field, 'id' | 'page' | 'positionX' | 'positionY' | 'width' | 'height' | 'inserted' | 'customText'> & {
@@ -20,48 +20,6 @@ type InlineDateOverlayProps = {
   dateFormat?: string;
   onCommit: (value: string | null) => Promise<void>;
   onCancel: () => void;
-};
-
-type OverlayPlacement = {
-  top: number;
-  left: number;
-};
-
-const getOverlayPlacement = ({
-  fieldY,
-  fieldHeight,
-  fieldX,
-  pageHeight,
-  pageWidth,
-  panelHeight,
-  panelWidth,
-}: {
-  fieldY: number;
-  fieldHeight: number;
-  fieldX: number;
-  pageHeight: number;
-  pageWidth: number;
-  panelHeight: number;
-  panelWidth: number;
-}): OverlayPlacement => {
-  const spaceBelow = pageHeight - (fieldY + fieldHeight);
-  const spaceAbove = fieldY;
-
-  const fitsBelow = spaceBelow >= panelHeight + OVERLAY_GAP_PX;
-  const fitsAbove = spaceAbove >= panelHeight + OVERLAY_GAP_PX;
-
-  let top = fieldY + fieldHeight + OVERLAY_GAP_PX;
-
-  if (!fitsBelow && fitsAbove) {
-    top = fieldY - panelHeight - OVERLAY_GAP_PX;
-  } else if (!fitsBelow && !fitsAbove && spaceAbove > spaceBelow) {
-    top = Math.max(0, fieldY - panelHeight - OVERLAY_GAP_PX);
-  }
-
-  const maxLeft = Math.max(0, pageWidth - panelWidth);
-  const left = Math.min(Math.max(0, fieldX), maxLeft);
-
-  return { top, left };
 };
 
 /**
@@ -198,8 +156,8 @@ export const InlineDateOverlay = ({ field, dateFormat, onCommit, onCancel }: Inl
     }
   };
 
-  const isPastHalfway = coords.pageWidth > 0 && coords.x > coords.pageWidth / 2;
-  const isPastVerticalHalfway = coords.pageHeight > 0 && coords.y > coords.pageHeight / 2;
+  const openAbove = placement.top < coords.y;
+  const alignRight = coords.x + coords.width / 2 > coords.pageWidth / 2;
 
   return (
     <div
@@ -214,13 +172,10 @@ export const InlineDateOverlay = ({ field, dateFormat, onCommit, onCancel }: Inl
         role="dialog"
         aria-label={t`Select date`}
         className="flex flex-col rounded-md border bg-background shadow-md"
-        style={{
-          transformOrigin: `${isPastVerticalHalfway ? 'bottom' : 'top'} ${isPastHalfway ? 'right' : 'left'}`,
-          transform: typeof window !== 'undefined' && window.innerWidth < 640 ? 'scale(0.85)' : 'none',
-        }}
+        style={getMobileOverlayScaleStyle({ openAbove, alignRight })}
         onPointerDown={(event) => event.stopPropagation()}
       >
-        <Calendar mode="single" selected={selectedDate} onSelect={(date) => void handleSelect(date)} />
+        <Calendar mode="single" selected={selectedDate} onSelect={(date) => void handleSelect(date)} initialFocus />
         <div className="border-t p-2">
           <button
             type="button"
