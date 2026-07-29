@@ -3,11 +3,15 @@ import { Calendar } from '@documenso/ui/primitives/calendar';
 import { useLingui } from '@lingui/react/macro';
 import type { Field } from '@prisma/client';
 import { DateTime } from 'luxon';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import { getDateFieldInitialJsDate, jsDateToIsoDate } from '~/utils/field-signing/commit-date-field';
 
+import { getMobileOverlayScaleStyle, getOverlayPlacement, type OverlayPlacement } from './get-overlay-placement';
 import { useFieldOverlayCoords } from './use-field-overlay-coords';
+
+/** Approximate calendar height used before the panel is measured. */
+const FALLBACK_CALENDAR_HEIGHT_PX = 350;
 
 type InlineDateOverlayProps = {
   field: Pick<Field, 'id' | 'page' | 'positionX' | 'positionY' | 'width' | 'height' | 'inserted' | 'customText'> & {
@@ -20,6 +24,7 @@ type InlineDateOverlayProps = {
 
 /**
  * Calendar overlay positioned next to a Konva date field during inline signing.
+ * Prefers opening below the field; flips above when there is not enough room on the page.
  */
 export const InlineDateOverlay = ({ field, dateFormat, onCommit, onCancel }: InlineDateOverlayProps) => {
   const { t } = useLingui();
@@ -43,6 +48,34 @@ export const InlineDateOverlay = ({ field, dateFormat, onCommit, onCancel }: Inl
   });
 
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(initialDate);
+  const [placement, setPlacement] = useState<OverlayPlacement>(() =>
+    getOverlayPlacement({
+      fieldY: coords.y,
+      fieldHeight: coords.height,
+      fieldX: coords.x,
+      pageHeight: coords.pageHeight,
+      pageWidth: coords.pageWidth,
+      panelHeight: FALLBACK_CALENDAR_HEIGHT_PX,
+      panelWidth: 0,
+    }),
+  );
+
+  useLayoutEffect(() => {
+    const panelHeight = panelRef.current?.offsetHeight ?? FALLBACK_CALENDAR_HEIGHT_PX;
+    const panelWidth = panelRef.current?.offsetWidth ?? 0;
+
+    setPlacement(
+      getOverlayPlacement({
+        fieldY: coords.y,
+        fieldHeight: coords.height,
+        fieldX: coords.x,
+        pageHeight: coords.pageHeight,
+        pageWidth: coords.pageWidth,
+        panelHeight,
+        panelWidth,
+      }),
+    );
+  }, [coords.height, coords.pageHeight, coords.pageWidth, coords.width, coords.x, coords.y]);
 
   useEffect(() => {
     const handlePointerDown = (event: PointerEvent) => {
@@ -104,22 +137,54 @@ export const InlineDateOverlay = ({ field, dateFormat, onCommit, onCancel }: Inl
     }
   };
 
+  const handleClear = async () => {
+    if (isCommittingRef.current) {
+      return;
+    }
+
+    if (!field.inserted) {
+      onCancel();
+      return;
+    }
+
+    isCommittingRef.current = true;
+
+    try {
+      await onCommit(null);
+    } finally {
+      isCommittingRef.current = false;
+    }
+  };
+
+  const openAbove = placement.top < coords.y;
+  const alignRight = coords.x + coords.width / 2 > coords.pageWidth / 2;
+
   return (
     <div
       className="absolute z-20"
       style={{
-        top: `${coords.y + coords.height + 4}px`,
-        left: `${coords.x}px`,
+        top: `${placement.top}px`,
+        left: `${placement.left}px`,
       }}
     >
       <div
         ref={panelRef}
         role="dialog"
         aria-label={t`Select date`}
-        className="rounded-md border bg-background shadow-md"
+        className="flex flex-col rounded-md border bg-background shadow-md"
+        style={getMobileOverlayScaleStyle({ openAbove, alignRight })}
         onPointerDown={(event) => event.stopPropagation()}
       >
         <Calendar mode="single" selected={selectedDate} onSelect={(date) => void handleSelect(date)} initialFocus />
+        <div className="border-t p-2">
+          <button
+            type="button"
+            className="flex w-full cursor-pointer items-center justify-center rounded-sm px-3 py-2 font-medium text-muted-foreground text-sm outline-none hover:bg-accent hover:text-accent-foreground"
+            onClick={() => void handleClear()}
+          >
+            {t`Clear`}
+          </button>
+        </div>
       </div>
     </div>
   );

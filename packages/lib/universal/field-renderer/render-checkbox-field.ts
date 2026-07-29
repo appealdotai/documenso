@@ -58,15 +58,35 @@ export const getCheckboxFieldMinSizePx = ({
 export const renderCheckboxFieldElement = (field: FieldToRender, options: RenderFieldElementOptions) => {
   const { pageWidth, pageHeight, pageLayer, mode, color } = options;
 
-  const { fieldWidth, fieldHeight } = calculateFieldPosition(field, pageWidth, pageHeight);
-
   const checkboxMeta: TCheckboxFieldMeta | null = (field.fieldMeta as TCheckboxFieldMeta) || null;
   const checkboxValues = checkboxMeta?.values || [];
+  const fontSize = checkboxMeta?.fontSize || DEFAULT_STANDARD_FONT_SIZE;
+  const direction = checkboxMeta?.direction || 'vertical';
+
+  // Recipient signing and sealed PDF hug the checkbox square(s); editor keeps the authored size for labels.
+  const shouldShrinkToCheckbox = mode === 'sign' || mode === 'export';
+  const fieldToRender: FieldToRender = shouldShrinkToCheckbox
+    ? (() => {
+        const { minWidth, minHeight } = getCheckboxFieldMinSizePx({
+          fontSize,
+          itemCount: checkboxValues.length || 1,
+          direction,
+        });
+
+        return {
+          ...field,
+          width: (minWidth / pageWidth) * 100,
+          height: (minHeight / pageHeight) * 100,
+        };
+      })()
+    : field;
+
+  const { fieldWidth, fieldHeight } = calculateFieldPosition(fieldToRender, pageWidth, pageHeight);
 
   const isFirstRender = !pageLayer.findOne(`#${field.renderId}`);
 
   // Clear previous children and listeners to re-render fresh.
-  const fieldGroup = upsertFieldGroup(field, options);
+  const fieldGroup = upsertFieldGroup(fieldToRender, options);
   fieldGroup.removeChildren();
   fieldGroup.off('transform');
 
@@ -74,10 +94,8 @@ export const renderCheckboxFieldElement = (field: FieldToRender, options: Render
     pageLayer.add(fieldGroup);
   }
 
-  const fieldRect = upsertFieldRect(field, options, fieldGroup);
+  const fieldRect = upsertFieldRect(fieldToRender, options, fieldGroup);
   fieldGroup.add(fieldRect);
-
-  const fontSize = checkboxMeta?.fontSize || DEFAULT_STANDARD_FONT_SIZE;
 
   // Handle rescaling items during transforms.
   fieldGroup.on('transform', () => {
@@ -120,7 +138,7 @@ export const renderCheckboxFieldElement = (field: FieldToRender, options: Render
         itemSize: calculateCheckboxSize(fontSize),
         spacingBetweenItemAndText: spacingBetweenCheckboxAndText,
         fieldPadding: checkboxFieldPadding,
-        direction: checkboxMeta?.direction || 'vertical',
+        direction,
         type: 'checkbox',
       });
 
@@ -136,7 +154,7 @@ export const renderCheckboxFieldElement = (field: FieldToRender, options: Render
         y: itemInputY,
       });
 
-      textElement.setAttrs({
+      textElement?.setAttrs({
         x: textX,
         y: textY,
         scaleX: 1,
@@ -161,13 +179,16 @@ export const renderCheckboxFieldElement = (field: FieldToRender, options: Render
 
   const checkedValues: number[] = field.customText ? parseCheckboxCustomText(field.customText) : [];
 
+  // Recipient signing and sealed PDF only render the tick; option wording lives on the PDF.
+  const shouldRenderOptionText = mode === 'edit';
+
   checkboxValues.forEach(({ value, checked }, index) => {
     const isCheckboxChecked = match(mode)
       .with('edit', () => checked)
       .with('sign', () => checkedValues.includes(index))
       .with('export', () => {
         // If it's read-only, check the originally checked state.
-        if (checkboxMeta.readOnly) {
+        if (checkboxMeta?.readOnly) {
           return checked;
         }
 
@@ -185,7 +206,7 @@ export const renderCheckboxFieldElement = (field: FieldToRender, options: Render
       itemSize,
       spacingBetweenItemAndText: spacingBetweenCheckboxAndText,
       fieldPadding: checkboxFieldPadding,
-      direction: checkboxMeta?.direction || 'vertical',
+      direction,
       type: 'checkbox',
     });
 
@@ -218,24 +239,27 @@ export const renderCheckboxFieldElement = (field: FieldToRender, options: Render
       visible: isCheckboxChecked,
     });
 
-    const text = new Konva.Text({
-      internalCheckboxIndex: index,
-      id: `checkbox-text-${index}`,
-      name: 'checkbox-text',
-      x: textX,
-      y: textY,
-      text: value,
-      width: textWidth,
-      height: textHeight,
-      fontSize,
-      fontFamily: konvaTextFontFamily,
-      fill: konvaTextFill,
-      verticalAlign: 'middle',
-    });
-
     fieldGroup.add(square);
     fieldGroup.add(checkmark);
-    fieldGroup.add(text);
+
+    if (shouldRenderOptionText) {
+      const text = new Konva.Text({
+        internalCheckboxIndex: index,
+        id: `checkbox-text-${index}`,
+        name: 'checkbox-text',
+        x: textX,
+        y: textY,
+        text: value,
+        width: textWidth,
+        height: textHeight,
+        fontSize,
+        fontFamily: konvaTextFontFamily,
+        fill: konvaTextFill,
+        verticalAlign: 'middle',
+      });
+
+      fieldGroup.add(text);
+    }
   });
 
   if (color !== 'readOnly' && mode !== 'export') {

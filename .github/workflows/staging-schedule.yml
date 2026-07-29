@@ -34,6 +34,37 @@ jobs:
             local service_name="$2"
 
             echo "Starting ${service_name}..."
+
+            DEPLOY_ID=$(curl -sf https://backboard.railway.com/graphql/v2 \
+              -H "Authorization: Bearer ${RAILWAY_TOKEN}" \
+              -H "Content-Type: application/json" \
+              -d "$(jq -n \
+                --arg environmentId "$STAGING_ENV_ID" \
+                --arg serviceId "$service_id" \
+                '{
+                  query: "query($environmentId: String!, $serviceId: String!) { deployments(first: 5, input: { serviceId: $serviceId, environmentId: $environmentId }) { edges { node { id status canRedeploy } } } }",
+                  variables: {
+                    environmentId: $environmentId,
+                    serviceId: $serviceId
+                  }
+                }')" \
+              | jq -r '[.data.deployments.edges[].node | select(.canRedeploy == true)][0].id // empty')
+
+            if [ -n "$DEPLOY_ID" ]; then
+              echo "Redeploying existing deployment ${DEPLOY_ID} for ${service_name}..."
+              curl --fail-with-body -X POST https://backboard.railway.com/graphql/v2 \
+                -H "Authorization: Bearer ${RAILWAY_TOKEN}" \
+                -H "Content-Type: application/json" \
+                -d "$(jq -n \
+                  --arg id "$DEPLOY_ID" \
+                  '{
+                    query: "mutation($id: String!) { deploymentRedeploy(id: $id) }",
+                    variables: { id: $id }
+                  }')"
+              return 0
+            fi
+
+            echo "No redeployable deployment for ${service_name} — falling back to serviceInstanceRedeploy..."
             curl --fail-with-body -X POST https://backboard.railway.com/graphql/v2 \
               -H "Authorization: Bearer ${RAILWAY_TOKEN}" \
               -H "Content-Type: application/json" \

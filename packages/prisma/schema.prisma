@@ -983,6 +983,9 @@ model OrganisationGlobalSettings {
   brandingLogo           String  @default("")
   brandingUrl            String  @default("")
   brandingCompanyDetails String  @default("")
+  brandingEmail          String  @default("")
+  brandingName           String  @default("")
+  brandingHideWatermark  Boolean @default(false)
   brandingColors         Json? /// [TCssVarsSchema] @zod.custom.use(ZCssVarsSchema)
   brandingCss            String  @default("")
   recipientForceLightMode Boolean @default(false)
@@ -1029,6 +1032,9 @@ model TeamGlobalSettings {
   brandingLogo           String?
   brandingUrl            String?
   brandingCompanyDetails String?
+  brandingEmail          String?
+  brandingName           String?
+  brandingHideWatermark  Boolean?
   brandingColors         Json? /// [TCssVarsSchema] @zod.custom.use(ZCssVarsSchema)
   brandingCss            String?
   recipientForceLightMode Boolean?
