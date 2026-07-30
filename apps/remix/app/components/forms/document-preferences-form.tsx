@@ -110,6 +110,7 @@ const getDocumentPreferencesFormValues = (settings: SettingsSubset): TDocumentPr
     defaultRecipients: settings.defaultRecipients ? ZDefaultRecipientsSchema.parse(settings.defaultRecipients) : null,
     delegateDocumentOwnership: settings.delegateDocumentOwnership,
     aiFeaturesEnabled: settings.aiFeaturesEnabled,
+    useEnvelopeTitleForDownload: settings.useEnvelopeTitleForDownload,
     envelopeExpirationPeriod: settings.envelopeExpirationPeriod ?? null,
     reminderSettings: settings.reminderSettings ?? null,
   };

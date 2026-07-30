@@ -150,18 +150,26 @@ export function BrandingPreferencesForm({
   // defaults, so it never renders as a pointless disabled button.
   const isResetToDefaultsVisible =
     settings.brandingEnabled !== (canInherit ? null : false) ||
+    settings.recipientForceLightMode !== (canInherit ? null : false) ||
     !!settings.brandingLogo ||
     !!settings.brandingUrl ||
     !!settings.brandingCompanyDetails ||
+    !!settings.brandingEmail ||
+    !!settings.brandingName ||
+    settings.brandingHideWatermark !== (canInherit ? null : false) ||
     !!settings.brandingCss ||
     !hasResetBrandingColors;
 
   const handleResetToDefaults = async () => {
     const data: TBrandingPreferencesFormSchema = {
       brandingEnabled: canInherit ? null : false,
+      recipientForceLightMode: canInherit ? null : false,
       brandingLogo: null,
       brandingUrl: '',
       brandingCompanyDetails: '',
+      brandingEmail: '',
+      brandingName: '',
+      brandingHideWatermark: canInherit ? null : false,
       brandingColors: {},
       brandingCss: '',
     };
