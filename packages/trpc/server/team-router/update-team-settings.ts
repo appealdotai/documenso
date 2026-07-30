@@ -42,7 +42,6 @@ export const updateTeamSettingsRoute = authenticatedProcedure
 
       // Branding related settings.
       brandingEnabled,
-      brandingLogo,
       brandingUrl,
       brandingCompanyDetails,
       brandingEmail,
@@ -183,7 +182,6 @@ export const updateTeamSettingsRoute = authenticatedProcedure
 
             // Branding related settings.
             brandingEnabled,
-            brandingLogo,
             brandingUrl,
             brandingCompanyDetails,
             brandingEmail,
