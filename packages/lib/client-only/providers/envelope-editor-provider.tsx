@@ -60,6 +60,9 @@ type EnvelopeEditorProviderValue = {
   autosaveError: boolean;
   resetForms: () => void;
 
+  isSnappingEnabled: boolean;
+  setIsSnappingEnabled: (enabled: boolean) => void;
+
   relativePath: {
     basePath: string;
     envelopePath: string;
@@ -109,6 +112,7 @@ export const EnvelopeEditorProvider = ({
 
   const [envelope, _setEnvelope] = useState(initialEnvelope);
   const [autosaveError, setAutosaveError] = useState<boolean>(false);
+  const [isSnappingEnabled, setIsSnappingEnabled] = useState<boolean>(true);
 
   const isCscMode = IS_INSTANCE_CSC_MODE();
 
@@ -518,6 +522,8 @@ export const EnvelopeEditorProvider = ({
         registerExternalFlush,
         registerPendingMutation,
         organisationEmails,
+        isSnappingEnabled,
+        setIsSnappingEnabled,
       }}
     >
       {children}

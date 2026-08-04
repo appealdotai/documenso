@@ -10,6 +10,7 @@ import {
   Building2Icon,
   Globe2Icon,
   LockIcon,
+  MagnetIcon,
   RefreshCwIcon,
   SendIcon,
   SettingsIcon,
@@ -42,6 +43,8 @@ export default function EnvelopeEditorHeader() {
     relativePath,
     editorConfig,
     flushAutosave,
+    isSnappingEnabled,
+    setIsSnappingEnabled,
   } = useCurrentEnvelopeEditor();
 
   const {
@@ -178,6 +181,15 @@ export default function EnvelopeEditorHeader() {
         </div>
 
         <div className="flex shrink-0 items-center space-x-2">
+          <Button
+            variant={isSnappingEnabled ? 'secondary' : 'outline'}
+            size="sm"
+            onClick={() => setIsSnappingEnabled(!isSnappingEnabled)}
+            title={isSnappingEnabled ? t`Disable Snap to Objects` : t`Enable Snap to Objects`}
+          >
+            <MagnetIcon className="h-4 w-4" />
+          </Button>
+
           {allowAttachments &&
             (isEmbedded ? (
               <EmbeddedEditorAttachmentPopover buttonSize="sm" />

@@ -49,7 +49,7 @@ import { EnvelopeRecipientSelectorCommand } from './envelope-recipient-selector'
 
 export const EnvelopeEditorFieldsPageRenderer = ({ pageData }: { pageData: PageRenderData }) => {
   const { t, i18n } = useLingui();
-  const { envelope, editorFields, getRecipientColorKey } = useCurrentEnvelopeEditor();
+  const { envelope, editorFields, getRecipientColorKey, isSnappingEnabled } = useCurrentEnvelopeEditor();
   const { currentEnvelopeItem, setRenderError } = useCurrentEnvelopeRender();
 
   const interactiveTransformer = useRef<Transformer | null>(null);
@@ -61,6 +61,8 @@ export const EnvelopeEditorFieldsPageRenderer = ({ pageData }: { pageData: PageR
 
   const [isFieldChanging, setIsFieldChanging] = useState(false);
   const [pendingFieldCreation, setPendingFieldCreation] = useState<Konva.Rect | null>(null);
+
+  const isModifierKeyPressedRef = useRef(false);
 
   /**
    * Whether the field was automatically selected on creation (drag-drop or marquee).
@@ -169,6 +171,14 @@ export const EnvelopeEditorFieldsPageRenderer = ({ pageData }: { pageData: PageR
     const fieldGroup = event.target as Konva.Group;
 
     if (!stage.current || !snapGuideLayer.current || !fieldGroup.hasName('field-group')) {
+      return;
+    }
+
+    const shouldSnap = isSnappingEnabled ? !isModifierKeyPressedRef.current : isModifierKeyPressedRef.current;
+
+    if (!shouldSnap) {
+      hideSnapGuides(snapGuideLayer.current);
+      pageLayer.current?.batchDraw();
       return;
     }
 
@@ -426,6 +436,13 @@ export const EnvelopeEditorFieldsPageRenderer = ({ pageData }: { pageData: PageR
         }
 
         if (selectedNodes.length === 1 && currentStage && snapGuideLayer.current) {
+          const shouldSnap = isSnappingEnabled ? !isModifierKeyPressedRef.current : isModifierKeyPressedRef.current;
+
+          if (!shouldSnap) {
+            hideSnapGuides(snapGuideLayer.current);
+            return newBox;
+          }
+
           const snapped = getSnappedResize(currentStage, selectedNodes[0] as Konva.Group, oldBox, newBox);
 
           showMultipleSnapGuides(
@@ -585,6 +602,26 @@ export const EnvelopeEditorFieldsPageRenderer = ({ pageData }: { pageData: PageR
   /**
    * Render fields when they are added or removed from the localFields.
    */
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Alt' || e.key === 'Meta') {
+        isModifierKeyPressedRef.current = true;
+      }
+    };
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === 'Alt' || e.key === 'Meta') {
+        isModifierKeyPressedRef.current = false;
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, []);
+
   useEffect(() => {
     if (!pageLayer.current || !stage.current) {
       return;
