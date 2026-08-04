@@ -1,6 +1,6 @@
 import { env } from '../utils/env';
 
-export const APP_BRANDS = ['documenso', 'aushail'] as const;
+export const APP_BRANDS = ['documenso', 'aushail', 'urbanstorm'] as const;
 
 export type TAppBrand = (typeof APP_BRANDS)[number];
 
@@ -44,13 +44,25 @@ const BRAND_CONFIGS: Record<TAppBrand, BrandConfig> = {
       { rel: 'apple-touch-icon', href: 'apple-touch-icon.png', sizes: '180x180' },
     ],
   },
+  urbanstorm: {
+    id: 'urbanstorm',
+    productName: 'eSign UrbanStorm',
+    assetPath: '/branding/urbanstorm',
+    manifestPath: '/branding/urbanstorm/site.webmanifest',
+    icons: [
+      { rel: 'icon', href: 'favicon.ico', sizes: 'any' },
+      { rel: 'icon', href: 'favicon.svg', type: 'image/svg+xml' },
+      { rel: 'icon', href: 'favicon-96x96.png', sizes: '96x96', type: 'image/png' },
+      { rel: 'apple-touch-icon', href: 'apple-touch-icon.png', sizes: '180x180' },
+    ],
+  },
 };
 
 export const getAppBrand = (): TAppBrand => {
   const value = env('NEXT_PUBLIC_APP_BRAND');
 
-  if (value === 'aushail') {
-    return 'aushail';
+  if (value === 'aushail' || value === 'urbanstorm') {
+    return value;
   }
 
   return 'documenso';
