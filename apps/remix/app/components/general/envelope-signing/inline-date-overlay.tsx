@@ -161,7 +161,7 @@ export const InlineDateOverlay = ({ field, dateFormat, onCommit, onCancel }: Inl
 
   return (
     <div
-      className="absolute z-20"
+      className="absolute z-[51]"
       style={{
         top: `${placement.top}px`,
         left: `${placement.left}px`,

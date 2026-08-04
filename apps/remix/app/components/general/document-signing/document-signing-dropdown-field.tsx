@@ -253,7 +253,7 @@ export const DocumentSigningDropdownField = ({
       {isLoading && <DocumentSigningFieldsLoader />}
 
       {isEditing && !isLoading && (
-        <div ref={listRef} className="absolute inset-x-0 top-0 z-20">
+        <div ref={listRef} className="absolute inset-x-0 top-0 z-[51]">
           <div className="pointer-events-none mb-0.5 flex h-full min-h-[100%] items-center rounded-[2px] border border-primary/40 bg-white px-1.5 text-[clamp(0.425rem,25cqw,0.825rem)] text-foreground">
             <span className="truncate">{selectedValue || t`Select`}</span>
           </div>
