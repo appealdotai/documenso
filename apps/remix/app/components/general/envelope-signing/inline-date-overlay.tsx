@@ -175,7 +175,7 @@ export const InlineDateOverlay = ({ field, dateFormat, onCommit, onCancel }: Inl
         style={getMobileOverlayScaleStyle({ openAbove, alignRight })}
         onPointerDown={(event) => event.stopPropagation()}
       >
-        <Calendar mode="single" selected={selectedDate} onSelect={(date) => void handleSelect(date)} initialFocus />
+        <Calendar mode="single" selected={selectedDate} onSelect={(date) => void handleSelect(date)} />
         <div className="border-t p-2">
           <button
             type="button"

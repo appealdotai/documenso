@@ -263,7 +263,7 @@ export const DocumentSigningDateField = ({
       {isEditing && !isLoading && (
         <div ref={panelRef} className="absolute top-full left-0 z-30 mt-1">
           <div className="rounded-md border bg-background shadow-md" onPointerDown={(event) => event.stopPropagation()}>
-            <Calendar mode="single" selected={selectedDate} onSelect={(date) => void handleSelect(date)} initialFocus />
+            <Calendar mode="single" selected={selectedDate} onSelect={(date) => void handleSelect(date)} />
           </div>
         </div>
       )}
