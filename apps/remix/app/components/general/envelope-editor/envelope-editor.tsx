@@ -35,6 +35,7 @@ import { EnvelopeDuplicateDialog } from '~/components/dialogs/envelope-duplicate
 import { EnvelopeRedistributeDialog } from '~/components/dialogs/envelope-redistribute-dialog';
 import { EnvelopeSaveAsTemplateDialog } from '~/components/dialogs/envelope-save-as-template-dialog';
 import { TemplateDirectLinkDialog } from '~/components/dialogs/template-direct-link-dialog';
+import { UnsavedChangesDialog } from '~/components/dialogs/unsaved-changes-dialog';
 import { EnvelopeEditorSettingsDialog } from '~/components/general/envelope-editor/envelope-editor-settings-dialog';
 
 import { EnvelopeEditorFieldsPage } from './envelope-editor-fields-page';
@@ -177,6 +178,9 @@ export const EnvelopeEditor = () => {
   return (
     <div className="h-screen w-screen bg-envelope-editor-background">
       <EnvelopeEditorHeader />
+
+      {/* Warns before navigating away during an in-progress or failed autosave */}
+      <UnsavedChangesDialog />
 
       {/* Main Content Area */}
       <div className="flex h-[calc(100vh-4rem)] w-screen">
