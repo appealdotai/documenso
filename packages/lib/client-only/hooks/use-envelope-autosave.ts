@@ -77,9 +77,14 @@ export function useEnvelopeAutosave<T>(saveFn: (data: T) => Promise<void>, delay
   }, [saveFn]);
 
   useEffect(() => {
-    const handleBeforeUnload = () => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
       if (timeoutRef.current || pendingPromiseRef.current) {
         void flush();
+
+        // Setting returnValue triggers the browser's native "Leave site?" dialog.
+        event.preventDefault();
+        // Legacy support for older browsers.
+        event.returnValue = '';
       }
     };
 

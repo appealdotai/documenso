@@ -16,7 +16,7 @@ import { useLingui } from '@lingui/react/macro';
 import { EnvelopeType, Prisma, ReadStatus, SendStatus, SigningStatus } from '@prisma/client';
 import type React from 'react';
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router';
+import { useBlocker, useSearchParams } from 'react-router';
 
 import type { TDocumentEmailSettings } from '../../types/document-email';
 import { formatDocumentsPath, formatTemplatesPath } from '../../utils/teams';
@@ -73,6 +73,13 @@ type EnvelopeEditorProviderValue = {
 
   registerExternalFlush: (key: string, flush: () => Promise<void>) => () => void;
   registerPendingMutation: (promise: Promise<unknown>) => void;
+
+  /**
+   * React Router blocker that fires when the user tries to navigate away while
+   * there is an in-progress autosave or a failed save.  Consumers mount an
+   * UnsavedChangesDialog driven by this state.
+   */
+  navigationBlocker: ReturnType<typeof useBlocker>;
 
   organisationEmails?: { id: string; email: string }[];
 };
@@ -421,6 +428,16 @@ export const EnvelopeEditorProvider = ({
     return isFieldsMutationPending || isRecipientsMutationPending || isEnvelopeMutationPending;
   }, [isFieldsMutationPending, isRecipientsMutationPending, isEnvelopeMutationPending]);
 
+  /**
+   * Block in-app navigation when there is an in-progress save or a failed save.
+   * The UnsavedChangesDialog mounts at the editor root and reads this blocker.
+   * We skip blocking in embedded mode — embedded editors handle their own lifecycle.
+   */
+  const navigationBlocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      !isEmbedded && (isAutosaving || autosaveError) && currentLocation.pathname !== nextLocation.pathname,
+  );
+
   const relativePath = useMemo(() => {
     let documentRootPath = formatDocumentsPath(envelope.team.url);
     let templateRootPath = formatTemplatesPath(envelope.team.url);
@@ -517,6 +534,7 @@ export const EnvelopeEditorProvider = ({
         resetForms,
         registerExternalFlush,
         registerPendingMutation,
+        navigationBlocker,
         organisationEmails,
       }}
     >
