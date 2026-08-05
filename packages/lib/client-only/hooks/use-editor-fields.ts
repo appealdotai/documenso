@@ -5,9 +5,12 @@ import { nanoid } from '@documenso/lib/universal/id';
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { Field } from '@prisma/client';
 import { FieldType } from '@prisma/client';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useFieldArray, useForm } from 'react-hook-form';
 import { z } from 'zod';
+
+/** Maximum number of undo steps to keep in memory. */
+const MAX_HISTORY_SIZE = 50;
 
 export const ZLocalFieldSchema = z.object({
   // This is the actual ID of the field if created.
@@ -62,12 +65,33 @@ type UseEditorFieldsResponse = {
   selectedRecipient: TEditorEnvelope['recipients'][number] | null;
   setSelectedRecipient: (recipientId: number | null) => void;
 
+  // History (undo / redo)
+  undo: () => void;
+  redo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
+
   resetForm: (fields?: Field[]) => void;
 };
 
 export const useEditorFields = ({ envelope, handleFieldsUpdate }: EditorFieldsProps): UseEditorFieldsResponse => {
   const [selectedFieldFormId, setSelectedFieldFormId] = useState<string | null>(null);
   const [selectedRecipientId, setSelectedRecipientId] = useState<number | null>(null);
+
+  /**
+   * Undo / redo history stacks.
+   *
+   * Each entry is a deep-cloned snapshot of `localFields` at a commit point
+   * (add, remove, update-meta, duplicate).  We do NOT snapshot during drag/resize
+   * because `updateFieldByFormId` is called on every pointer-move tick; instead
+   * callers pass `skipHistory: true` for intermediate moves and omit the flag
+   * (or explicitly pass `false`) for the final committed position.
+   */
+  const historyPastRef = useRef<TLocalField[][]>([]);
+  const historyFutureRef = useRef<TLocalField[][]>([]);
+  // Re-render trigger so canUndo/canRedo stay reactive without storing stacks in useState.
+  const [historyVersion, setHistoryVersion] = useState(0);
+  const bumpHistory = () => setHistoryVersion((v) => v + 1);
 
   const generateDefaultValues = (fields?: Field[]) => {
     const formFields = (fields || envelope.fields).map(
@@ -111,6 +135,18 @@ export const useEditorFields = ({ envelope, handleFieldsUpdate }: EditorFieldsPr
     void handleFieldsUpdate(form.getValues().fields);
   };
 
+  /**
+   * Push a snapshot of the current fields onto the undo stack and clear the redo
+   * stack (a new action breaks the forward history).
+   */
+  const snapshotHistory = useCallback(() => {
+    const snapshot = structuredClone(form.getValues().fields) as TLocalField[];
+
+    historyPastRef.current = [...historyPastRef.current.slice(-(MAX_HISTORY_SIZE - 1)), snapshot];
+    historyFutureRef.current = [];
+    bumpHistory();
+  }, [form]);
+
   const setSelectedField = (formId: string | null, bypassCheck = false) => {
     if (!formId) {
       setSelectedFieldFormId(null);
@@ -134,6 +170,8 @@ export const useEditorFields = ({ envelope, handleFieldsUpdate }: EditorFieldsPr
 
   const addField = useCallback(
     (fieldData: Omit<TLocalField, 'formId'>): TLocalField => {
+      snapshotHistory();
+
       const field: TLocalField = {
         ...fieldData,
         formId: nanoid(12),
@@ -145,7 +183,7 @@ export const useEditorFields = ({ envelope, handleFieldsUpdate }: EditorFieldsPr
       setSelectedField(field.formId, true);
       return field;
     },
-    [append, triggerFieldsUpdate, setSelectedField],
+    [append, triggerFieldsUpdate, setSelectedField, snapshotHistory],
   );
 
   const removeFieldsByFormId = useCallback(
@@ -155,11 +193,12 @@ export const useEditorFields = ({ envelope, handleFieldsUpdate }: EditorFieldsPr
         .filter((index) => index !== -1);
 
       if (indexes.length > 0) {
+        snapshotHistory();
         remove(indexes);
         triggerFieldsUpdate();
       }
     },
-    [localFields, remove, triggerFieldsUpdate],
+    [localFields, remove, triggerFieldsUpdate, snapshotHistory],
   );
 
   const setFieldId = (formId: string, id: number) => {
@@ -176,10 +215,14 @@ export const useEditorFields = ({ envelope, handleFieldsUpdate }: EditorFieldsPr
   };
 
   const updateFieldByFormId = useCallback(
-    (formId: string, updates: Partial<TLocalField>) => {
+    (formId: string, updates: Partial<TLocalField>, skipHistory = false) => {
       const index = localFields.findIndex((field) => field.formId === formId);
 
       if (index !== -1) {
+        if (!skipHistory) {
+          snapshotHistory();
+        }
+
         const updatedField = {
           ...localFields[index],
           ...updates,
@@ -192,11 +235,13 @@ export const useEditorFields = ({ envelope, handleFieldsUpdate }: EditorFieldsPr
         triggerFieldsUpdate();
       }
     },
-    [localFields, update, triggerFieldsUpdate],
+    [localFields, update, triggerFieldsUpdate, snapshotHistory],
   );
 
   const duplicateField = useCallback(
     (field: TLocalField): TLocalField => {
+      snapshotHistory();
+
       const newField: TLocalField = {
         ...structuredClone(field),
         id: undefined,
@@ -210,7 +255,7 @@ export const useEditorFields = ({ envelope, handleFieldsUpdate }: EditorFieldsPr
       triggerFieldsUpdate();
       return newField;
     },
-    [append, triggerFieldsUpdate],
+    [append, triggerFieldsUpdate, snapshotHistory],
   );
 
   const duplicateFieldToAllPages = useCallback(
@@ -221,6 +266,8 @@ export const useEditorFields = ({ envelope, handleFieldsUpdate }: EditorFieldsPr
       if (totalPages < 1) {
         return newFields;
       }
+
+      snapshotHistory();
 
       for (let pageNumber = 1; pageNumber <= totalPages; pageNumber += 1) {
         if (pageNumber === field.page) {
@@ -241,7 +288,7 @@ export const useEditorFields = ({ envelope, handleFieldsUpdate }: EditorFieldsPr
       triggerFieldsUpdate();
       return newFields;
     },
-    [append, triggerFieldsUpdate],
+    [append, triggerFieldsUpdate, snapshotHistory],
   );
 
   const getFieldByFormId = useCallback(
@@ -281,8 +328,63 @@ export const useEditorFields = ({ envelope, handleFieldsUpdate }: EditorFieldsPr
   };
 
   const resetForm = (fields?: Field[]) => {
+    historyPastRef.current = [];
+    historyFutureRef.current = [];
+    bumpHistory();
     form.reset(generateDefaultValues(fields));
   };
+
+  /**
+   * Restore the previous snapshot.
+   *
+   * The *current* state is pushed onto the redo stack so the user can go forward
+   * again.  We call `form.reset` with the snapshot to atomically replace all
+   * fields, then immediately flush to the server via `triggerFieldsUpdate`.
+   */
+  const undo = useCallback(() => {
+    if (historyPastRef.current.length === 0) {
+      return;
+    }
+
+    const snapshot = historyPastRef.current[historyPastRef.current.length - 1];
+    historyPastRef.current = historyPastRef.current.slice(0, -1);
+
+    // Push current state onto redo stack.
+    const currentSnapshot = structuredClone(form.getValues().fields) as TLocalField[];
+    historyFutureRef.current = [...historyFutureRef.current, currentSnapshot];
+
+    bumpHistory();
+
+    form.reset({ fields: snapshot });
+    void handleFieldsUpdate(snapshot);
+  }, [form, handleFieldsUpdate]);
+
+  /**
+   * Re-apply the next snapshot after an undo.
+   */
+  const redo = useCallback(() => {
+    if (historyFutureRef.current.length === 0) {
+      return;
+    }
+
+    const snapshot = historyFutureRef.current[historyFutureRef.current.length - 1];
+    historyFutureRef.current = historyFutureRef.current.slice(0, -1);
+
+    // Push current state onto undo stack.
+    const currentSnapshot = structuredClone(form.getValues().fields) as TLocalField[];
+    historyPastRef.current = [...historyPastRef.current.slice(-(MAX_HISTORY_SIZE - 1)), currentSnapshot];
+
+    bumpHistory();
+
+    form.reset({ fields: snapshot });
+    void handleFieldsUpdate(snapshot);
+  }, [form, handleFieldsUpdate]);
+
+  // Derive canUndo/canRedo reactively via historyVersion.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _historyVersion = historyVersion;
+  const canUndo = historyPastRef.current.length > 0;
+  const canRedo = historyFutureRef.current.length > 0;
 
   return {
     // Core state
@@ -307,6 +409,12 @@ export const useEditorFields = ({ envelope, handleFieldsUpdate }: EditorFieldsPr
     // Selected recipient
     selectedRecipient,
     setSelectedRecipient,
+
+    // History (undo / redo)
+    undo,
+    redo,
+    canUndo,
+    canRedo,
 
     resetForm,
   };
