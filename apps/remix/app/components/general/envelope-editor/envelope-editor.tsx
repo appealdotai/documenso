@@ -5,6 +5,7 @@ import { cn } from '@documenso/ui/lib/utils';
 import { Button } from '@documenso/ui/primitives/button';
 import { Separator } from '@documenso/ui/primitives/separator';
 import { SpinnerBox } from '@documenso/ui/primitives/spinner';
+import { Switch } from '@documenso/ui/primitives/switch';
 import type { MessageDescriptor } from '@lingui/core';
 import { msg } from '@lingui/core/macro';
 import { Trans, useLingui } from '@lingui/react/macro';
@@ -42,6 +43,7 @@ import { EnvelopeEditorFieldsPage } from './envelope-editor-fields-page';
 import EnvelopeEditorHeader from './envelope-editor-header';
 import { EnvelopeEditorPreviewPage } from './envelope-editor-preview-page';
 import { EnvelopeEditorUploadPage } from './envelope-editor-upload-page';
+import { FloatingSaveBar } from './floating-save-bar';
 
 type EnvelopeEditorStepData = {
   id: string;
@@ -86,6 +88,9 @@ export const EnvelopeEditor = () => {
     syncEnvelope,
     flushAutosave,
     resetForms,
+    isAutoSaveEnabled,
+    setIsAutoSaveEnabled,
+    hasUnsavedChanges,
   } = useCurrentEnvelopeEditor();
 
   const [searchParams, setSearchParams] = useSearchParams();
@@ -179,8 +184,12 @@ export const EnvelopeEditor = () => {
     <div className="h-screen w-screen bg-envelope-editor-background">
       <EnvelopeEditorHeader />
 
-      {/* Warns before navigating away during an in-progress or failed autosave */}
+      {/* Warns before navigating away during an in-progress or failed autosave,
+          or when auto-save is off and there are unsaved changes */}
       <UnsavedChangesDialog />
+
+      {/* Floating save bar – shown when auto-save is off and there are unsaved changes */}
+      {!isAutoSaveEnabled && hasUnsavedChanges && <FloatingSaveBar />}
 
       {/* Main Content Area */}
       <div className="flex h-[calc(100vh-4rem)] w-screen">
@@ -492,6 +501,35 @@ export const EnvelopeEditor = () => {
                 }}
               />
             )}
+
+            {/* Auto-save toggle */}
+            <button
+              type="button"
+              className={cn(
+                'flex w-full cursor-pointer items-center rounded-md px-2 py-1.5 transition-colors hover:bg-accent',
+                {
+                  'justify-center': minimizeLeftSidebar,
+                  'justify-between': !minimizeLeftSidebar,
+                },
+              )}
+              title={isAutoSaveEnabled ? t`Auto-save is on` : t`Auto-save is off`}
+              onClick={() => setIsAutoSaveEnabled(!isAutoSaveEnabled)}
+            >
+              {!minimizeLeftSidebar && (
+                <span className="text-muted-foreground text-sm">
+                  <Trans>Auto-save</Trans>
+                </span>
+              )}
+
+              <Switch
+                checked={isAutoSaveEnabled}
+                onCheckedChange={setIsAutoSaveEnabled}
+                // Prevent the button click from double-firing
+                onClick={(e) => e.stopPropagation()}
+                className="pointer-events-none"
+                aria-label={isAutoSaveEnabled ? t`Auto-save is on` : t`Auto-save is off`}
+              />
+            </button>
           </div>
 
           {/* Footer of left sidebar. */}

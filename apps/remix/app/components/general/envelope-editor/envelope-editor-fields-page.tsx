@@ -142,6 +142,12 @@ export const EnvelopeEditorFieldsPage = () => {
     editorFields.setSelectedField(targetField.formId);
   };
 
+  const lastSelectedFieldId = useRef<string | null>(null);
+
+  useEffect(() => {
+    lastSelectedFieldId.current = selectedField?.formId ?? null;
+  }, [selectedField?.formId]);
+
   const updateSelectedFieldMeta = (fieldMeta: TFieldMetaSchema) => {
     if (!selectedField) {
       return;
@@ -150,9 +156,9 @@ export const EnvelopeEditorFieldsPage = () => {
     const isMetaSame = isDeepEqual(selectedField.fieldMeta, fieldMeta);
 
     if (!isMetaSame) {
-      editorFields.updateFieldByFormId(selectedField.formId, {
-        fieldMeta,
-      });
+      const isInitialSync = lastSelectedFieldId.current !== selectedField.formId;
+
+      editorFields.updateFieldByFormId(selectedField.formId, { fieldMeta }, isInitialSync);
     }
   };
 

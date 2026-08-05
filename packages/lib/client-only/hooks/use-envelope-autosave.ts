@@ -45,6 +45,10 @@ export function useEnvelopeAutosave<T>(saveFn: (data: T) => Promise<void>, delay
     [saveFn, delay],
   );
 
+  const setData = useCallback((data: T) => {
+    lastArgsRef.current = data;
+  }, []);
+
   const flush = useCallback(async () => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
@@ -93,5 +97,5 @@ export function useEnvelopeAutosave<T>(saveFn: (data: T) => Promise<void>, delay
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [flush]);
 
-  return { triggerSave, flush, isPending, isCommiting };
+  return { triggerSave, setData, flush, isPending, isCommiting };
 }
