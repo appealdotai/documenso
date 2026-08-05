@@ -82,6 +82,10 @@ export function useEnvelopeAutosave<T>(saveFn: (data: T) => Promise<void>, delay
    * Skip the debounce and save now. The editor calls this when it needs
    * everything persisted, e.g. before sending or switching steps.
    */
+  const setData = useCallback((data: T) => {
+    pendingRef.current = { value: data };
+    setIsPending(true);
+  }, []);
   const flush = useCallback(async () => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
@@ -109,5 +113,5 @@ export function useEnvelopeAutosave<T>(saveFn: (data: T) => Promise<void>, delay
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [flush]);
 
-  return { triggerSave, flush, isPending, isCommiting };
+  return { triggerSave, setData, flush, isPending, isCommiting };
 }

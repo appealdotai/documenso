@@ -40,6 +40,11 @@ export type TEditorFieldsFormSchema = z.infer<typeof ZEditorFieldsFormSchema>;
 type EditorFieldsProps = {
   envelope: TEditorEnvelope;
   handleFieldsUpdate: (fields: TLocalField[]) => unknown;
+  /**
+   * Optional callback called after undo/redo to flush the queued save
+   * immediately, bypassing the normal debounce delay.
+   */
+  handleFieldsFlush?: () => Promise<void>;
 };
 
 type UseEditorFieldsResponse = {
@@ -74,7 +79,11 @@ type UseEditorFieldsResponse = {
   resetForm: (fields?: Field[]) => void;
 };
 
-export const useEditorFields = ({ envelope, handleFieldsUpdate }: EditorFieldsProps): UseEditorFieldsResponse => {
+export const useEditorFields = ({
+  envelope,
+  handleFieldsUpdate,
+  handleFieldsFlush,
+}: EditorFieldsProps): UseEditorFieldsResponse => {
   const [selectedFieldFormId, setSelectedFieldFormId] = useState<string | null>(null);
   const [selectedRecipientId, setSelectedRecipientId] = useState<number | null>(null);
 
@@ -339,7 +348,8 @@ export const useEditorFields = ({ envelope, handleFieldsUpdate }: EditorFieldsPr
    *
    * The *current* state is pushed onto the redo stack so the user can go forward
    * again.  We call `form.reset` with the snapshot to atomically replace all
-   * fields, then immediately flush to the server via `triggerFieldsUpdate`.
+   * fields, then immediately flush to the server via `handleFieldsFlush` (bypassing
+   * the normal debounce delay) so the canvas reflects the change without waiting.
    */
   const undo = useCallback(() => {
     if (historyPastRef.current.length === 0) {
@@ -357,7 +367,9 @@ export const useEditorFields = ({ envelope, handleFieldsUpdate }: EditorFieldsPr
 
     form.reset({ fields: snapshot });
     void handleFieldsUpdate(snapshot);
-  }, [form, handleFieldsUpdate]);
+    // Bypass the debounce — flush immediately so the save doesn't lag 2s.
+    void handleFieldsFlush?.();
+  }, [form, handleFieldsUpdate, handleFieldsFlush]);
 
   /**
    * Re-apply the next snapshot after an undo.
@@ -378,7 +390,9 @@ export const useEditorFields = ({ envelope, handleFieldsUpdate }: EditorFieldsPr
 
     form.reset({ fields: snapshot });
     void handleFieldsUpdate(snapshot);
-  }, [form, handleFieldsUpdate]);
+    // Bypass the debounce — flush immediately so the save doesn't lag 2s.
+    void handleFieldsFlush?.();
+  }, [form, handleFieldsUpdate, handleFieldsFlush]);
 
   // Derive canUndo/canRedo reactively via historyVersion.
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

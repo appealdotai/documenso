@@ -15,7 +15,16 @@ import { useToast } from '@documenso/ui/primitives/use-toast';
 import { useLingui } from '@lingui/react/macro';
 import { EnvelopeType, Prisma, ReadStatus, SendStatus, SigningStatus } from '@prisma/client';
 import type React from 'react';
-import { createContext, useCallback, useContext, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react';
 import { useBlocker, useSearchParams } from 'react-router';
 
 import type { TDocumentEmailSettings } from '../../types/document-email';
@@ -25,6 +34,8 @@ import type { TLocalField } from '../hooks/use-editor-fields';
 import { useEditorFields } from '../hooks/use-editor-fields';
 import { useEditorRecipients } from '../hooks/use-editor-recipients';
 import { useEnvelopeAutosave } from '../hooks/use-envelope-autosave';
+
+const AUTO_SAVE_STORAGE_KEY = 'documenso:envelope-editor:auto-save-enabled';
 
 export type EnvelopeEditorStep = 'upload' | 'addFields' | 'preview';
 
@@ -61,6 +72,26 @@ type EnvelopeEditorProviderValue = {
   autosaveError: boolean;
   resetForms: () => void;
 
+  /** Whether auto-save is enabled. Persisted to localStorage. */
+  isAutoSaveEnabled: boolean;
+  /** Toggle the auto-save feature on/off. */
+  setIsAutoSaveEnabled: (enabled: boolean) => void;
+  /**
+   * True when auto-save is disabled and there are local changes that have not
+   * yet been flushed to the server. Used to show the floating save bar.
+   */
+  hasUnsavedChanges: boolean;
+  /**
+   * Manually save all pending changes. Used by the floating save bar.
+   * Equivalent to flushAutosave but also clears the hasUnsavedChanges flag.
+   */
+  saveNow: () => Promise<void>;
+  /**
+   * Discard all pending changes by reloading the envelope from the server
+   * and resetting local form state.
+   */
+  discardChanges: () => Promise<void>;
+
   relativePath: {
     basePath: string;
     envelopePath: string;
@@ -77,8 +108,9 @@ type EnvelopeEditorProviderValue = {
 
   /**
    * React Router blocker that fires when the user tries to navigate away while
-   * there is an in-progress autosave or a failed save.  Consumers mount an
-   * UnsavedChangesDialog driven by this state.
+   * there is an in-progress autosave, a failed save, or (when auto-save is off)
+   * unsaved changes.  Consumers mount an UnsavedChangesDialog driven by this
+   * state.
    */
   navigationBlocker: ReturnType<typeof useBlocker>;
 
@@ -153,6 +185,34 @@ export const EnvelopeEditorProvider = ({
 
   const isCscMode = IS_INSTANCE_CSC_MODE();
 
+  // ---------------------------------------------------------------------------
+  // Auto-save toggle – persisted to localStorage so it survives page refreshes.
+  // Defaults to true (auto-save ON).
+  // ---------------------------------------------------------------------------
+  const [isAutoSaveEnabled, _setIsAutoSaveEnabled] = useState<boolean>(() => {
+    try {
+      const stored = localStorage.getItem(AUTO_SAVE_STORAGE_KEY);
+      return stored === null ? true : stored !== 'false';
+    } catch {
+      return true;
+    }
+  });
+
+  /**
+   * Tracks whether there are local changes that haven't been flushed to the
+   * server.  Only meaningful when auto-save is disabled.
+   */
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  const setIsAutoSaveEnabled = useCallback((enabled: boolean) => {
+    _setIsAutoSaveEnabled(enabled);
+    try {
+      localStorage.setItem(AUTO_SAVE_STORAGE_KEY, enabled ? 'true' : 'false');
+    } catch {
+      // Ignore storage errors (e.g., private browsing mode).
+    }
+  }, []);
+
   /**
    * CSC-mode overrides applied on top of any caller-supplied editor config.
    * TSP envelopes are forced SEQUENTIAL at send-time and the sign path has no
@@ -197,9 +257,35 @@ export const EnvelopeEditorProvider = ({
 
   const isEmbedded = editorConfig.embedded !== undefined;
 
+  /**
+   * A ref that always holds the latest `isAutoSaveEnabled` value so that
+   * callbacks closed over in `useEnvelopeAutosave` see the current value
+   * without needing to re-register the callback.
+   */
+  const isAutoSaveEnabledRef = useRef(isAutoSaveEnabled);
+  useEffect(() => {
+    isAutoSaveEnabledRef.current = isAutoSaveEnabled;
+  }, [isAutoSaveEnabled]);
+
   const editorFields = useEditorFields({
     envelope,
-    handleFieldsUpdate: (fields) => setFieldsDebounced(fields),
+    handleFieldsUpdate: (fields) => {
+      if (!isAutoSaveEnabledRef.current) {
+        // In manual-save mode: queue the data for later but also mark unsaved.
+        // We still call setFieldsDebounced so the pending args are stored and
+        // can be flushed by saveNow(). The save callback itself will check the
+        // flag and skip the network call when auto-save is off.
+        setHasUnsavedChanges(true);
+      }
+      setFieldsDebounced(fields);
+    },
+    /**
+     * Called by undo/redo to bypass the 2-second debounce and immediately
+     * persist the restored snapshot to the server (or mark unsaved in manual mode).
+     */
+    handleFieldsFlush: async () => {
+      await flushSetFields();
+    },
   });
 
   const editorRecipients = useEditorRecipients({
@@ -214,9 +300,11 @@ export const EnvelopeEditorProvider = ({
    * Handles debouncing the recipients updates to the server.
    *
    * Will set the local envelope recipients and fields after the update is complete.
+   * When auto-save is disabled, marks unsaved changes but skips the network call.
    */
   const {
-    triggerSave: setRecipientsDebounced,
+    triggerSave: _setRecipientsDebounced,
+    setData: setRecipientsData,
     flush: flushSetRecipients,
     isPending: isRecipientsMutationPending,
   } = useEnvelopeAutosave(async (localRecipients: TSetEnvelopeRecipientsRequest['recipients']) => {
@@ -267,6 +355,18 @@ export const EnvelopeEditorProvider = ({
     }
   }, 1000);
 
+  const setRecipientsDebounced = useCallback(
+    (localRecipients: TSetEnvelopeRecipientsRequest['recipients']) => {
+      if (!isAutoSaveEnabledRef.current) {
+        setRecipientsData(localRecipients);
+        setHasUnsavedChanges(true);
+      } else {
+        _setRecipientsDebounced(localRecipients);
+      }
+    },
+    [_setRecipientsDebounced, setRecipientsData],
+  );
+
   const setRecipientsAsync = async (localRecipients: TSetEnvelopeRecipientsRequest['recipients']) => {
     setRecipientsDebounced(localRecipients);
     await flushSetRecipients();
@@ -276,9 +376,11 @@ export const EnvelopeEditorProvider = ({
    * Handles debouncing the fields updates to the server.
    *
    * Will set the local envelope fields after the update is complete.
+   * When auto-save is disabled, marks unsaved changes but skips the network call.
    */
   const {
-    triggerSave: setFieldsDebounced,
+    triggerSave: _setFieldsDebounced,
+    setData: setFieldsData,
     flush: flushSetFields,
     isPending: isFieldsMutationPending,
   } = useEnvelopeAutosave(async (localFields: TLocalField[]) => {
@@ -336,6 +438,18 @@ export const EnvelopeEditorProvider = ({
     }
   }, 2000);
 
+  const setFieldsDebounced = useCallback(
+    (localFields: TLocalField[]) => {
+      if (!isAutoSaveEnabledRef.current) {
+        setFieldsData(localFields);
+        setHasUnsavedChanges(true);
+      } else {
+        _setFieldsDebounced(localFields);
+      }
+    },
+    [_setFieldsDebounced, setFieldsData],
+  );
+
   const setFieldsAsync = async (localFields: TLocalField[]) => {
     setFieldsDebounced(localFields);
     await flushSetFields();
@@ -345,9 +459,11 @@ export const EnvelopeEditorProvider = ({
    * Handles debouncing the envelope updates to the server.
    *
    * Will set the local envelope after the update is complete.
+   * When auto-save is disabled, marks unsaved changes but skips the network call.
    */
   const {
-    triggerSave: updateEnvelopeDebounced,
+    triggerSave: _updateEnvelopeDebounced,
+    setData: setUpdateEnvelopeData,
     flush: flushUpdateEnvelope,
     isPending: isEnvelopeMutationPending,
   } = useEnvelopeAutosave(async ({ data, meta }: UpdateEnvelopePayload) => {
@@ -397,6 +513,18 @@ export const EnvelopeEditorProvider = ({
     }
   }, 1000);
 
+  const updateEnvelopeDebounced = useCallback(
+    (envelopeUpdates: UpdateEnvelopePayload) => {
+      if (!isAutoSaveEnabledRef.current) {
+        setUpdateEnvelopeData(envelopeUpdates);
+        setHasUnsavedChanges(true);
+      } else {
+        _updateEnvelopeDebounced(envelopeUpdates);
+      }
+    },
+    [_updateEnvelopeDebounced, setUpdateEnvelopeData],
+  );
+
   const updateEnvelopeAsync = async (envelopeUpdates: UpdateEnvelopePayload) => {
     updateEnvelopeDebounced(envelopeUpdates);
     await flushUpdateEnvelope();
@@ -417,6 +545,10 @@ export const EnvelopeEditorProvider = ({
         ...envelopeUpdates.meta,
       },
     }));
+
+    if (!isAutoSaveEnabledRef.current) {
+      setHasUnsavedChanges(true);
+    }
 
     updateEnvelopeDebounced(envelopeUpdates);
   };
@@ -473,14 +605,29 @@ export const EnvelopeEditorProvider = ({
   }, [isFieldsMutationPending, isRecipientsMutationPending, isEnvelopeMutationPending]);
 
   /**
-   * Block in-app navigation when there is an in-progress save or a failed save.
+   * Block in-app navigation when there is an in-progress save, a failed save,
+   * or (when auto-save is off) unsaved manual changes.
    * The UnsavedChangesDialog mounts at the editor root and reads this blocker.
    * We skip blocking in embedded mode — embedded editors handle their own lifecycle.
    */
   const navigationBlocker = useBlocker(
     ({ currentLocation, nextLocation }) =>
-      !isEmbedded && (isAutosaving || autosaveError) && currentLocation.pathname !== nextLocation.pathname,
+      !isEmbedded &&
+      (isAutosaving || autosaveError || (!isAutoSaveEnabled && hasUnsavedChanges)) &&
+      currentLocation.pathname !== nextLocation.pathname,
   );
+
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (!isAutoSaveEnabledRef.current && hasUnsavedChanges) {
+        event.preventDefault();
+        event.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
 
   const relativePath = useMemo(() => {
     let documentRootPath = formatDocumentsPath(envelope.team.url);
@@ -554,6 +701,54 @@ export const EnvelopeEditorProvider = ({
     return getEnvelope();
   };
 
+  /**
+   * Manually persist all pending local changes to the server.
+   *
+   * Temporarily forces auto-save behaviour so all three debounced flushes
+   * actually fire their network calls, then restores manual-save mode.
+   */
+  const saveNow = async () => {
+    // Temporarily flip to auto-save so the flush functions issue network calls.
+    isAutoSaveEnabledRef.current = true;
+
+    try {
+      await flushAutosave();
+      setHasUnsavedChanges(false);
+      setAutosaveError(false);
+    } finally {
+      // Restore to whatever the user has set.
+      isAutoSaveEnabledRef.current = isAutoSaveEnabled;
+    }
+  };
+
+  /**
+   * Discard all unsaved local changes by reloading the envelope from the server
+   * and resetting the local form state.
+   */
+  const discardChanges = async () => {
+    if (isEmbedded) {
+      resetForms();
+      setHasUnsavedChanges(false);
+      return;
+    }
+
+    const fetchedEnvelopeData = await reloadEnvelope();
+
+    if (fetchedEnvelopeData.data) {
+      setEnvelope(fetchedEnvelopeData.data);
+
+      editorRecipients.resetForm({
+        recipients: fetchedEnvelopeData.data.recipients,
+        documentMeta: fetchedEnvelopeData.data.documentMeta,
+      });
+
+      editorFields.resetForm(fetchedEnvelopeData.data.fields);
+    }
+
+    setHasUnsavedChanges(false);
+    setAutosaveError(false);
+  };
+
   return (
     <EnvelopeEditorContext.Provider
       value={{
@@ -574,6 +769,11 @@ export const EnvelopeEditorProvider = ({
         autosaveError,
         flushAutosave,
         isAutosaving,
+        isAutoSaveEnabled,
+        setIsAutoSaveEnabled,
+        hasUnsavedChanges,
+        saveNow,
+        discardChanges,
         relativePath,
         syncEnvelope,
         navigateToStep,
