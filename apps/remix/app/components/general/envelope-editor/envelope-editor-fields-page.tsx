@@ -142,11 +142,13 @@ export const EnvelopeEditorFieldsPage = () => {
     editorFields.setSelectedField(targetField.formId);
   };
 
-  const lastSelectedFieldId = useRef<string | null>(null);
-
-  useEffect(() => {
-    lastSelectedFieldId.current = selectedField?.formId ?? null;
-  }, [selectedField?.formId]);
+  /**
+   * Tracks the last field ID and meta for which we have already performed a sync.
+   * Updated inside updateSelectedFieldMeta itself to prevent double-firing
+   * during React render cycles before the selectedField state updates.
+   */
+  const lastSyncedFieldId = useRef<string | null>(null);
+  const lastSyncedFieldMeta = useRef<TFieldMetaSchema | null>(null);
 
   const updateSelectedFieldMeta = (fieldMeta: TFieldMetaSchema) => {
     if (!selectedField) {
@@ -154,9 +156,18 @@ export const EnvelopeEditorFieldsPage = () => {
     }
 
     const isMetaSame = isDeepEqual(selectedField.fieldMeta, fieldMeta);
+    const isAlreadySynced = isDeepEqual(lastSyncedFieldMeta.current, fieldMeta);
 
-    if (!isMetaSame) {
-      const isInitialSync = lastSelectedFieldId.current !== selectedField.formId;
+    // If the meta is the same as current state OR the same as what we literally
+    // just sent in this render cycle, ignore it. This prevents double-saves.
+    if (!isMetaSame && !isAlreadySynced) {
+      // If this is the first meta update for this field, skip the history snapshot
+      // so that undo only needs one click to remove the field.
+      const isInitialSync = lastSyncedFieldId.current !== selectedField.formId;
+
+      // Mark this field and meta as synced.
+      lastSyncedFieldId.current = selectedField.formId;
+      lastSyncedFieldMeta.current = fieldMeta;
 
       editorFields.updateFieldByFormId(selectedField.formId, { fieldMeta }, isInitialSync);
     }
