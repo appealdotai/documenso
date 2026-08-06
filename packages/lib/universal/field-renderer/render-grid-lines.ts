@@ -66,7 +66,7 @@ export function calculateSnapPositions(
       return;
     }
 
-    const rect = group.getClientRect();
+    const rect = group.getClientRect({ skipStroke: true, skipShadow: true });
 
     // Vertical snap points (for horizontal alignment)
     horizontal.push(
@@ -96,7 +96,7 @@ export function calculateSnapSizes(stage: Konva.Stage, excludeId?: string): { wi
       return;
     }
 
-    const rect = group.getClientRect();
+    const rect = group.getClientRect({ skipStroke: true, skipShadow: true });
     widths.push(rect.width);
     heights.push(rect.height);
   });
@@ -122,7 +122,7 @@ export function getSnappedPosition(
   const scale = stage.scaleX();
 
   // Current size of the moving field in client coords
-  const clientRect = movingGroup.getClientRect();
+  const clientRect = movingGroup.getClientRect({ skipStroke: true, skipShadow: true });
   const clientWidth = clientRect.width;
   const clientHeight = clientRect.height;
 
