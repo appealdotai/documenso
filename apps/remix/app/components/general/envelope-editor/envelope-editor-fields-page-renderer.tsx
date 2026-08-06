@@ -48,11 +48,12 @@ import { EnvelopeRecipientSelectorCommand } from './envelope-recipient-selector'
 
 export const EnvelopeEditorFieldsPageRenderer = ({ pageData }: { pageData: PageRenderData }) => {
   const { t, i18n } = useLingui();
-  const { envelope, editorFields, getRecipientColorKey } = useCurrentEnvelopeEditor();
+  const { envelope, editorFields, getRecipientColorKey, isSnappingEnabled } = useCurrentEnvelopeEditor();
   const { currentEnvelopeItem, setRenderError } = useCurrentEnvelopeRender();
 
   const interactiveTransformer = useRef<Transformer | null>(null);
   const snapGuideLayer = useRef<Konva.Layer | null>(null);
+  const isModifierActiveRef = useRef(false);
   const editorFieldsRef = useRef(editorFields);
   editorFieldsRef.current = editorFields;
 
@@ -74,6 +75,34 @@ export const EnvelopeEditorFieldsPageRenderer = ({ pageData }: { pageData: PageR
   );
 
   const { scale, pageNumber } = pageData;
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Alt' || e.key === 'Meta') {
+        isModifierActiveRef.current = true;
+      }
+    };
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === 'Alt' || e.key === 'Meta') {
+        isModifierActiveRef.current = false;
+      }
+    };
+
+    // Check if modifier keys are pressed on window focus as well
+    const handleFocus = () => {
+      isModifierActiveRef.current = false;
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('blur', handleFocus);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('blur', handleFocus);
+    };
+  }, []);
 
   const localPageFields = useMemo(
     () =>
@@ -168,6 +197,13 @@ export const EnvelopeEditorFieldsPageRenderer = ({ pageData }: { pageData: PageR
     const fieldGroup = event.target as Konva.Group;
 
     if (!stage.current || !snapGuideLayer.current || !fieldGroup.hasName('field-group')) {
+      return;
+    }
+
+    const shouldSnap = isSnappingEnabled ? !isModifierActiveRef.current : isModifierActiveRef.current;
+
+    if (!shouldSnap) {
+      hideSnapGuides(snapGuideLayer.current);
       return;
     }
 
@@ -428,7 +464,9 @@ export const EnvelopeEditorFieldsPageRenderer = ({ pageData }: { pageData: PageR
           return oldBox;
         }
 
-        if (selectedNodes.length === 1 && currentStage && snapGuideLayer.current) {
+        const shouldSnap = isSnappingEnabled ? !isModifierActiveRef.current : isModifierActiveRef.current;
+
+        if (selectedNodes.length === 1 && currentStage && snapGuideLayer.current && shouldSnap) {
           const snapped = getSnappedResize(currentStage, selectedNodes[0] as Konva.Group, oldBox, newBox);
 
           // Reject snaps that would shrink the field below its minimum size.
