@@ -10,12 +10,9 @@ import {
   Building2Icon,
   Globe2Icon,
   LockIcon,
-  MagnetIcon,
-  Redo2Icon,
   RefreshCwIcon,
   SendIcon,
   SettingsIcon,
-  Undo2Icon,
 } from 'lucide-react';
 import { useMemo } from 'react';
 import { Link } from 'react-router';
@@ -45,10 +42,6 @@ export default function EnvelopeEditorHeader() {
     relativePath,
     editorConfig,
     flushAutosave,
-    editorFields,
-    isAutoSaveEnabled,
-    isSnappingEnabled,
-    setIsSnappingEnabled,
   } = useCurrentEnvelopeEditor();
 
   const {
@@ -86,41 +79,6 @@ export default function EnvelopeEditorHeader() {
             </Link>
           )}
           <Separator orientation="vertical" className="h-6 shrink-0" />
-
-          {/* Undo / Redo buttons — only shown on the Add Fields step where history
-              is tracked, and only when auto-save is enabled (otherwise they live
-              in the FloatingSaveBar) */}
-          {isAutoSaveEnabled && (editorFields.canUndo || editorFields.canRedo) && (
-            <>
-              <div className="flex items-center gap-1">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 w-7 p-0"
-                  disabled={!editorFields.canUndo}
-                  title={t`Undo (Ctrl+Z)`}
-                  onClick={() => editorFields.undo()}
-                >
-                  <Undo2Icon className="h-4 w-4" />
-                </Button>
-
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 w-7 p-0"
-                  disabled={!editorFields.canRedo}
-                  title={t`Redo (Ctrl+Shift+Z)`}
-                  onClick={() => editorFields.redo()}
-                >
-                  <Redo2Icon className="h-4 w-4" />
-                </Button>
-              </div>
-
-              <Separator orientation="vertical" className="h-6 shrink-0" />
-            </>
-          )}
 
           <div className="flex min-w-0 items-center space-x-2">
             <EnvelopeItemTitleInput
@@ -236,15 +194,6 @@ export default function EnvelopeEditorHeader() {
               }
             />
           )}
-
-          <Button
-            variant={isSnappingEnabled ? 'secondary' : 'outline'}
-            size="sm"
-            onClick={() => setIsSnappingEnabled(!isSnappingEnabled)}
-            title={isSnappingEnabled ? t`Disable snapping` : t`Enable snapping`}
-          >
-            <MagnetIcon className="h-4 w-4" />
-          </Button>
 
           {match({ isEmbedded, isDocument, isTemplate, allowDistributing })
             .with({ isEmbedded: false, isDocument: true, allowDistributing: true }, () => (

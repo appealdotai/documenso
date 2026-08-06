@@ -19,10 +19,13 @@ import {
   FileOutputIcon,
   LinkIcon,
   type LucideIcon,
+  MagnetIcon,
   MousePointerIcon,
+  Redo2Icon,
   SendIcon,
   SettingsIcon,
   Trash2Icon,
+  Undo2Icon,
   UploadIcon,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -91,6 +94,9 @@ export const EnvelopeEditor = () => {
     isAutoSaveEnabled,
     setIsAutoSaveEnabled,
     hasUnsavedChanges,
+    isSnappingEnabled,
+    setIsSnappingEnabled,
+    editorFields,
   } = useCurrentEnvelopeEditor();
 
   const [searchParams, setSearchParams] = useSearchParams();
@@ -501,36 +507,129 @@ export const EnvelopeEditor = () => {
                 }}
               />
             )}
-
-            {/* Auto-save toggle */}
-            <button
-              type="button"
-              className={cn(
-                'flex w-full cursor-pointer items-center rounded-md px-2 py-1.5 transition-colors hover:bg-accent',
-                {
-                  'justify-center': minimizeLeftSidebar,
-                  'justify-between': !minimizeLeftSidebar,
-                },
-              )}
-              title={isAutoSaveEnabled ? t`Auto-save is on` : t`Auto-save is off`}
-              onClick={() => setIsAutoSaveEnabled(!isAutoSaveEnabled)}
-            >
-              {!minimizeLeftSidebar && (
-                <span className="text-muted-foreground text-sm">
-                  <Trans>Auto-save</Trans>
-                </span>
-              )}
-
-              <Switch
-                checked={isAutoSaveEnabled}
-                onCheckedChange={setIsAutoSaveEnabled}
-                // Prevent the button click from double-firing
-                onClick={(e) => e.stopPropagation()}
-                className="pointer-events-none"
-                aria-label={isAutoSaveEnabled ? t`Auto-save is on` : t`Auto-save is off`}
-              />
-            </button>
           </div>
+
+          {/* Editor Tools — only shown on the Add Fields step */}
+          {pageToRender === 'addFields' && (
+            <>
+              <Separator
+                className={cn('my-2', {
+                  'mx-auto w-4/5': minimizeLeftSidebar,
+                })}
+              />
+
+              <div
+                className={cn('space-y-1 px-4 [&_.lucide]:text-muted-foreground', {
+                  'px-2': minimizeLeftSidebar,
+                })}
+              >
+                {!minimizeLeftSidebar && (
+                  <h4 className="mb-2 font-semibold text-foreground text-sm">
+                    <Trans>Editor Tools</Trans>
+                  </h4>
+                )}
+
+                {/* Undo */}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-start"
+                  disabled={!editorFields.canUndo}
+                  title={t`Undo (Ctrl+Z)`}
+                  onClick={() => editorFields.undo()}
+                >
+                  <Undo2Icon className="h-4 w-4" />
+
+                  {!minimizeLeftSidebar && (
+                    <span className="ml-2">
+                      <Trans>Undo</Trans>
+                    </span>
+                  )}
+                </Button>
+
+                {/* Redo */}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-start"
+                  disabled={!editorFields.canRedo}
+                  title={t`Redo (Ctrl+Shift+Z)`}
+                  onClick={() => editorFields.redo()}
+                >
+                  <Redo2Icon className="h-4 w-4" />
+
+                  {!minimizeLeftSidebar && (
+                    <span className="ml-2">
+                      <Trans>Redo</Trans>
+                    </span>
+                  )}
+                </Button>
+
+                {/* Snapping toggle */}
+                <button
+                  type="button"
+                  className={cn(
+                    'flex w-full cursor-pointer items-center rounded-md px-2 py-1.5 transition-colors hover:bg-accent',
+                    {
+                      'justify-center': minimizeLeftSidebar,
+                      'justify-between': !minimizeLeftSidebar,
+                    },
+                  )}
+                  title={isSnappingEnabled ? t`Snapping is on` : t`Snapping is off`}
+                  onClick={() => setIsSnappingEnabled(!isSnappingEnabled)}
+                >
+                  {!minimizeLeftSidebar && (
+                    <span className="flex items-center gap-2 text-muted-foreground text-sm">
+                      <MagnetIcon className="h-4 w-4" />
+                      <Trans>Snapping</Trans>
+                    </span>
+                  )}
+
+                  {minimizeLeftSidebar && <MagnetIcon className="h-4 w-4" />}
+
+                  {!minimizeLeftSidebar && (
+                    <Switch
+                      checked={isSnappingEnabled}
+                      onCheckedChange={setIsSnappingEnabled}
+                      onClick={(e) => e.stopPropagation()}
+                      className="pointer-events-none"
+                      aria-label={isSnappingEnabled ? t`Snapping is on` : t`Snapping is off`}
+                    />
+                  )}
+                </button>
+
+                {/* Auto-save toggle */}
+                <button
+                  type="button"
+                  className={cn(
+                    'flex w-full cursor-pointer items-center rounded-md px-2 py-1.5 transition-colors hover:bg-accent',
+                    {
+                      'justify-center': minimizeLeftSidebar,
+                      'justify-between': !minimizeLeftSidebar,
+                    },
+                  )}
+                  title={isAutoSaveEnabled ? t`Auto-save is on` : t`Auto-save is off`}
+                  onClick={() => setIsAutoSaveEnabled(!isAutoSaveEnabled)}
+                >
+                  {!minimizeLeftSidebar && (
+                    <span className="text-muted-foreground text-sm">
+                      <Trans>Auto-save</Trans>
+                    </span>
+                  )}
+
+                  <Switch
+                    checked={isAutoSaveEnabled}
+                    onCheckedChange={setIsAutoSaveEnabled}
+                    onClick={(e) => e.stopPropagation()}
+                    className="pointer-events-none"
+                    aria-label={isAutoSaveEnabled ? t`Auto-save is on` : t`Auto-save is off`}
+                  />
+                </button>
+              </div>
+            </>
+          )}
 
           {/* Footer of left sidebar. */}
           {!editorConfig.embedded && (

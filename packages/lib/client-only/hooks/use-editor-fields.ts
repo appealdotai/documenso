@@ -58,7 +58,7 @@ type UseEditorFieldsResponse = {
   addField: (field: Omit<TLocalField, 'formId'>) => TLocalField;
   setFieldId: (formId: string, id: number) => void;
   removeFieldsByFormId: (formIds: string[]) => void;
-  updateFieldByFormId: (formId: string, updates: Partial<TLocalField>) => void;
+  updateFieldByFormId: (formId: string, updates: Partial<TLocalField>, skipHistory?: boolean) => void;
   duplicateField: (field: TLocalField, recipientId?: number) => TLocalField;
   duplicateFieldToAllPages: (field: TLocalField, recipientId?: number) => TLocalField[];
 
