@@ -22,6 +22,7 @@ import {
   MagnetIcon,
   MousePointerIcon,
   Redo2Icon,
+  SaveIcon,
   SendIcon,
   SettingsIcon,
   Trash2Icon,
@@ -513,13 +514,13 @@ export const EnvelopeEditor = () => {
           {pageToRender === 'addFields' && (
             <>
               <Separator
-                className={cn('my-2', {
-                  'mx-auto w-4/5': minimizeLeftSidebar,
+                className={cn('my-6', {
+                  'mx-auto mb-4 w-4/5': minimizeLeftSidebar,
                 })}
               />
 
               <div
-                className={cn('space-y-1 px-4 [&_.lucide]:text-muted-foreground', {
+                className={cn('space-y-3 px-4 [&_.lucide]:text-muted-foreground', {
                   'px-2': minimizeLeftSidebar,
                 })}
               >
@@ -614,7 +615,8 @@ export const EnvelopeEditor = () => {
                   onClick={() => setIsAutoSaveEnabled(!isAutoSaveEnabled)}
                 >
                   {!minimizeLeftSidebar && (
-                    <span className="text-muted-foreground text-sm">
+                    <span className="flex items-center gap-2 text-muted-foreground text-sm">
+                      <SaveIcon className="h-4 w-4" />
                       <Trans>Auto-save</Trans>
                     </span>
                   )}
@@ -630,6 +632,12 @@ export const EnvelopeEditor = () => {
               </div>
             </>
           )}
+
+          <Separator
+            className={cn('my-6', {
+              'mx-auto mb-4 w-4/5': minimizeLeftSidebar,
+            })}
+          />
 
           {/* Footer of left sidebar. */}
           {!editorConfig.embedded && (
