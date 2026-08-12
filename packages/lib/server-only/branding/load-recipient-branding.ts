@@ -43,6 +43,16 @@ export const loadRecipientBrandingByTeamId = async ({
     allowCustomBranding = false;
   }
 
+  if (!allowCustomBranding) {
+    return {
+      allowCustomBranding: false,
+      hidePoweredBy,
+      recipientForceLightMode: settings.recipientForceLightMode,
+      colors: null,
+      css: null,
+    };
+  }
+
   const parsedColors = settings.brandingColors ? ZCssVarsSchema.safeParse(settings.brandingColors) : null;
   const savedColors = parsedColors?.success ? parsedColors.data : null;
   const fieldHighlightColors = resolveSigningFieldHighlightColors(savedColors);

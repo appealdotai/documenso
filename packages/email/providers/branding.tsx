@@ -11,9 +11,6 @@ type BrandingContextValue = {
   brandingHidePoweredBy: boolean;
   brandingHideWatermark: boolean;
   brandingColors?: EmailBrandingColors;
-  /**
-   * When set by `getEmailContext`, forces recipient emails to render with a light palette.
-   */
   forceLightMode?: boolean;
 };
 

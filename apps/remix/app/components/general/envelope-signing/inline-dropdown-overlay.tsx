@@ -126,7 +126,7 @@ export const InlineDropdownOverlay = ({ field, onCommit, onCancel }: InlineDropd
 
   return (
     <div
-      className="absolute z-20"
+      className="absolute z-[51]"
       style={{
         top: `${coords.y}px`,
         left: `${coords.x}px`,
@@ -144,7 +144,7 @@ export const InlineDropdownOverlay = ({ field, onCommit, onCancel }: InlineDropd
         ref={listRef}
         role="listbox"
         aria-label={t`Dropdown options`}
-        className="absolute z-20 max-h-60 overflow-y-auto rounded-md border bg-background shadow-md"
+        className="absolute z-[51] max-h-60 overflow-y-auto rounded-md border bg-background shadow-md"
         style={{
           width: `${listWidth}px`,
           left: `${listOffsetLeft}px`,
