@@ -277,6 +277,7 @@ export const EnvelopeEditorProvider = ({
     triggerSave: _setRecipientsDebounced,
     setData: setRecipientsData,
     flush: flushSetRecipients,
+    abort: abortSetRecipients,
     isPending: isRecipientsMutationPending,
   } = useEnvelopeAutosave(async (localRecipients: TSetEnvelopeRecipientsRequest['recipients']) => {
     try {
@@ -347,6 +348,7 @@ export const EnvelopeEditorProvider = ({
     triggerSave: _setFieldsDebounced,
     setData: setFieldsData,
     flush: flushSetFields,
+    abort: abortSetFields,
     isPending: isFieldsMutationPending,
   } = useEnvelopeAutosave(async (localFields: TLocalField[]) => {
     try {
@@ -422,6 +424,7 @@ export const EnvelopeEditorProvider = ({
     triggerSave: _updateEnvelopeDebounced,
     setData: setUpdateEnvelopeData,
     flush: flushUpdateEnvelope,
+    abort: abortUpdateEnvelope,
     isPending: isEnvelopeMutationPending,
   } = useEnvelopeAutosave(async ({ data, meta }: UpdateEnvelopePayload) => {
     try {
@@ -687,6 +690,13 @@ export const EnvelopeEditorProvider = ({
    * and resetting the local form state.
    */
   const discardChanges = async () => {
+    // Abort all pending debounce timers and clear queued data FIRST.
+    // This prevents flushAutosave() (called by handleStepChange on navigation)
+    // from sending stale local data to the server after the user chose to discard.
+    abortSetRecipients();
+    abortSetFields();
+    abortUpdateEnvelope();
+
     if (isEmbedded) {
       resetForms();
       setHasUnsavedChanges(false);
