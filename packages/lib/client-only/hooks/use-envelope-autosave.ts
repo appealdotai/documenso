@@ -95,7 +95,20 @@ export function useEnvelopeAutosave<T>(saveFn: (data: T) => Promise<void>, delay
     await commit();
   }, [commit]);
 
-  // Last-ditch attempt to save if the tab closes with unsaved edits.
+  /**
+   * Cancel any pending debounce and discard queued data without sending it
+   * to the server. Used when the user explicitly discards changes.
+   */
+  const abort = useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+
+    pendingRef.current = null;
+    setIsPending(false);
+  }, []);
+
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
       if (timeoutRef.current || pendingRef.current || commitPromiseRef.current) {
@@ -111,5 +124,5 @@ export function useEnvelopeAutosave<T>(saveFn: (data: T) => Promise<void>, delay
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [flush]);
 
-  return { triggerSave, setData, flush, isPending, isCommiting };
+  return { triggerSave, setData, flush, abort, isPending, isCommiting };
 }
