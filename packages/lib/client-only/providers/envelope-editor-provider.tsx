@@ -610,12 +610,24 @@ export const EnvelopeEditorProvider = ({
    * The UnsavedChangesDialog mounts at the editor root and reads this blocker.
    * We skip blocking in embedded mode — embedded editors handle their own lifecycle.
    */
-  const navigationBlocker = useBlocker(
-    ({ currentLocation, nextLocation }) =>
-      !isEmbedded &&
-      (isAutosaving || autosaveError || (!isAutoSaveEnabled && hasUnsavedChanges)) &&
-      currentLocation.pathname !== nextLocation.pathname,
-  );
+  const navigationBlocker = useBlocker(({ currentLocation, nextLocation }) => {
+    if (isEmbedded) {
+      return false;
+    }
+
+    const isPathChange = currentLocation.pathname !== nextLocation.pathname;
+    const isStepChange = currentLocation.search !== nextLocation.search;
+
+    if (isPathChange) {
+      return isAutosaving || autosaveError || (!isAutoSaveEnabled && hasUnsavedChanges);
+    }
+
+    if (isStepChange) {
+      return !isAutoSaveEnabled && hasUnsavedChanges;
+    }
+
+    return false;
+  });
 
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
