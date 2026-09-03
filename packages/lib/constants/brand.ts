@@ -66,7 +66,7 @@ const BRAND_CONFIGS: Record<TAppBrand, BrandConfig> = {
   },
   assessdirect: {
     id: 'assessdirect',
-    productName: 'eSign assessdirect',
+    productName: 'eSign AssessDirect',
     assetPath: '/branding/assessdirect',
     manifestPath: '/branding/assessdirect/site.webmanifest',
     logoPath: '/branding/assessdirect/favicon.svg',
