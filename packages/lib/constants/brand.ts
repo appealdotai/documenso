@@ -16,6 +16,8 @@ type BrandConfig = {
   productName: string;
   assetPath: string;
   manifestPath: string;
+  logoPath?: string;
+  logoIconPath?: string;
   icons: BrandIconLink[];
 };
 
@@ -25,6 +27,8 @@ const BRAND_CONFIGS: Record<TAppBrand, BrandConfig> = {
     productName: 'Documenso',
     assetPath: '/branding/documenso',
     manifestPath: '/branding/documenso/site.webmanifest',
+    logoPath: '/branding/documenso/apple-touch-icon.png',
+    logoIconPath: '/branding/documenso/apple-touch-icon.png',
     icons: [
       { rel: 'icon', href: 'favicon.ico', sizes: 'any' },
       { rel: 'icon', href: 'favicon-16x16.png', sizes: '16x16', type: 'image/png' },
@@ -37,6 +41,8 @@ const BRAND_CONFIGS: Record<TAppBrand, BrandConfig> = {
     productName: 'eSign AusHail',
     assetPath: '/branding/aushail',
     manifestPath: '/branding/aushail/site.webmanifest',
+    logoPath: '/branding/aushail/favicon.svg',
+    logoIconPath: '/branding/aushail/favicon.svg',
     icons: [
       { rel: 'icon', href: 'favicon.ico', sizes: 'any' },
       { rel: 'icon', href: 'favicon.svg', type: 'image/svg+xml' },
@@ -49,6 +55,8 @@ const BRAND_CONFIGS: Record<TAppBrand, BrandConfig> = {
     productName: 'eSign UrbanStorm',
     assetPath: '/branding/urbanstorm',
     manifestPath: '/branding/urbanstorm/site.webmanifest',
+    logoPath: '/branding/urbanstorm/favicon.svg',
+    logoIconPath: '/branding/urbanstorm/favicon.svg',
     icons: [
       { rel: 'icon', href: 'favicon.ico', sizes: 'any' },
       { rel: 'icon', href: 'favicon.svg', type: 'image/svg+xml' },
@@ -61,6 +69,8 @@ const BRAND_CONFIGS: Record<TAppBrand, BrandConfig> = {
     productName: 'eSign assessdirect',
     assetPath: '/branding/assessdirect',
     manifestPath: '/branding/assessdirect/site.webmanifest',
+    logoPath: '/branding/assessdirect/favicon.svg',
+    logoIconPath: '/branding/assessdirect/favicon.svg',
     icons: [
       { rel: 'icon', href: 'favicon.ico', sizes: 'any' },
       { rel: 'icon', href: 'favicon.svg', type: 'image/svg+xml' },
