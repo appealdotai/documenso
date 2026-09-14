@@ -56,6 +56,8 @@ export const EnvelopeEditorFieldsPageRenderer = ({ pageData }: { pageData: PageR
   const isModifierActiveRef = useRef(false);
   const editorFieldsRef = useRef(editorFields);
   editorFieldsRef.current = editorFields;
+  const isSnappingEnabledRef = useRef(isSnappingEnabled);
+  isSnappingEnabledRef.current = isSnappingEnabled;
 
   const [selectedKonvaFieldGroups, setSelectedKonvaFieldGroups] = useState<Konva.Group[]>([]);
 
@@ -200,7 +202,7 @@ export const EnvelopeEditorFieldsPageRenderer = ({ pageData }: { pageData: PageR
       return;
     }
 
-    const shouldSnap = isSnappingEnabled ? !isModifierActiveRef.current : isModifierActiveRef.current;
+    const shouldSnap = isSnappingEnabledRef.current ? !isModifierActiveRef.current : isModifierActiveRef.current;
 
     if (!shouldSnap) {
       hideSnapGuides(snapGuideLayer.current);
@@ -464,7 +466,7 @@ export const EnvelopeEditorFieldsPageRenderer = ({ pageData }: { pageData: PageR
           return oldBox;
         }
 
-        const shouldSnap = isSnappingEnabled ? !isModifierActiveRef.current : isModifierActiveRef.current;
+        const shouldSnap = isSnappingEnabledRef.current ? !isModifierActiveRef.current : isModifierActiveRef.current;
 
         if (selectedNodes.length === 1 && currentStage && snapGuideLayer.current && shouldSnap) {
           const snapped = getSnappedResize(currentStage, selectedNodes[0] as Konva.Group, oldBox, newBox);
@@ -698,6 +700,41 @@ export const EnvelopeEditorFieldsPageRenderer = ({ pageData }: { pageData: PageR
     isFieldChanging,
     editorFields.selectedField?.formId,
   ]);
+
+  /**
+   * Global keyboard shortcuts for undo (Ctrl/Cmd+Z) and redo (Ctrl/Cmd+Shift+Z or Ctrl/Cmd+Y).
+   * Only active while this page renderer is mounted (i.e. the "Add Fields" step is visible).
+   */
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const isMac = navigator.platform.toUpperCase().includes('MAC');
+      const isModifier = isMac ? event.metaKey : event.ctrlKey;
+
+      if (!isModifier) {
+        return;
+      }
+
+      const isShift = event.shiftKey;
+      const key = event.key.toLowerCase();
+
+      if (key === 'z' && !isShift) {
+        event.preventDefault();
+        editorFields.undo();
+        return;
+      }
+
+      if ((key === 'z' && isShift) || key === 'y') {
+        event.preventDefault();
+        editorFields.redo();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [editorFields.undo, editorFields.redo]);
 
   const setSelectedFields = (nodes: Konva.Node[], options?: { isAutoSelect?: boolean }) => {
     // Any explicit (user-driven) selection shows the action toolbar; only auto-selection
