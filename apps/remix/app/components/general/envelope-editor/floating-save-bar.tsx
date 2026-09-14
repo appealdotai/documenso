@@ -16,7 +16,7 @@ import { useState } from 'react';
 export const FloatingSaveBar = () => {
   const { t } = useLingui();
 
-  const { saveNow, discardChanges, editorFields, isAutosaving } = useCurrentEnvelopeEditor();
+  const { saveNow, discardChanges, editorFields } = useCurrentEnvelopeEditor();
 
   const [isSaving, setIsSaving] = useState(false);
   const [isDiscarding, setIsDiscarding] = useState(false);
@@ -39,7 +39,7 @@ export const FloatingSaveBar = () => {
     }
   };
 
-  const isBusy = isSaving || isDiscarding || isAutosaving;
+  const isBusy = isSaving || isDiscarding;
 
   return (
     // Outer wrapper: pointer-events-none keeps the transparent region from
