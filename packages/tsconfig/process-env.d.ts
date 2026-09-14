@@ -2,7 +2,7 @@ declare namespace NodeJS {
   export interface ProcessEnv {
     PORT?: string;
     NEXT_PUBLIC_WEBAPP_URL?: string;
-    NEXT_PUBLIC_APP_BRAND?: 'documenso' | 'aushail' | 'urbanstorm';
+    NEXT_PUBLIC_APP_BRAND?: 'documenso' | 'aushail' | 'urbanstorm' | 'assessdirect';
     NEXT_PRIVATE_DOCUMENSO_LICENSE_KEY?: string;
 
     NEXT_PRIVATE_GOOGLE_CLIENT_ID?: string;
@@ -93,6 +93,13 @@ declare namespace NodeJS {
     NEXT_PUBLIC_DISABLE_MICROSOFT_SIGNUP?: string;
     NEXT_PUBLIC_DISABLE_OIDC_SIGNUP?: string;
     NEXT_PRIVATE_ALLOWED_SIGNUP_DOMAINS?: string;
+
+    NEXT_PUBLIC_DISABLE_SIGNIN?: string;
+    NEXT_PUBLIC_DISABLE_EMAIL_PASSWORD_SIGNIN?: string;
+    NEXT_PUBLIC_DISABLE_GOOGLE_SIGNIN?: string;
+    NEXT_PUBLIC_DISABLE_MICROSOFT_SIGNIN?: string;
+    NEXT_PUBLIC_DISABLE_OIDC_SIGNIN?: string;
+    NEXT_PUBLIC_DISABLE_OIDC_AUTO_REDIRECT?: string;
 
     NEXT_PRIVATE_BROWSERLESS_URL?: string;
 

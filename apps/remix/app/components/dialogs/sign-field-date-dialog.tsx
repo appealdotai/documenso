@@ -56,7 +56,7 @@ export const SignFieldDateDialog = createCallable<SignFieldDateDialogProps, stri
           </DialogHeader>
 
           <div className="flex justify-center py-4">
-            <Calendar mode="single" selected={selectedDate} onSelect={setSelectedDate} initialFocus />
+            <Calendar mode="single" selected={selectedDate} onSelect={setSelectedDate} />
           </div>
 
           <DialogFooter>

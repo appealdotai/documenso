@@ -7,6 +7,7 @@ import { getEnvelopeForDirectTemplateSigning } from '@documenso/lib/server-only/
 import { getTemplateByDirectLinkToken } from '@documenso/lib/server-only/template/get-template-by-direct-link-token';
 import { DocumentAccessAuth } from '@documenso/lib/types/document-auth';
 import { extractDocumentAuthMethods } from '@documenso/lib/utils/document-auth';
+import { getRecipientsWithMissingFields } from '@documenso/lib/utils/recipients';
 import { resolveSigningFieldHighlightColors } from '@documenso/lib/utils/signing-field-highlight-colors';
 import { prisma } from '@documenso/prisma';
 import { Plural } from '@lingui/react/macro';
@@ -15,6 +16,7 @@ import { redirect } from 'react-router';
 import { match } from 'ts-pattern';
 
 import { Header as AuthenticatedHeader } from '~/components/general/app-header';
+import { DirectTemplateInvalidPageView } from '~/components/general/direct-template/direct-template-invalid-page';
 import { DirectTemplatePageView } from '~/components/general/direct-template/direct-template-page';
 import { DirectTemplateAuthPageView } from '~/components/general/direct-template/direct-template-signing-auth-page';
 import { DocumentSigningAuthPageView } from '~/components/general/document-signing/document-signing-auth-page';
@@ -71,8 +73,18 @@ const handleV1Loader = async ({ params, request }: Route.LoaderArgs) => {
     };
   }
 
+  const recipientsWithMissingFields = getRecipientsWithMissingFields(template.recipients, template.fields);
+
+  if (recipientsWithMissingFields.length > 0) {
+    return {
+      isAccessAuthValid: true,
+      isTemplateMissingSignatures: true,
+    } as const;
+  }
+
   return {
     isAccessAuthValid: true,
+    isTemplateMissingSignatures: false,
     template: {
       ...template,
       folder: null,
@@ -97,6 +109,7 @@ const handleV2Loader = async ({ params, request }: Route.LoaderArgs) => {
     .then((envelopeForSigning) => {
       return {
         isDocumentAccessValid: true,
+        isTemplateMissingSignatures: false,
         envelopeForSigning,
       } as const;
     })
@@ -106,6 +119,13 @@ const handleV2Loader = async ({ params, request }: Route.LoaderArgs) => {
       if (error.code === AppErrorCode.UNAUTHORIZED) {
         return {
           isDocumentAccessValid: false,
+        } as const;
+      }
+
+      if (error.code === AppErrorCode.MISSING_SIGNATURE_FIELD) {
+        return {
+          isDocumentAccessValid: true,
+          isTemplateMissingSignatures: true,
         } as const;
       }
 
@@ -189,6 +209,10 @@ const DirectSigningPageV1 = ({ data }: { data: Awaited<ReturnType<typeof handleV
     return <DirectTemplateAuthPageView />;
   }
 
+  if (data.isTemplateMissingSignatures) {
+    return <DirectTemplateInvalidPageView />;
+  }
+
   const { template, directTemplateRecipient } = data;
 
   return (
@@ -247,6 +271,10 @@ const DirectSigningPageV2 = ({
 
   if (!data.isDocumentAccessValid) {
     return <DocumentSigningAuthPageView email={''} emailHasAccount={true} />;
+  }
+
+  if (data.isTemplateMissingSignatures) {
+    return <DirectTemplateInvalidPageView />;
   }
 
   const { envelope, recipient } = data.envelopeForSigning;

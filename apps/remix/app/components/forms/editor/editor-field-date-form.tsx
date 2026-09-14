@@ -139,7 +139,7 @@ export const EditorFieldDateForm = ({
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="end">
-                      <Calendar mode="single" selected={selectedDate} onSelect={handleDateSelect} initialFocus />
+                      <Calendar mode="single" selected={selectedDate} onSelect={handleDateSelect} />
                     </PopoverContent>
                   </Popover>
                 </div>
