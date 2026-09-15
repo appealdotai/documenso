@@ -64,4 +64,4 @@ export const appMiddleware = async (c: Context, next: Next) => {
 // 3. Starts with /favicon (like /favicon.ico)
 // The ^ ensures matching from the beginning of the string
 // The | acts as OR operator between different patterns
-const nonPagePathRegex = /^(\/api\/|\/ingest\/|\/__manifest|\/assets\/|\/apple-.*|\/favicon.*)/;
+const nonPagePathRegex = /^(\/api\/|\/ingest\/|\/__manifest|\/assets\/|\/apple-.*|\/favicon.*|\/branding\/)/;
