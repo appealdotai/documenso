@@ -1,4 +1,6 @@
 import { PREFERRED_TEAM_URL_COOKIE } from '@documenso/lib/constants/cookies';
+import { formatPath } from '@documenso/lib/constants/app';
+import { getAppBrandConfig } from '@documenso/lib/constants/brand';
 import { AppDebugger } from '@documenso/lib/utils/debugger';
 import type { Context, Next } from 'hono';
 import { setCookie } from 'hono/cookie';
@@ -19,6 +21,25 @@ const debug = new AppDebugger('Middleware');
 export const appMiddleware = async (c: Context, next: Next) => {
   const { req } = c;
   const { path } = req;
+
+  if (path.startsWith('/.well-known/appspecific/')) {
+    return c.body(null, 404);
+  }
+
+  const brandConfig = getAppBrandConfig();
+  const legacyAssetRedirects: Record<string, string> = {
+    '/site.webmanifest': brandConfig.manifestPath,
+    '/favicon.ico': `${brandConfig.assetPath}/favicon.ico`,
+    '/favicon-16x16.png': `${brandConfig.assetPath}/favicon-16x16.png`,
+    '/favicon-32x32.png': `${brandConfig.assetPath}/favicon-32x32.png`,
+    '/apple-touch-icon.png': `${brandConfig.assetPath}/apple-touch-icon.png`,
+  };
+
+  const legacyAssetPath = legacyAssetRedirects[path];
+
+  if (legacyAssetPath) {
+    return c.redirect(formatPath(legacyAssetPath), 308);
+  }
 
   // Paths to ignore.
   if (nonPagePathRegex.test(path)) {
