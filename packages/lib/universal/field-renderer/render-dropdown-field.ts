@@ -53,7 +53,8 @@ export const renderDropdownFieldElement = (field: FieldToRender, options: Render
 
   const dropdownMeta: TDropdownFieldMeta | null = (field.fieldMeta as TDropdownFieldMeta) || null;
 
-  let selectedValue = translations?.[FieldType.DROPDOWN] || 'Select Option';
+  const placeholderValue = translations?.[FieldType.DROPDOWN] || 'Select Option';
+  let selectedValue = mode === 'edit' && dropdownMeta?.label ? dropdownMeta.label : placeholderValue;
 
   const isFirstRender = !pageLayer.findOne(`#${field.renderId}`);
 
@@ -62,7 +63,7 @@ export const renderDropdownFieldElement = (field: FieldToRender, options: Render
   fieldGroup.removeChildren();
   fieldGroup.off('transform');
 
-  const fieldRect = upsertFieldRect(field, options);
+  const fieldRect = upsertFieldRect(field, options, fieldGroup);
   fieldGroup.add(fieldRect);
 
   if (isFirstRender) {

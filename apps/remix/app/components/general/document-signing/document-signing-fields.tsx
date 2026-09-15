@@ -1,3 +1,5 @@
+import type { TFieldOverflowMode } from '@documenso/lib/types/field-meta';
+import { resolveFieldOverflowMode } from '@documenso/lib/types/field-meta';
 import { cn } from '@documenso/ui/lib/utils';
 import { Loader } from 'lucide-react';
 
@@ -26,19 +28,38 @@ type DocumentSigningFieldsInsertedProps = {
    * Defaults to left.
    */
   textAlign?: 'left' | 'center' | 'right';
+
+  /**
+   * How text should behave when it exceeds the field bounds.
+   *
+   * Defaults to crop when not specified.
+   */
+  overflow?: TFieldOverflowMode;
 };
 
-export const DocumentSigningFieldsInserted = ({ children, textAlign = 'left' }: DocumentSigningFieldsInsertedProps) => {
+export const DocumentSigningFieldsInserted = ({
+  children,
+  textAlign = 'left',
+  overflow,
+}: DocumentSigningFieldsInsertedProps) => {
+  const overflowMode = resolveFieldOverflowMode({ overflow });
+  const isCropMode = overflowMode === 'crop';
+  const isHorizontalOverflow = overflowMode === 'horizontal';
+
   return (
-    <div className="flex h-full w-full items-center overflow-hidden">
+    <div
+      className={cn('flex h-full w-full items-center', {
+        'overflow-hidden': isCropMode,
+        'overflow-visible': !isCropMode,
+      })}
+    >
       <p
-        className={cn(
-          'w-full whitespace-pre-wrap text-left text-[clamp(0.425rem,25cqw,0.825rem)] text-foreground duration-200',
-          {
-            '!text-center': textAlign === 'center',
-            '!text-right': textAlign === 'right',
-          },
-        )}
+        className={cn('w-full text-left text-[clamp(0.425rem,25cqw,0.825rem)] text-foreground duration-200', {
+          '!text-center': textAlign === 'center',
+          '!text-right': textAlign === 'right',
+          'whitespace-pre-wrap break-words': !isHorizontalOverflow,
+          'whitespace-nowrap': isHorizontalOverflow,
+        })}
       >
         {children}
       </p>

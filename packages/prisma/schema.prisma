@@ -989,6 +989,9 @@ model OrganisationGlobalSettings {
   brandingHideWatermark  Boolean @default(false)
   brandingColors         Json? /// [TCssVarsSchema] @zod.custom.use(ZCssVarsSchema)
   brandingCss            String  @default("")
+  recipientForceLightMode Boolean @default(false)
+
+  useEnvelopeTitleForDownload Boolean @default(false)
 
   recipientForceLightMode     Boolean @default(false)
   useEnvelopeTitleForDownload Boolean @default(false)
@@ -1038,6 +1041,9 @@ model TeamGlobalSettings {
   brandingHideWatermark  Boolean?
   brandingColors         Json? /// [TCssVarsSchema] @zod.custom.use(ZCssVarsSchema)
   brandingCss            String?
+  recipientForceLightMode Boolean?
+
+  useEnvelopeTitleForDownload Boolean?
 
   recipientForceLightMode     Boolean?
   useEnvelopeTitleForDownload Boolean?

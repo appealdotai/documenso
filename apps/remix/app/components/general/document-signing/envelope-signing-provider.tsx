@@ -3,8 +3,11 @@ import { isBase64Image } from '@documenso/lib/constants/signatures';
 import { DEFAULT_DOCUMENT_TIME_ZONE } from '@documenso/lib/constants/time-zones';
 import { DO_NOT_INVALIDATE_QUERY_ON_MUTATION } from '@documenso/lib/constants/trpc';
 import type { EnvelopeForSigningResponse } from '@documenso/lib/server-only/envelope/get-envelope-for-recipient-signing';
+import type { TCssVarsSchema } from '@documenso/lib/types/css-vars';
 import type { TRecipientActionAuth } from '@documenso/lib/types/document-auth';
+import { DocumentAuth } from '@documenso/lib/types/document-auth';
 import { isFieldUnsignedAndRequired, isRequiredField } from '@documenso/lib/utils/advanced-fields-helpers';
+import { extractDocumentAuthMethods } from '@documenso/lib/utils/document-auth';
 import { extractFieldInsertionValues } from '@documenso/lib/utils/envelope-signing';
 import { trpc } from '@documenso/trpc/react';
 import type { TSignEnvelopeFieldValue } from '@documenso/trpc/server/envelope-router/sign-envelope-field.types';
@@ -22,6 +25,10 @@ export type EnvelopeSigningContextValue = {
   setEmail: (_value: string) => void;
   signature: string | null;
   setSignature: (_value: string | null) => void;
+  profileSignature: string | null;
+  hasCompletedSignatureActionAuth: boolean;
+  markSignatureActionAuthCompleted: () => void;
+  recipientActionAuthRequired: boolean;
 
   showPendingFieldTooltip: boolean;
   setShowPendingFieldTooltip: (_value: boolean) => void;
@@ -42,6 +49,8 @@ export type EnvelopeSigningContextValue = {
   assistantFields: Field[];
   setSelectedAssistantRecipientId: (_value: number | null) => void;
   selectedAssistantRecipient: EnvelopeForSigningResponse['envelope']['recipients'][number] | null;
+
+  signingFieldHighlightColors: TCssVarsSchema | null;
 
   signField: (
     _fieldId: number,
@@ -71,20 +80,18 @@ export interface EnvelopeSigningProviderProps {
   email?: string | null;
   signature?: string | null;
   envelopeData: EnvelopeForSigningResponse;
+  signingFieldHighlightColors?: TCssVarsSchema | null;
   children: React.ReactNode;
 }
 
 /**
  * Inject prefilled date fields for the current recipient.
  *
- * The dates are filled in correctly when the recipient "completes" the document.
+ * Only prefills date fields that are marked as readOnly by the editor.
+ * Editable date fields with a preset value will show the value but remain editable.
  */
 const prefillDateFields = (data: EnvelopeForSigningResponse): EnvelopeForSigningResponse => {
   const { timezone, dateFormat } = data.envelope.documentMeta;
-
-  const formattedDate = DateTime.now()
-    .setZone(timezone ?? DEFAULT_DOCUMENT_TIME_ZONE)
-    .toFormat(dateFormat ?? DEFAULT_DOCUMENT_DATE_FORMAT);
 
   const prefillField = <T extends { type: FieldType; inserted: boolean; customText: string; fieldMeta: unknown }>(
     field: T,
@@ -93,12 +100,28 @@ const prefillDateFields = (data: EnvelopeForSigningResponse): EnvelopeForSigning
       return field;
     }
 
+    const meta = typeof field.fieldMeta === 'object' && field.fieldMeta !== null ? field.fieldMeta : {};
+    const fieldReadOnly = 'readOnly' in meta && meta.readOnly === true;
+    const fieldValue = 'value' in meta && typeof meta.value === 'string' ? meta.value : '';
+
+    if (!fieldReadOnly) {
+      return field;
+    }
+
+    const formattedDate = fieldValue
+      ? DateTime.fromISO(fieldValue)
+          .setZone(timezone ?? DEFAULT_DOCUMENT_TIME_ZONE)
+          .toFormat(dateFormat ?? DEFAULT_DOCUMENT_DATE_FORMAT)
+      : DateTime.now()
+          .setZone(timezone ?? DEFAULT_DOCUMENT_TIME_ZONE)
+          .toFormat(dateFormat ?? DEFAULT_DOCUMENT_DATE_FORMAT);
+
     return {
       ...field,
       customText: formattedDate,
       inserted: true,
       fieldMeta: {
-        ...(typeof field.fieldMeta === 'object' ? field.fieldMeta : {}),
+        ...meta,
         readOnly: true,
       },
     };
@@ -125,6 +148,7 @@ export const EnvelopeSigningProvider = ({
   email: initialEmail,
   signature: initialSignature,
   envelopeData: initialEnvelopeData,
+  signingFieldHighlightColors = null,
   children,
 }: EnvelopeSigningProviderProps) => {
   const [envelopeData, setEnvelopeData] = useState(() => prefillDateFields(initialEnvelopeData));
@@ -135,8 +159,18 @@ export const EnvelopeSigningProvider = ({
   const [email, setEmail] = useState(initialEmail || '');
 
   const [showPendingFieldTooltip, setShowPendingFieldTooltip] = useState(false);
+  const [hasCompletedSignatureActionAuth, setHasCompletedSignatureActionAuth] = useState(false);
 
   const isDirectTemplate = envelope.type === EnvelopeType.TEMPLATE;
+
+  const { derivedRecipientActionAuth, recipientActionAuthRequired } = useMemo(
+    () =>
+      extractDocumentAuthMethods({
+        documentAuth: envelope.authOptions,
+        recipientAuth: recipient.authOptions,
+      }),
+    [envelope.authOptions, recipient.authOptions],
+  );
 
   const { mutateAsync: signEnvelopeField } = trpc.envelope.field.sign.useMutation({
     ...DO_NOT_INVALIDATE_QUERY_ON_MUTATION,
@@ -164,35 +198,27 @@ export const EnvelopeSigningProvider = ({
     },
   });
 
-  // Ensure the user signature doesn't show up if it's not allowed.
-  const [signature, setSignature] = useState(
-    (() => {
-      const sig = initialSignature || '';
-      const isBase64 = isBase64Image(sig);
+  const profileSignature = useMemo(() => {
+    const sig = initialSignature || '';
+    const isBase64 = isBase64Image(sig);
 
-      if (
-        !sig &&
-        (envelope.documentMeta.uploadSignatureEnabled || envelope.documentMeta.drawSignatureEnabled) &&
-        envelopeData.recipientSignature?.signatureImageAsBase64
-      ) {
-        return envelopeData.recipientSignature.signatureImageAsBase64;
-      }
+    if (isBase64 && (envelope.documentMeta.uploadSignatureEnabled || envelope.documentMeta.drawSignatureEnabled)) {
+      return sig;
+    }
 
-      if (!sig && envelope.documentMeta.typedSignatureEnabled && envelopeData.recipientSignature?.typedSignature) {
-        return envelopeData.recipientSignature.typedSignature;
-      }
+    if (!isBase64 && sig && envelope.documentMeta.typedSignatureEnabled) {
+      return sig;
+    }
 
-      if (isBase64 && (envelope.documentMeta.uploadSignatureEnabled || envelope.documentMeta.drawSignatureEnabled)) {
-        return sig;
-      }
+    return null;
+  }, [initialSignature, envelope.documentMeta]);
 
-      if (!isBase64 && envelope.documentMeta.typedSignatureEnabled) {
-        return sig;
-      }
+  // Sidebar default suggestion only — not auto-applied to signature fields.
+  const [signature, setSignature] = useState(profileSignature);
 
-      return null;
-    })(),
-  );
+  const markSignatureActionAuthCompleted = () => {
+    setHasCompletedSignatureActionAuth(true);
+  };
 
   /**
    * The fields that are still required to be signed by the actual recipient.
@@ -406,6 +432,13 @@ export const EnvelopeSigningProvider = ({
         setEmail,
         signature,
         setSignature,
+        profileSignature,
+        hasCompletedSignatureActionAuth,
+        markSignatureActionAuthCompleted,
+        recipientActionAuthRequired:
+          recipientActionAuthRequired &&
+          derivedRecipientActionAuth.length > 0 &&
+          !derivedRecipientActionAuth.includes(DocumentAuth.EXPLICIT_NONE),
         envelopeData,
         envelope,
 
@@ -424,6 +457,8 @@ export const EnvelopeSigningProvider = ({
         setSelectedAssistantRecipientId,
         selectedAssistantRecipient,
         selectedAssistantRecipientFields,
+
+        signingFieldHighlightColors,
 
         signField,
       }}

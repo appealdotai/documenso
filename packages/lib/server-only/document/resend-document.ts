@@ -27,6 +27,7 @@ import { isDocumentCompleted } from '../../utils/document';
 import type { EnvelopeIdOptions } from '../../utils/envelope';
 import { isRecipientEmailValidForSending } from '../../utils/recipients';
 import { renderEmailWithI18N } from '../../utils/render-email-with-i18n';
+import { resolveBrandedInviter } from '../../utils/resolve-branded-inviter';
 import { buildEnvelopeEmailHeaders } from '../email/build-envelope-email-headers';
 import { getEmailContext } from '../email/get-email-context';
 import { getEnvelopeWhereInput } from '../envelope/get-envelope-by-id';
@@ -169,6 +170,7 @@ export const resendDocument = async ({ id, userId, recipients, teamId, requestMe
   const {
     branding,
     emailLanguage,
+    settings,
     organisationType,
     senderEmail,
     replyToEmail,
@@ -224,11 +226,17 @@ export const resendDocument = async ({ id, userId, recipients, teamId, requestMe
       }
 
       if (organisationType === OrganisationType.ORGANISATION) {
+        const { inviterName } = resolveBrandedInviter({
+          settings,
+          fallbackName: user.name,
+          fallbackEmail: user.email,
+        });
+
         emailSubject = i18n._(msg`Reminder: ${envelope.team.name} invited you to ${recipientActionVerb} a document`);
         emailMessage =
           envelope.documentMeta.message ||
           i18n._(
-            msg`${user.name || user.email} on behalf of "${envelope.team.name}" has invited you to ${recipientActionVerb} the document "${envelope.title}".`,
+            msg`${inviterName || user.email} on behalf of "${envelope.team.name}" has invited you to ${recipientActionVerb} the document "${envelope.title}".`,
           );
       }
 
@@ -242,13 +250,19 @@ export const resendDocument = async ({ id, userId, recipients, teamId, requestMe
       const signDocumentLink = `${NEXT_PUBLIC_WEBAPP_URL()}/sign/${recipient.token}`;
       const reportUrl = `${NEXT_PUBLIC_WEBAPP_URL()}/report/${recipient.token}`;
 
-      const template = createElement(DocumentInviteEmailTemplate, {
-        documentName: envelope.title,
-        inviterName: user.name || undefined,
-        inviterEmail:
+      const { inviterName, inviterEmail } = resolveBrandedInviter({
+        settings,
+        fallbackName: user.name,
+        fallbackEmail:
           organisationType === OrganisationType.ORGANISATION
             ? envelope.team?.teamEmail?.email || user.email
             : user.email,
+      });
+
+      const template = createElement(DocumentInviteEmailTemplate, {
+        documentName: envelope.title,
+        inviterName,
+        inviterEmail,
         assetBaseUrl,
         signDocumentLink,
         customBody: renderCustomEmailTemplate(emailMessage, customEmailTemplate),

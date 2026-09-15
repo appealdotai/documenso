@@ -8,6 +8,8 @@ import {
   ZRadioFieldMeta,
   ZTextFieldMeta,
 } from '@documenso/lib/types/field-meta';
+import { isSignatureFieldType } from '@documenso/prisma/guards/is-signature-field';
+import type { FieldWithSignature } from '@documenso/prisma/types/field-with-signature';
 import type { FieldWithSignatureAndFieldMeta } from '@documenso/prisma/types/field-with-signature-and-fieldmeta';
 import type {
   TRemovedSignedFieldWithTokenMutationSchema,
@@ -16,7 +18,10 @@ import type {
 import { ElementVisible } from '@documenso/ui/primitives/element-visible';
 import type { DocumentMeta } from '@prisma/client';
 import { type Field, FieldType } from '@prisma/client';
+import { useMemo } from 'react';
 import { match } from 'ts-pattern';
+
+import { SignFieldSignatureDialog } from '~/components/dialogs/sign-field-signature-dialog';
 
 import { DocumentSigningCheckboxField } from '~/components/general/document-signing/document-signing-checkbox-field';
 import { DocumentSigningDateField } from '~/components/general/document-signing/document-signing-date-field';
@@ -40,132 +45,140 @@ export type EmbedDocumentFieldsProps = {
 };
 
 export const EmbedDocumentFields = ({ fields, metadata, onSignField, onUnsignField }: EmbedDocumentFieldsProps) => {
+  const recipientSignatureFields = useMemo(() => {
+    return fields.filter((field) => isSignatureFieldType(field.type)) as FieldWithSignature[];
+  }, [fields]);
+
   return (
-    <ElementVisible target={PDF_VIEWER_PAGE_SELECTOR}>
-      {fields.map((field) =>
-        match(field.type)
-          .with(FieldType.SIGNATURE, () => (
-            <DocumentSigningSignatureField
-              key={field.id}
-              field={field}
-              onSignField={onSignField}
-              onUnsignField={onUnsignField}
-              typedSignatureEnabled={metadata?.typedSignatureEnabled}
-              uploadSignatureEnabled={metadata?.uploadSignatureEnabled}
-              drawSignatureEnabled={metadata?.drawSignatureEnabled}
-            />
-          ))
-          .with(FieldType.INITIALS, () => (
-            <DocumentSigningInitialsField
-              key={field.id}
-              field={field}
-              onSignField={onSignField}
-              onUnsignField={onUnsignField}
-            />
-          ))
-          .with(FieldType.NAME, () => (
-            <DocumentSigningNameField
-              key={field.id}
-              field={field}
-              onSignField={onSignField}
-              onUnsignField={onUnsignField}
-            />
-          ))
-          .with(FieldType.DATE, () => (
-            <DocumentSigningDateField
-              key={field.id}
-              field={field}
-              onSignField={onSignField}
-              onUnsignField={onUnsignField}
-              dateFormat={metadata?.dateFormat ?? DEFAULT_DOCUMENT_DATE_FORMAT}
-              timezone={metadata?.timezone ?? DEFAULT_DOCUMENT_TIME_ZONE}
-            />
-          ))
-          .with(FieldType.EMAIL, () => (
-            <DocumentSigningEmailField
-              key={field.id}
-              field={field}
-              onSignField={onSignField}
-              onUnsignField={onUnsignField}
-            />
-          ))
-          .with(FieldType.TEXT, () => {
-            const fieldWithMeta: FieldWithSignatureAndFieldMeta = {
-              ...field,
-              fieldMeta: field.fieldMeta ? ZTextFieldMeta.parse(field.fieldMeta) : null,
-            };
-
-            return (
-              <DocumentSigningTextField
+    <>
+      <SignFieldSignatureDialog.Root />
+      <ElementVisible target={PDF_VIEWER_PAGE_SELECTOR}>
+        {fields.map((field) =>
+          match(field.type)
+            .with(FieldType.SIGNATURE, () => (
+              <DocumentSigningSignatureField
                 key={field.id}
-                field={fieldWithMeta}
+                field={field}
+                recipientSignatureFields={recipientSignatureFields}
+                onSignField={onSignField}
+                onUnsignField={onUnsignField}
+                typedSignatureEnabled={metadata?.typedSignatureEnabled}
+                uploadSignatureEnabled={metadata?.uploadSignatureEnabled}
+                drawSignatureEnabled={metadata?.drawSignatureEnabled}
+              />
+            ))
+            .with(FieldType.INITIALS, () => (
+              <DocumentSigningInitialsField
+                key={field.id}
+                field={field}
                 onSignField={onSignField}
                 onUnsignField={onUnsignField}
               />
-            );
-          })
-          .with(FieldType.NUMBER, () => {
-            const fieldWithMeta: FieldWithSignatureAndFieldMeta = {
-              ...field,
-              fieldMeta: field.fieldMeta ? ZNumberFieldMeta.parse(field.fieldMeta) : null,
-            };
-
-            return (
-              <DocumentSigningNumberField
+            ))
+            .with(FieldType.NAME, () => (
+              <DocumentSigningNameField
                 key={field.id}
-                field={fieldWithMeta}
+                field={field}
                 onSignField={onSignField}
                 onUnsignField={onUnsignField}
               />
-            );
-          })
-          .with(FieldType.RADIO, () => {
-            const fieldWithMeta: FieldWithSignatureAndFieldMeta = {
-              ...field,
-              fieldMeta: field.fieldMeta ? ZRadioFieldMeta.parse(field.fieldMeta) : null,
-            };
-
-            return (
-              <DocumentSigningRadioField
+            ))
+            .with(FieldType.DATE, () => (
+              <DocumentSigningDateField
                 key={field.id}
-                field={fieldWithMeta}
+                field={field}
+                onSignField={onSignField}
+                onUnsignField={onUnsignField}
+                dateFormat={metadata?.dateFormat ?? DEFAULT_DOCUMENT_DATE_FORMAT}
+                timezone={metadata?.timezone ?? DEFAULT_DOCUMENT_TIME_ZONE}
+              />
+            ))
+            .with(FieldType.EMAIL, () => (
+              <DocumentSigningEmailField
+                key={field.id}
+                field={field}
                 onSignField={onSignField}
                 onUnsignField={onUnsignField}
               />
-            );
-          })
-          .with(FieldType.CHECKBOX, () => {
-            const fieldWithMeta: FieldWithSignatureAndFieldMeta = {
-              ...field,
-              fieldMeta: field.fieldMeta ? ZCheckboxFieldMeta.parse(field.fieldMeta) : null,
-            };
+            ))
+            .with(FieldType.TEXT, () => {
+              const fieldWithMeta: FieldWithSignatureAndFieldMeta = {
+                ...field,
+                fieldMeta: field.fieldMeta ? ZTextFieldMeta.parse(field.fieldMeta) : null,
+              };
 
-            return (
-              <DocumentSigningCheckboxField
-                key={field.id}
-                field={fieldWithMeta}
-                onSignField={onSignField}
-                onUnsignField={onUnsignField}
-              />
-            );
-          })
-          .with(FieldType.DROPDOWN, () => {
-            const fieldWithMeta: FieldWithSignatureAndFieldMeta = {
-              ...field,
-              fieldMeta: field.fieldMeta ? ZDropdownFieldMeta.parse(field.fieldMeta) : null,
-            };
+              return (
+                <DocumentSigningTextField
+                  key={field.id}
+                  field={fieldWithMeta}
+                  onSignField={onSignField}
+                  onUnsignField={onUnsignField}
+                />
+              );
+            })
+            .with(FieldType.NUMBER, () => {
+              const fieldWithMeta: FieldWithSignatureAndFieldMeta = {
+                ...field,
+                fieldMeta: field.fieldMeta ? ZNumberFieldMeta.parse(field.fieldMeta) : null,
+              };
 
-            return (
-              <DocumentSigningDropdownField
-                key={field.id}
-                field={fieldWithMeta}
-                onSignField={onSignField}
-                onUnsignField={onUnsignField}
-              />
-            );
-          })
-          .otherwise(() => null),
-      )}
-    </ElementVisible>
+              return (
+                <DocumentSigningNumberField
+                  key={field.id}
+                  field={fieldWithMeta}
+                  onSignField={onSignField}
+                  onUnsignField={onUnsignField}
+                />
+              );
+            })
+            .with(FieldType.RADIO, () => {
+              const fieldWithMeta: FieldWithSignatureAndFieldMeta = {
+                ...field,
+                fieldMeta: field.fieldMeta ? ZRadioFieldMeta.parse(field.fieldMeta) : null,
+              };
+
+              return (
+                <DocumentSigningRadioField
+                  key={field.id}
+                  field={fieldWithMeta}
+                  onSignField={onSignField}
+                  onUnsignField={onUnsignField}
+                />
+              );
+            })
+            .with(FieldType.CHECKBOX, () => {
+              const fieldWithMeta: FieldWithSignatureAndFieldMeta = {
+                ...field,
+                fieldMeta: field.fieldMeta ? ZCheckboxFieldMeta.parse(field.fieldMeta) : null,
+              };
+
+              return (
+                <DocumentSigningCheckboxField
+                  key={field.id}
+                  field={fieldWithMeta}
+                  onSignField={onSignField}
+                  onUnsignField={onUnsignField}
+                />
+              );
+            })
+            .with(FieldType.DROPDOWN, () => {
+              const fieldWithMeta: FieldWithSignatureAndFieldMeta = {
+                ...field,
+                fieldMeta: field.fieldMeta ? ZDropdownFieldMeta.parse(field.fieldMeta) : null,
+              };
+
+              return (
+                <DocumentSigningDropdownField
+                  key={field.id}
+                  field={fieldWithMeta}
+                  onSignField={onSignField}
+                  onUnsignField={onUnsignField}
+                />
+              );
+            })
+            .otherwise(() => null),
+        )}
+      </ElementVisible>
+    </>
   );
 };

@@ -72,6 +72,10 @@ export type EmailContextResponse = {
   settings: Omit<OrganisationGlobalSettings, 'id'>;
   claims: OrganisationClaim;
   /**
+   * When true, recipient-facing emails should be rendered with a forced light palette.
+   */
+  forceLightMode: boolean;
+  /**
    * Whether the organisation is prevented from sending emails.
    *
    * When true, ALL emails sent on behalf of this organisation must be skipped.
@@ -128,10 +132,18 @@ export const getEmailContext = async (options: GetEmailContextOptions): Promise<
         transport: mailer,
       };
 
+  const forceLightMode = options.emailType === 'RECIPIENT' && emailContext.settings.recipientForceLightMode;
+
+  const brandingWithLightMode = {
+    ...emailContext.branding,
+    forceLightMode,
+  };
+
   // Immediate return for internal emails.
   if (options.emailType === 'INTERNAL') {
     return {
       ...emailContext,
+      forceLightMode: false,
       emailTransport: resolvedTransportData.transport,
       senderEmail: {
         name: resolvedTransportData.name,
@@ -162,6 +174,8 @@ export const getEmailContext = async (options: GetEmailContextOptions): Promise<
   if (foundSenderEmail) {
     return {
       ...emailContext,
+      branding: brandingWithLightMode,
+      forceLightMode,
       emailTransport: mailer,
       senderEmail: {
         name: foundSenderEmail.emailName,
@@ -175,6 +189,8 @@ export const getEmailContext = async (options: GetEmailContextOptions): Promise<
   // No custom-domain sender → per-plan transport (if any) supplies transport + from-address.
   return {
     ...emailContext,
+    branding: brandingWithLightMode,
+    forceLightMode,
     emailTransport: resolvedTransportData.transport,
     senderEmail: {
       name: resolvedTransportData.name,
@@ -234,6 +250,7 @@ const handleOrganisationEmailContext = async (organisationId: string) => {
     branding,
     settings: organisation.organisationGlobalSettings,
     claims,
+    forceLightMode: false,
     emailsDisabled: organisation.owner.disabled || claims.flags.disableEmails === true,
     organisationId: organisation.id,
     organisationType: organisation.type,
@@ -294,6 +311,7 @@ const handleTeamEmailContext = async (teamId: number) => {
     branding,
     settings: teamSettings,
     claims,
+    forceLightMode: false,
     emailsDisabled: organisation.owner.disabled || claims.flags.disableEmails === true,
     organisationId: organisation.id,
     organisationType: organisation.type,

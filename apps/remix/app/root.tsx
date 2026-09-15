@@ -2,6 +2,7 @@ import { getOptionalSession } from '@documenso/auth/server/lib/utils/get-session
 import { useAnalytics } from '@documenso/lib/client-only/hooks/use-analytics';
 import { SessionProvider } from '@documenso/lib/client-only/providers/session';
 import { getBasePath } from '@documenso/lib/constants/app';
+import { getAppBrandConfig, getAppBrandIconLinks } from '@documenso/lib/constants/brand';
 import { APP_I18N_OPTIONS, type SupportedLanguageCodes } from '@documenso/lib/constants/i18n';
 import { createPublicEnv } from '@documenso/lib/utils/env';
 import { extractLocaleData } from '@documenso/lib/utils/i18n';
@@ -125,6 +126,8 @@ export function LayoutContent({ children }: { children: React.ReactNode }) {
   // route tree, attached directly to document.body).
   const matches = useMatches();
   const isRecipientRoute = matches.some((m) => m.id?.startsWith('routes/_recipient+'));
+  const brandIconLinks = getAppBrandIconLinks();
+  const { manifestPath } = getAppBrandConfig();
 
   return (
     // `suppressHydrationWarning` because `remix-themes` intentionally mutates

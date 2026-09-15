@@ -168,16 +168,20 @@ export const EnvelopesBulkDownloadDialog = ({
           const envelopeFiles: ZipFileEntry[] = [];
 
           for (const envelopeItem of envelopeItems) {
-            const { filename, blob } = await fetchPDF({
+            const result = await fetchPDF({
               envelopeItem,
               token: undefined,
               fileName: envelopeItem.title,
               version: downloadVersion,
             });
 
+            if (!result) {
+              continue;
+            }
+
             envelopeFiles.push({
-              filename: `${folderName}/${sanitizeZipPathSegment(filename)}`,
-              data: blob,
+              filename: `${folderName}/${sanitizeZipPathSegment(result.filename)}`,
+              data: result.blob,
             });
           }
 

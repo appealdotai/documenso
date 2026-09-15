@@ -1,4 +1,5 @@
 import { NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
+import { getAppBrandConfig } from '@documenso/lib/constants/brand';
 import { getDocumentByAccessToken } from '@documenso/lib/server-only/document/get-document-by-access-token';
 import { redirect, useLoaderData } from 'react-router';
 
@@ -11,8 +12,10 @@ export function meta({ params: { slug } }: Route.MetaArgs) {
     return undefined;
   }
 
+  const { productName } = getAppBrandConfig();
+
   return [
-    { title: 'Documenso - Share' },
+    { title: `Share - ${productName}` },
     { description: 'I just signed a document in style with Documenso!' },
     {
       property: 'og:title',

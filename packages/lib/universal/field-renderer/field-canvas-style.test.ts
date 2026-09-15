@@ -107,8 +107,15 @@ describe('getRenderableColor', () => {
 });
 
 describe('getFieldCanvasStyleCacheKey', () => {
-  it('includes validation state', () => {
-    expect(getFieldCanvasStyleCacheKey(createField({ isValidating: false }))).toBe('SIGNATURE:false:false:false');
-    expect(getFieldCanvasStyleCacheKey(createField({ isValidating: true }))).toBe('SIGNATURE:false:false:true');
+  it('includes validation and editing state', () => {
+    expect(getFieldCanvasStyleCacheKey(createField({ isValidating: false }))).toBe(
+      'SIGNATURE:false:false:false:false:required',
+    );
+    expect(getFieldCanvasStyleCacheKey(createField({ isValidating: true }))).toBe(
+      'SIGNATURE:false:false:true:false:required',
+    );
+    expect(getFieldCanvasStyleCacheKey(createField({ isEditing: true }))).toBe(
+      'SIGNATURE:false:false:false:true:required',
+    );
   });
 });

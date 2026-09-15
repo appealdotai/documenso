@@ -28,6 +28,7 @@ import { DocumentAccessAuth } from '@documenso/lib/types/document-auth';
 import { isTspEnvelope } from '@documenso/lib/types/signature-level';
 import { extractDocumentAuthMethods } from '@documenso/lib/utils/document-auth';
 import { isRecipientExpired } from '@documenso/lib/utils/recipients';
+import { resolveSigningFieldHighlightColors } from '@documenso/lib/utils/signing-field-highlight-colors';
 import { prisma } from '@documenso/prisma';
 import { SigningCard3D } from '@documenso/ui/components/signing-card';
 import { Trans } from '@lingui/react/macro';
@@ -392,7 +393,14 @@ export default function SigningPage() {
   return (
     <>
       <RecipientBranding branding={data.branding} cspNonce={cspNonce} />
-      {data.version === 2 ? <SigningPageV2 data={data.payload} /> : <SigningPageV1 data={data.payload} />}
+      {data.version === 2 ? (
+        <SigningPageV2
+          data={data.payload}
+          signingFieldHighlightColors={resolveSigningFieldHighlightColors(data.branding?.colors)}
+        />
+      ) : (
+        <SigningPageV1 data={data.payload} />
+      )}
     </>
   );
 }
@@ -495,7 +503,13 @@ const SigningPageV1 = ({ data }: { data: Awaited<ReturnType<typeof handleV1Loade
   );
 };
 
-const SigningPageV2 = ({ data }: { data: Awaited<ReturnType<typeof handleV2Loader>> }) => {
+const SigningPageV2 = ({
+  data,
+  signingFieldHighlightColors,
+}: {
+  data: Awaited<ReturnType<typeof handleV2Loader>>;
+  signingFieldHighlightColors: ReturnType<typeof resolveSigningFieldHighlightColors>;
+}) => {
   const { sessionData } = useOptionalSession();
   const user = sessionData?.user;
 
@@ -571,6 +585,7 @@ const SigningPageV2 = ({ data }: { data: Awaited<ReturnType<typeof handleV2Loade
       email={recipient.email}
       fullName={user?.email === recipient.email ? user?.name : recipient.name}
       signature={user?.email === recipient.email ? user?.signature : undefined}
+      signingFieldHighlightColors={signingFieldHighlightColors}
     >
       <DocumentSigningAuthProvider documentAuthOptions={envelope.authOptions} recipient={recipient} user={user}>
         <EnvelopeRenderProvider

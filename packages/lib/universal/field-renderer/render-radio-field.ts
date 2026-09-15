@@ -38,7 +38,7 @@ export const renderRadioFieldElement = (field: FieldToRender, options: RenderFie
     pageLayer.add(fieldGroup);
   }
 
-  const fieldRect = upsertFieldRect(field, options);
+  const fieldRect = upsertFieldRect(field, options, fieldGroup);
   fieldGroup.add(fieldRect);
 
   const fontSize = radioMeta?.fontSize || DEFAULT_STANDARD_FONT_SIZE;

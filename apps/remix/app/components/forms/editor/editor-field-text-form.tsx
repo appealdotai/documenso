@@ -1,5 +1,6 @@
 import {
   DEFAULT_FIELD_FONT_SIZE,
+  DEFAULT_TEXT_OVERFLOW_MODE,
   FIELD_DEFAULT_GENERIC_ALIGN,
   FIELD_DEFAULT_GENERIC_VERTICAL_ALIGN,
   FIELD_DEFAULT_LETTER_SPACING,
@@ -20,6 +21,7 @@ import {
   EditorGenericFontSizeField,
   EditorGenericLetterSpacingField,
   EditorGenericLineHeightField,
+  EditorGenericOverflowField,
   EditorGenericReadOnlyField,
   EditorGenericRequiredField,
   EditorGenericTextAlignField,
@@ -36,6 +38,7 @@ const ZTextFieldFormSchema = ZTextFieldMeta.pick({
   lineHeight: true,
   letterSpacing: true,
   verticalAlign: true,
+  overflow: true,
   required: true,
   readOnly: true,
 }).refine(
@@ -77,6 +80,7 @@ export const EditorFieldTextForm = ({
       lineHeight: value.lineHeight ?? FIELD_DEFAULT_LINE_HEIGHT,
       letterSpacing: value.letterSpacing ?? FIELD_DEFAULT_LETTER_SPACING,
       verticalAlign: value.verticalAlign ?? FIELD_DEFAULT_GENERIC_VERTICAL_ALIGN,
+      overflow: value.overflow ?? DEFAULT_TEXT_OVERFLOW_MODE,
       required: value.required || false,
       readOnly: value.readOnly || false,
     },
@@ -115,6 +119,8 @@ export const EditorFieldTextForm = ({
 
             <EditorGenericVerticalAlignField className="w-full" formControl={form.control} />
           </div>
+
+          <EditorGenericOverflowField className="w-full" formControl={form.control} />
 
           <FormField
             control={form.control}

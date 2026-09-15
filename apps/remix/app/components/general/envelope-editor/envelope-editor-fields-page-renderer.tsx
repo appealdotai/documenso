@@ -13,7 +13,16 @@ import {
   MIN_FIELD_HEIGHT_PX,
   MIN_FIELD_WIDTH_PX,
 } from '@documenso/lib/universal/field-renderer/field-renderer';
+import { getCheckboxFieldMinSizePx } from '@documenso/lib/universal/field-renderer/render-checkbox-field';
 import { renderField } from '@documenso/lib/universal/field-renderer/render-field';
+import {
+  getSnappedPosition,
+  getSnappedResize,
+  hideSnapGuides,
+  initializeSnapGuides,
+  showMultipleSnapGuides,
+  showSnapGuides,
+} from '@documenso/lib/universal/field-renderer/render-grid-lines';
 import { getClientSideFieldTranslations } from '@documenso/lib/utils/fields';
 import { getOverlappingFieldPairs } from '@documenso/lib/utils/fields-overlap';
 import { canRecipientFieldsBeModified } from '@documenso/lib/utils/recipients';
@@ -28,7 +37,7 @@ import {
 } from '@documenso/ui/primitives/command';
 import { FRIENDLY_FIELD_TYPE } from '@documenso/ui/primitives/document-flow/types';
 import { useLingui } from '@lingui/react/macro';
-import type { FieldType } from '@prisma/client';
+import { FieldType } from '@prisma/client';
 import Konva from 'konva';
 import type { KonvaEventObject } from 'konva/lib/Node';
 import type { Transformer } from 'konva/lib/shapes/Transformer';
@@ -44,10 +53,16 @@ const TRANSFORMER_ANCHOR_HIT_STROKE_PX = 24;
 export const EnvelopeEditorFieldsPageRenderer = ({ pageData }: { pageData: PageRenderData }) => {
   const { t, i18n } = useLingui();
   const analytics = useAnalytics();
-  const { envelope, editorFields, getRecipientColorKey } = useCurrentEnvelopeEditor();
+  const { envelope, editorFields, getRecipientColorKey, isSnappingEnabled } = useCurrentEnvelopeEditor();
   const { currentEnvelopeItem, setRenderError } = useCurrentEnvelopeRender();
 
   const interactiveTransformer = useRef<Transformer | null>(null);
+  const snapGuideLayer = useRef<Konva.Layer | null>(null);
+  const isModifierActiveRef = useRef(false);
+  const editorFieldsRef = useRef(editorFields);
+  editorFieldsRef.current = editorFields;
+  const isSnappingEnabledRef = useRef(isSnappingEnabled);
+  isSnappingEnabledRef.current = isSnappingEnabled;
 
   const [selectedKonvaFieldGroups, setSelectedKonvaFieldGroups] = useState<Konva.Group[]>([]);
 
@@ -67,6 +82,34 @@ export const EnvelopeEditorFieldsPageRenderer = ({ pageData }: { pageData: PageR
   );
 
   const { scale, pageNumber } = pageData;
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Alt' || e.key === 'Meta') {
+        isModifierActiveRef.current = true;
+      }
+    };
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === 'Alt' || e.key === 'Meta') {
+        isModifierActiveRef.current = false;
+      }
+    };
+
+    // Check if modifier keys are pressed on window focus as well
+    const handleFocus = () => {
+      isModifierActiveRef.current = false;
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('blur', handleFocus);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('blur', handleFocus);
+    };
+  }, []);
 
   const localPageFields = useMemo(
     () =>
@@ -155,6 +198,37 @@ export const EnvelopeEditorFieldsPageRenderer = ({ pageData }: { pageData: PageR
     }
 
     pageLayer.current?.batchDraw();
+  };
+
+  const handleFieldDragMove = (event: KonvaEventObject<DragEvent>) => {
+    const fieldGroup = event.target as Konva.Group;
+
+    if (!stage.current || !snapGuideLayer.current || !fieldGroup.hasName('field-group')) {
+      return;
+    }
+
+    const shouldSnap = isSnappingEnabledRef.current ? !isModifierActiveRef.current : isModifierActiveRef.current;
+
+    if (!shouldSnap) {
+      hideSnapGuides(snapGuideLayer.current);
+      return;
+    }
+
+    const snappedPosition = getSnappedPosition(stage.current, fieldGroup, fieldGroup.x(), fieldGroup.y());
+
+    if (snappedPosition.x !== fieldGroup.x() || snappedPosition.y !== fieldGroup.y()) {
+      fieldGroup.position({ x: snappedPosition.x, y: snappedPosition.y });
+    }
+
+    showSnapGuides(snapGuideLayer.current, snappedPosition.horizontalGuide, snappedPosition.verticalGuide);
+    pageLayer.current?.batchDraw();
+  };
+
+  const handleFieldDragEnd = (event: KonvaEventObject<DragEvent>) => {
+    handleFieldDragMove(event);
+    if (snapGuideLayer.current) {
+      hideSnapGuides(snapGuideLayer.current);
+    }
   };
 
   /**
@@ -273,7 +347,11 @@ export const EnvelopeEditorFieldsPageRenderer = ({ pageData }: { pageData: PageR
     });
 
     fieldGroup.on('transformend', handleResizeOrMove);
-    fieldGroup.on('dragend', handleResizeOrMove);
+    fieldGroup.on('dragmove', handleFieldDragMove);
+    fieldGroup.on('dragend', (event) => {
+      handleFieldDragEnd(event);
+      handleResizeOrMove(event);
+    });
   };
 
   const renderFieldOnLayer = (field: TLocalField) => {
@@ -297,7 +375,7 @@ export const EnvelopeEditorFieldsPageRenderer = ({ pageData }: { pageData: PageR
    */
   const createPageCanvas = (currentStage: Konva.Stage, currentPageLayer: Konva.Layer) => {
     // Initialize snap guides layer
-    // snapGuideLayer.current = initializeSnapGuides(stage.current);
+    snapGuideLayer.current = initializeSnapGuides(currentStage);
 
     // Add transformer for resizing and rotating.
     interactiveTransformer.current = createInteractiveTransformer(currentStage, currentPageLayer);
@@ -366,13 +444,79 @@ export const EnvelopeEditorFieldsPageRenderer = ({ pageData }: { pageData: PageR
         anchor.hitStrokeWidth(TRANSFORMER_ANCHOR_HIT_STROKE_PX / scale);
       },
       boundBoxFunc: (oldBox, newBox) => {
-        // Enforce minimum size
-        if (newBox.width < 30 || newBox.height < 20) {
+        const DEFAULT_MIN_WIDTH = 30;
+        const DEFAULT_MIN_HEIGHT = 20;
+
+        let minWidth = DEFAULT_MIN_WIDTH;
+        let minHeight = DEFAULT_MIN_HEIGHT;
+
+        const selectedNodes = transformer.nodes();
+
+        // Checkbox fields can shrink until left/right insets match the 2px padding.
+        // Bound box values are in stage (scaled) coordinates.
+        if (selectedNodes.length === 1) {
+          const field = editorFieldsRef.current.localFields.find(
+            (localField) => localField.formId === selectedNodes[0].id(),
+          );
+
+          if (field?.type === FieldType.CHECKBOX) {
+            const checkboxMeta = field.fieldMeta?.type === 'checkbox' ? field.fieldMeta : null;
+            const { minWidth: checkboxMinWidth, minHeight: checkboxMinHeight } = getCheckboxFieldMinSizePx({
+              fontSize: checkboxMeta?.fontSize,
+              itemCount: checkboxMeta?.values?.length ?? 1,
+              direction: checkboxMeta?.direction ?? 'vertical',
+            });
+
+            minWidth = checkboxMinWidth * scale;
+            minHeight = checkboxMinHeight * scale;
+          }
+        }
+
+        if (newBox.width < minWidth || newBox.height < minHeight) {
+          if (snapGuideLayer.current) {
+            hideSnapGuides(snapGuideLayer.current);
+          }
+
           return oldBox;
+        }
+
+        const shouldSnap = isSnappingEnabledRef.current ? !isModifierActiveRef.current : isModifierActiveRef.current;
+
+        if (selectedNodes.length === 1 && currentStage && snapGuideLayer.current && shouldSnap) {
+          const snapped = getSnappedResize(currentStage, selectedNodes[0] as Konva.Group, oldBox, newBox);
+
+          // Reject snaps that would shrink the field below its minimum size.
+          if (snapped.width < minWidth || snapped.height < minHeight) {
+            hideSnapGuides(snapGuideLayer.current);
+            return newBox;
+          }
+
+          showMultipleSnapGuides(
+            snapGuideLayer.current,
+            snapped.horizontalGuides,
+            snapped.verticalGuides,
+            currentStage.width(),
+            currentStage.height(),
+          );
+
+          return {
+            ...newBox,
+            x: snapped.x,
+            y: snapped.y,
+            width: snapped.width,
+            height: snapped.height,
+          };
         }
 
         return newBox;
       },
+    });
+
+    // Make sure we clear snapping guides when transform ends
+    transformer.on('transformend', () => {
+      if (snapGuideLayer.current) {
+        hideSnapGuides(snapGuideLayer.current);
+      }
     });
 
     currentPageLayer.add(transformer);

@@ -191,8 +191,14 @@ export const generateDefaultTeamSettings = (): Omit<TeamGlobalSettings, 'id' | '
     brandingLogo: null,
     brandingUrl: null,
     brandingCompanyDetails: null,
+    brandingEmail: null,
+    brandingName: null,
+    brandingHideWatermark: null,
     brandingColors: null,
     brandingCss: null,
+    recipientForceLightMode: null,
+
+    useEnvelopeTitleForDownload: null,
 
     emailDocumentSettings: null,
     emailId: null,

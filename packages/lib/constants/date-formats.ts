@@ -173,20 +173,53 @@ export const convertToLocalSystemFormat = (
 ): string => {
   const coalescedDateFormat = dateFormat ?? DEFAULT_DOCUMENT_DATE_FORMAT;
   const coalescedTimeZone = timeZone ?? DEFAULT_DOCUMENT_TIME_ZONE;
+  const dateOnlyFormat = toDateOnlyFormat(coalescedDateFormat);
 
-  const parsedDate = DateTime.fromFormat(customText, coalescedDateFormat, {
+  const parsedWithFullFormat = DateTime.fromFormat(customText, coalescedDateFormat, {
     zone: coalescedTimeZone,
   });
 
-  if (!parsedDate.isValid) {
-    return 'Invalid date';
+  if (parsedWithFullFormat.isValid) {
+    return parsedWithFullFormat.toLocal().toFormat(coalescedDateFormat);
   }
 
-  const formattedDate = parsedDate.toLocal().toFormat(coalescedDateFormat);
+  // Date-only stamps (calendar picks) won't match time-inclusive formats.
+  const parsedWithDateOnlyFormat = DateTime.fromFormat(customText, dateOnlyFormat, {
+    zone: coalescedTimeZone,
+  });
 
-  return formattedDate;
+  if (parsedWithDateOnlyFormat.isValid) {
+    return parsedWithDateOnlyFormat.toLocal().toFormat(dateOnlyFormat);
+  }
+
+  return 'Invalid date';
 };
 
 export const isValidDateFormat = (dateFormat: unknown): dateFormat is ValidDateFormat => {
   return VALID_DATE_FORMAT_VALUES.includes(dateFormat as ValidDateFormat);
+};
+
+/**
+ * True when the value is a calendar date with no time component (e.g. `2026-07-14`).
+ */
+export const isIsoDateOnlyValue = (value: string): boolean => {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value);
+};
+
+/**
+ * Strips time tokens from a Luxon date format so date-only values do not
+ * render a meaningless midnight / 12:00 AM suffix.
+ */
+export const toDateOnlyFormat = (dateFormat: string): string => {
+  const stripped = dateFormat
+    .replace(/'T'/g, ' ')
+    .replace(/\s*HH:mm:ss\.SSSXXX/g, '')
+    .replace(/\s*HH:mm:ss/g, '')
+    .replace(/\s*HH:mm/g, '')
+    .replace(/\s*hh:mm\s*a/gi, '')
+    .replace(/\s*hh:mm/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return stripped.length > 0 ? stripped : 'yyyy-MM-dd';
 };

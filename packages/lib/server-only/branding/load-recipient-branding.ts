@@ -1,12 +1,17 @@
 import { IS_BILLING_ENABLED } from '../../constants/app';
 import type { TCssVarsSchema } from '../../types/css-vars';
 import { ZCssVarsSchema } from '../../types/css-vars';
+import {
+  hasSigningFieldHighlightOverrides,
+  resolveSigningFieldHighlightColors,
+} from '../../utils/signing-field-highlight-colors';
 import { getOrganisationClaimByTeamId } from '../organisation/get-organisation-claims';
 import { getTeamSettings } from '../team/get-team-settings';
 
 export type RecipientBrandingPayload = {
   allowCustomBranding: boolean;
   hidePoweredBy: boolean;
+  recipientForceLightMode: boolean;
   colors: TCssVarsSchema | null;
   css: string | null;
 };
@@ -42,18 +47,26 @@ export const loadRecipientBrandingByTeamId = async ({
     return {
       allowCustomBranding: false,
       hidePoweredBy,
+      recipientForceLightMode: settings.recipientForceLightMode,
       colors: null,
       css: null,
     };
   }
 
-  // brandingColors is stored as JSON; parse defensively. Drop unknown keys via Zod.
   const parsedColors = settings.brandingColors ? ZCssVarsSchema.safeParse(settings.brandingColors) : null;
+  const savedColors = parsedColors?.success ? parsedColors.data : null;
+  const fieldHighlightColors = resolveSigningFieldHighlightColors(savedColors);
+
+  const mergedColors: TCssVarsSchema = {
+    ...(allowCustomBranding && savedColors ? savedColors : {}),
+    ...fieldHighlightColors,
+  };
 
   return {
-    allowCustomBranding: true,
+    allowCustomBranding: allowCustomBranding || hasSigningFieldHighlightOverrides(savedColors),
     hidePoweredBy,
-    colors: parsedColors?.success ? parsedColors.data : null,
-    css: settings.brandingCss && settings.brandingCss.length > 0 ? settings.brandingCss : null,
+    recipientForceLightMode: settings.recipientForceLightMode,
+    colors: mergedColors,
+    css: allowCustomBranding && settings.brandingCss && settings.brandingCss.length > 0 ? settings.brandingCss : null,
   };
 };

@@ -47,7 +47,18 @@ export default function TeamsSettingsPage() {
 
   const onBrandingPreferencesFormSubmit = async (data: TBrandingPreferencesFormSchema) => {
     try {
-      const { brandingEnabled, brandingLogo, brandingUrl, brandingCompanyDetails, brandingColors, brandingCss } = data;
+      const {
+        brandingEnabled,
+        recipientForceLightMode,
+        brandingLogo,
+        brandingUrl,
+        brandingCompanyDetails,
+        brandingEmail,
+        brandingName,
+        brandingHideWatermark,
+        brandingColors,
+        brandingCss,
+      } = data;
 
       // Upload (or clear) the logo through the dedicated, server-validated route.
       if (brandingLogo instanceof File || brandingLogo === null) {
@@ -68,6 +79,9 @@ export default function TeamsSettingsPage() {
           brandingEnabled,
           brandingUrl: brandingUrl || null,
           brandingCompanyDetails: brandingCompanyDetails || null,
+          brandingEmail: brandingEmail || null,
+          brandingName: brandingName || null,
+          brandingHideWatermark,
           brandingColors,
           brandingCss,
         },

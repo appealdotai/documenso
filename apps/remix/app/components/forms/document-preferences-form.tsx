@@ -15,7 +15,15 @@ import { DocumentSignatureSettingsTooltip } from '@documenso/ui/components/docum
 import { RecipientRoleSelect } from '@documenso/ui/components/recipient/recipient-role-select';
 import { AvatarWithText } from '@documenso/ui/primitives/avatar';
 import { Combobox } from '@documenso/ui/primitives/combobox';
-import { Form, FormControl, FormDescription, FormField, FormMessage } from '@documenso/ui/primitives/form/form';
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@documenso/ui/primitives/form/form';
 import { MultiSelectCombobox } from '@documenso/ui/primitives/multi-select-combobox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@documenso/ui/primitives/select';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -44,6 +52,7 @@ export type TDocumentPreferencesFormSchema = {
   defaultRecipients: TDefaultRecipients | null;
   delegateDocumentOwnership: boolean | null;
   aiFeaturesEnabled: boolean | null;
+  useEnvelopeTitleForDownload: boolean | null;
 };
 
 type SettingsSubset = Pick<
@@ -58,6 +67,7 @@ type SettingsSubset = Pick<
   | 'defaultRecipients'
   | 'delegateDocumentOwnership'
   | 'aiFeaturesEnabled'
+  | 'useEnvelopeTitleForDownload'
 >;
 
 export type DocumentPreferencesFormProps = {
@@ -78,6 +88,7 @@ const getDocumentPreferencesFormValues = (settings: SettingsSubset): TDocumentPr
     defaultRecipients: settings.defaultRecipients ? ZDefaultRecipientsSchema.parse(settings.defaultRecipients) : null,
     delegateDocumentOwnership: settings.delegateDocumentOwnership,
     aiFeaturesEnabled: settings.aiFeaturesEnabled,
+    useEnvelopeTitleForDownload: settings.useEnvelopeTitleForDownload,
   };
 };
 
@@ -102,6 +113,7 @@ export const DocumentPreferencesForm = ({ settings, onFormSubmit, canInherit }: 
     defaultRecipients: ZDefaultRecipientsSchema.nullable(),
     delegateDocumentOwnership: z.boolean().nullable(),
     aiFeaturesEnabled: z.boolean().nullable(),
+    useEnvelopeTitleForDownload: z.boolean().nullable(),
   });
 
   const defaultValues = getDocumentPreferencesFormValues(settings);
@@ -353,6 +365,56 @@ export const DocumentPreferencesForm = ({ settings, onFormSubmit, canInherit }: 
                   </FormDescription>
                 )}
               </InheritableField>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="useEnvelopeTitleForDownload"
+            render={({ field }) => (
+              <FormItem className="flex-1">
+                <FormLabel>
+                  <Trans>Use document title for downloaded file names</Trans>
+                </FormLabel>
+
+                <FormControl>
+                  <Select
+                    {...field}
+                    value={field.value === null ? '-1' : field.value.toString()}
+                    onValueChange={(value) =>
+                      field.onChange(value === 'true' ? true : value === 'false' ? false : null)
+                    }
+                  >
+                    <SelectTrigger className="bg-background text-muted-foreground">
+                      <SelectValue />
+                    </SelectTrigger>
+
+                    <SelectContent>
+                      <SelectItem value="true">
+                        <Trans>Yes</Trans>
+                      </SelectItem>
+
+                      <SelectItem value="false">
+                        <Trans>No</Trans>
+                      </SelectItem>
+
+                      {canInherit && (
+                        <SelectItem value={'-1'}>
+                          <Trans>Inherit from organisation</Trans>
+                        </SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </FormControl>
+
+                <FormDescription>
+                  <Trans>
+                    When enabled, single-file documents download and email attachments use the document title (for
+                    example, the title passed via API override) instead of the per-file title. Multi-file documents
+                    continue to use per-file titles.
+                  </Trans>
+                </FormDescription>
+              </FormItem>
             )}
           />
 

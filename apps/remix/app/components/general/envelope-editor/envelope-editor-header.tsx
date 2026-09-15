@@ -10,6 +10,7 @@ import {
   Building2Icon,
   Globe2Icon,
   LockIcon,
+  MagnetIcon,
   Redo2Icon,
   RefreshCwIcon,
   SendIcon,
@@ -46,6 +47,8 @@ export default function EnvelopeEditorHeader() {
     flushAutosave,
     editorFields,
     isAutoSaveEnabled,
+    isSnappingEnabled,
+    setIsSnappingEnabled,
   } = useCurrentEnvelopeEditor();
 
   const {
@@ -233,6 +236,15 @@ export default function EnvelopeEditorHeader() {
               }
             />
           )}
+
+          <Button
+            variant={isSnappingEnabled ? 'secondary' : 'outline'}
+            size="sm"
+            onClick={() => setIsSnappingEnabled(!isSnappingEnabled)}
+            title={isSnappingEnabled ? t`Disable snapping` : t`Enable snapping`}
+          >
+            <MagnetIcon className="h-4 w-4" />
+          </Button>
 
           {match({ isEmbedded, isDocument, isTemplate, allowDistributing })
             .with({ isEmbedded: false, isDocument: true, allowDistributing: true }, () => (

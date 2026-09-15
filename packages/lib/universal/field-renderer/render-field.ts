@@ -1,3 +1,4 @@
+import type { TCssVarsSchema } from '@documenso/lib/types/css-vars';
 import type { TRecipientColor } from '@documenso/ui/lib/recipient-colors';
 import { FieldType } from '@prisma/client';
 import type Konva from 'konva';
@@ -22,8 +23,14 @@ type RenderFieldOptions = {
   pageHeight: number;
 
   color?: TRecipientColor;
+  brandingColors?: TCssVarsSchema | null;
 
   translations: Record<FieldType, string> | null;
+
+  /**
+   * See `RenderFieldElementOptions.signPlaceholders`.
+   */
+  signPlaceholders?: Partial<Record<FieldType, string>> | null;
 
   mode: FieldRenderMode;
 
@@ -35,6 +42,7 @@ type RenderFieldOptions = {
 export const renderField = ({
   field,
   translations,
+  signPlaceholders,
   pageLayer,
   pageWidth,
   pageHeight,
@@ -43,17 +51,19 @@ export const renderField = ({
   editable,
   color,
   fieldCanvasStyleCache,
+  brandingColors,
 }: RenderFieldOptions) => {
   const options = {
     pageLayer,
     pageWidth,
     pageHeight,
     translations,
+    signPlaceholders,
     mode,
     color,
     editable,
     scale,
-    fieldCanvasStyle: resolveFieldCanvasStyle(field, mode, fieldCanvasStyleCache),
+    fieldCanvasStyle: resolveFieldCanvasStyle(field, mode, fieldCanvasStyleCache, brandingColors),
   };
 
   // If the generic text field element array changes, update the `GenericTextFieldTypeMetas` type

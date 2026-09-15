@@ -11,13 +11,23 @@ import type { TRecipientActionAuth } from '@documenso/lib/types/document-auth';
 import type { TEnvelope } from '@documenso/lib/types/envelope';
 import { ZFullFieldSchema } from '@documenso/lib/types/field';
 import {
+  type TDateFieldMeta,
+  type TDropdownFieldMeta,
+  type TNumberFieldMeta,
+  type TTextFieldMeta,
+  ZDateFieldMeta,
+  ZDropdownFieldMeta,
+  ZNumberFieldMeta,
+  ZTextFieldMeta,
+} from '@documenso/lib/types/field-meta';
+import {
   createFieldCanvasStyleCache,
   type FieldCanvasStyleCache,
 } from '@documenso/lib/universal/field-renderer/field-canvas-style';
 import { createSpinner } from '@documenso/lib/universal/field-renderer/field-generic-items';
 import { renderField } from '@documenso/lib/universal/field-renderer/render-field';
 import { isFieldUnsignedAndRequired } from '@documenso/lib/utils/advanced-fields-helpers';
-import { getClientSideFieldTranslations } from '@documenso/lib/utils/fields';
+import { getClientSideFieldSignPlaceholders, getClientSideFieldTranslations } from '@documenso/lib/utils/fields';
 import { extractInitials } from '@documenso/lib/utils/recipient-formatter';
 import type { TSignEnvelopeFieldValue } from '@documenso/trpc/server/envelope-router/sign-envelope-field.types';
 import { EnvelopeRecipientFieldTooltip } from '@documenso/ui/components/document/envelope-recipient-field-tooltip';
@@ -27,24 +37,39 @@ import { Trans, useLingui } from '@lingui/react/macro';
 import { type Field, FieldType, type Recipient, RecipientRole, type Signature, SigningStatus } from '@prisma/client';
 import type Konva from 'konva';
 import type { KonvaEventObject } from 'konva/lib/Node';
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { match } from 'ts-pattern';
 
 import { useEmbedSigningContext } from '~/components/embed/embed-signing-context';
 import { handleCheckboxFieldClick } from '~/utils/field-signing/checkbox-field';
-import { handleDropdownFieldClick } from '~/utils/field-signing/dropdown-field';
 import { handleEmailFieldClick } from '~/utils/field-signing/email-field';
 import { handleInitialsFieldClick } from '~/utils/field-signing/initial-field';
 import { handleNameFieldClick } from '~/utils/field-signing/name-field';
-import { handleNumberFieldClick } from '~/utils/field-signing/number-field';
-import { handleSignatureFieldClick } from '~/utils/field-signing/signature-field';
-import { handleTextFieldClick } from '~/utils/field-signing/text-field';
+import { handleSignatureFieldClick, signatureDialogResultToFieldValue } from '~/utils/field-signing/signature-field';
+import { runSignatureFieldAction } from '~/utils/field-signing/signature-field-auth';
 
 import { useRequiredDocumentSigningAuthContext } from '../document-signing/document-signing-auth-provider';
 import { useRequiredEnvelopeSigningContext } from '../document-signing/envelope-signing-provider';
+import { InlineDateOverlay } from './inline-date-overlay';
+import { InlineDropdownOverlay } from './inline-dropdown-overlay';
+import { InlineFieldOverlay } from './inline-field-overlay';
 
 type GenericLocalField = TEnvelope['fields'][number] & {
   recipient: Pick<Recipient, 'id' | 'name' | 'email' | 'signingStatus'>;
+};
+
+const getFieldSignatureCacheKey = (field: Field & { signature?: Signature | null }) => {
+  return field.signature?.signatureImageAsBase64 || field.signature?.typedSignature || '';
+};
+
+type InlineSignableFieldType =
+  | typeof FieldType.NUMBER
+  | typeof FieldType.TEXT
+  | typeof FieldType.DROPDOWN
+  | typeof FieldType.DATE;
+
+const isInlineSignableFieldType = (type: FieldType): type is InlineSignableFieldType => {
+  return type === FieldType.NUMBER || type === FieldType.TEXT || type === FieldType.DROPDOWN || type === FieldType.DATE;
 };
 
 export const EnvelopeSignerPageRenderer = ({ pageData }: { pageData: PageRenderData }) => {
@@ -68,25 +93,45 @@ export const EnvelopeSignerPageRenderer = ({ pageData }: { pageData: PageRenderD
     fullName: fullNameState,
     setFullName,
     signature: signatureState,
-    setSignature,
+    profileSignature,
+    hasCompletedSignatureActionAuth,
+    markSignatureActionAuthCompleted,
+    recipientActionAuthRequired,
     selectedAssistantRecipientFields,
     selectedAssistantRecipient,
     isDirectTemplate,
+    signingFieldHighlightColors,
   } = useRequiredEnvelopeSigningContext();
 
   // Note: We're using refs here due to the closure within the signField function.
   const fullName = useRef(fullNameState);
   const email = useRef(emailState);
-  const signature = useRef(signatureState);
+  const signatureSuggestion = useRef(signatureState);
+  const profileSignatureRef = useRef(profileSignature);
+  const hasCompletedSignatureActionAuthRef = useRef(hasCompletedSignatureActionAuth);
+  const recipientFieldsRef = useRef(recipientFields);
 
   useEffect(() => {
     fullName.current = fullNameState;
     email.current = emailState;
-    signature.current = signatureState;
-  }, [fullNameState, emailState, signatureState]);
+    signatureSuggestion.current = signatureState;
+    profileSignatureRef.current = profileSignature;
+    hasCompletedSignatureActionAuthRef.current = hasCompletedSignatureActionAuth;
+    recipientFieldsRef.current = recipientFields;
+  }, [fullNameState, emailState, signatureState, profileSignature, hasCompletedSignatureActionAuth, recipientFields]);
 
   const cachedRenderFields = useRef<Map<number, Field & { signature?: Signature | null }>>(new Map());
   const prevShowPendingFieldTooltip = useRef(showPendingFieldTooltip);
+
+  const [activeInlineFieldId, setActiveInlineFieldId] = useState<number | null>(null);
+  const activeInlineFieldIdRef = useRef(activeInlineFieldId);
+  const previousActiveInlineFieldIdRef = useRef<number | null>(null);
+  const setActiveInlineFieldIdRef = useRef(setActiveInlineFieldId);
+
+  useEffect(() => {
+    activeInlineFieldIdRef.current = activeInlineFieldId;
+    setActiveInlineFieldIdRef.current = setActiveInlineFieldId;
+  }, [activeInlineFieldId]);
 
   const { onFieldSigned, onFieldUnsigned } = useEmbedSigningContext() || {};
 
@@ -167,17 +212,26 @@ export const EnvelopeSignerPageRenderer = ({ pageData }: { pageData: PageRenderD
         positionX: Number(fieldToRender.positionX),
         positionY: Number(fieldToRender.positionY),
         isValidating,
+        isEditing: activeInlineFieldIdRef.current === fieldToRender.id,
         signature: unparsedField.signature,
       },
       translations: getClientSideFieldTranslations(i18n),
+      signPlaceholders: getClientSideFieldSignPlaceholders(i18n),
       pageWidth: unscaledViewport.width,
       pageHeight: unscaledViewport.height,
       color,
       mode: 'sign',
       fieldCanvasStyleCache,
+      brandingColors: signingFieldHighlightColors,
     });
 
     const handleFieldGroupClick = (e: KonvaEventObject<Event>) => {
+      // Force any active HTML input (like inline fields) to blur and commit
+      // before processing the Konva click which might open a new field.
+      if (typeof document !== 'undefined' && document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+
       const currentTarget = e.currentTarget as Konva.Group;
       const target = e.target as Konva.Shape;
 
@@ -263,34 +317,18 @@ export const EnvelopeSignerPageRenderer = ({ pageData }: { pageData: PageRenderD
           });
         })
         /**
-         * NUMBER FIELD.
+         * NUMBER FIELD — inline HTML overlay (no dialog).
          */
         .with({ type: FieldType.NUMBER }, (field) => {
-          void handleNumberFieldClick({ field, number: null })
-            .then(async (payload) => {
-              if (payload) {
-                fieldGroup.add(loadingSpinnerGroup);
-                await signField(field.id, payload);
-              }
-            })
-            .finally(() => {
-              loadingSpinnerGroup.destroy();
-            });
+          loadingSpinnerGroup.destroy();
+          setActiveInlineFieldIdRef.current(field.id);
         })
         /**
-         * TEXT FIELD.
+         * TEXT FIELD — inline HTML overlay (no dialog).
          */
         .with({ type: FieldType.TEXT }, (field) => {
-          void handleTextFieldClick({ field, text: null })
-            .then(async (payload) => {
-              if (payload) {
-                fieldGroup.add(loadingSpinnerGroup);
-                await signField(field.id, payload);
-              }
-            })
-            .finally(() => {
-              loadingSpinnerGroup.destroy();
-            });
+          loadingSpinnerGroup.destroy();
+          setActiveInlineFieldIdRef.current(field.id);
         })
         /**
          * EMAIL FIELD.
@@ -348,32 +386,18 @@ export const EnvelopeSignerPageRenderer = ({ pageData }: { pageData: PageRenderD
             });
         })
         /**
-         * DROPDOWN FIELD.
+         * DROPDOWN FIELD — inline HTML overlay (no dialog).
          */
         .with({ type: FieldType.DROPDOWN }, (field) => {
-          void handleDropdownFieldClick({ field, text: null })
-            .then(async (payload) => {
-              if (payload) {
-                fieldGroup.add(loadingSpinnerGroup);
-                await signField(field.id, payload);
-              }
-            })
-            .finally(() => {
-              loadingSpinnerGroup.destroy();
-            });
+          loadingSpinnerGroup.destroy();
+          setActiveInlineFieldIdRef.current(field.id);
         })
         /**
-         * DATE FIELD.
+         * DATE FIELD — inline HTML overlay (no dialog).
          */
         .with({ type: FieldType.DATE }, (field) => {
-          fieldGroup.add(loadingSpinnerGroup);
-
-          void signField(field.id, {
-            type: FieldType.DATE,
-            value: !field.inserted,
-          }).finally(() => {
-            loadingSpinnerGroup.destroy();
-          });
+          loadingSpinnerGroup.destroy();
+          setActiveInlineFieldIdRef.current(field.id);
         })
         /**
          * SIGNATURE FIELD.
@@ -381,33 +405,36 @@ export const EnvelopeSignerPageRenderer = ({ pageData }: { pageData: PageRenderD
         .with({ type: FieldType.SIGNATURE }, (field) => {
           void handleSignatureFieldClick({
             field,
+            recipientFields: recipientFieldsRef.current,
             fullName: fullName.current,
-            signature: signature.current,
+            suggestedSignature: signatureSuggestion.current,
+            profileSignature: profileSignatureRef.current,
             typedSignatureEnabled: envelope.documentMeta.typedSignatureEnabled,
             uploadSignatureEnabled: envelope.documentMeta.uploadSignatureEnabled,
             drawSignatureEnabled: envelope.documentMeta.drawSignatureEnabled,
           })
-            .then(async (payload) => {
-              if (!payload) {
+            .then(async (result) => {
+              if (!result) {
                 return;
               }
 
               fieldGroup.add(loadingSpinnerGroup);
 
-              if (payload.value) {
-                await executeActionAuthProcedure({
-                  onReauthFormSubmit: async (authOptions) => {
-                    await signField(field.id, payload, authOptions);
+              const payload = signatureDialogResultToFieldValue(result);
 
-                    loadingSpinnerGroup.destroy();
-                  },
-                  actionTarget: field.type,
-                });
-
-                setSignature(payload.value);
-              } else {
-                await signField(field.id, payload);
-              }
+              await runSignatureFieldAction({
+                result,
+                hasAuthedOnceThisSession: hasCompletedSignatureActionAuthRef.current,
+                recipientActionAuthRequired,
+                markSignatureActionAuthCompleted,
+                executeActionAuthProcedure,
+                onApply: async (authOptions) => {
+                  await signField(field.id, payload, authOptions);
+                },
+                onRemove: async (authOptions) => {
+                  await signField(field.id, payload, authOptions);
+                },
+              });
             })
             .finally(() => {
               loadingSpinnerGroup.destroy();
@@ -457,7 +484,8 @@ export const EnvelopeSignerPageRenderer = ({ pageData }: { pageData: PageRenderD
         !isFieldCurrentlyRendered ||
         !existingCachedField ||
         existingCachedField.inserted !== field.inserted ||
-        existingCachedField.customText !== field.customText
+        existingCachedField.customText !== field.customText ||
+        getFieldSignatureCacheKey(existingCachedField) !== getFieldSignatureCacheKey(field)
       ) {
         renderFieldOnLayer(field, fieldCanvasStyleCache);
         cachedRenderFields.current.set(field.id, field);
@@ -486,6 +514,7 @@ export const EnvelopeSignerPageRenderer = ({ pageData }: { pageData: PageRenderD
           editable: false,
           mode: 'sign',
           fieldCanvasStyleCache,
+          brandingColors: signingFieldHighlightColors,
         });
 
         // Other-recipient fields are display-only — they have no click handlers
@@ -566,12 +595,72 @@ export const EnvelopeSignerPageRenderer = ({ pageData }: { pageData: PageRenderD
   }, [localPageFields, showPendingFieldTooltip]);
 
   /**
+   * Hide the Konva field content while the HTML overlay is editing it so the
+   * typed value is not doubled underneath the input. Also force a re-render so
+   * required fields pick up the editing accent ring.
+   */
+  useEffect(() => {
+    if (!pageLayer.current) {
+      return;
+    }
+
+    const previousActiveInlineFieldId = previousActiveInlineFieldIdRef.current;
+    previousActiveInlineFieldIdRef.current = activeInlineFieldId;
+
+    const fieldIdsToRefresh = [previousActiveInlineFieldId, activeInlineFieldId].filter(
+      (fieldId): fieldId is number => fieldId != null,
+    );
+
+    if (fieldIdsToRefresh.length > 0) {
+      const fieldCanvasStyleCache = createFieldCanvasStyleCache();
+
+      for (const fieldId of fieldIdsToRefresh) {
+        cachedRenderFields.current.delete(fieldId);
+        const field = localPageFields.find((pageField) => pageField.id === fieldId);
+
+        if (field) {
+          renderFieldOnLayer(field, fieldCanvasStyleCache);
+          cachedRenderFields.current.set(fieldId, field);
+        }
+      }
+
+      pageLayer.current.batchDraw();
+    }
+
+    if (!activeInlineFieldId) {
+      return;
+    }
+
+    const fieldGroup = pageLayer.current.findOne(`#${activeInlineFieldId}`) as Konva.Group | undefined;
+
+    if (!fieldGroup) {
+      return;
+    }
+
+    const fieldText = fieldGroup.findOne('.field-text');
+    const wasListening = fieldGroup.listening();
+    const wasTextVisible = fieldText?.visible() ?? true;
+
+    fieldGroup.listening(false);
+    fieldText?.visible(false);
+    pageLayer.current.batchDraw();
+
+    return () => {
+      fieldGroup.listening(wasListening);
+      fieldText?.visible(wasTextVisible);
+      pageLayer.current?.batchDraw();
+    };
+  }, [activeInlineFieldId, localPageFields]);
+
+  /**
    * Rerender the whole page if the selected assistant recipient changes.
    */
   useEffect(() => {
     if (!pageLayer.current || !stage.current) {
       return;
     }
+
+    setActiveInlineFieldId(null);
 
     // Rerender the whole page.
     pageLayer.current.destroyChildren();
@@ -582,6 +671,77 @@ export const EnvelopeSignerPageRenderer = ({ pageData }: { pageData: PageRenderD
     pageLayer.current.batchDraw();
   }, [selectedAssistantRecipient]);
 
+  const activeInlineField = useMemo(() => {
+    if (!activeInlineFieldId) {
+      return null;
+    }
+
+    return localPageFields.find((field) => field.id === activeInlineFieldId) ?? null;
+  }, [activeInlineFieldId, localPageFields]);
+
+  const activeInlineFieldMeta = useMemo(() => {
+    if (!activeInlineField) {
+      return null;
+    }
+
+    if (activeInlineField.type === FieldType.TEXT) {
+      const parsed = ZTextFieldMeta.safeParse(activeInlineField.fieldMeta);
+      return parsed.success ? parsed.data : null;
+    }
+
+    if (activeInlineField.type === FieldType.NUMBER) {
+      const parsed = ZNumberFieldMeta.safeParse(activeInlineField.fieldMeta);
+      return parsed.success ? parsed.data : null;
+    }
+
+    if (activeInlineField.type === FieldType.DROPDOWN) {
+      const parsed = ZDropdownFieldMeta.safeParse(activeInlineField.fieldMeta);
+      return parsed.success ? parsed.data : null;
+    }
+
+    if (activeInlineField.type === FieldType.DATE) {
+      const parsed = ZDateFieldMeta.safeParse(activeInlineField.fieldMeta);
+      return parsed.success ? parsed.data : null;
+    }
+
+    return null;
+  }, [activeInlineField]);
+
+  const handleInlineFieldCommit = async (fieldId: number, value: string | null) => {
+    const fieldToCommit = localPageFields.find((f) => f.id === fieldId);
+
+    if (!fieldToCommit || !isInlineSignableFieldType(fieldToCommit.type)) {
+      return;
+    }
+
+    const fieldGroup = pageLayer.current?.findOne(`#${fieldToCommit.id}`) as Konva.Group | undefined;
+    const fieldRect = fieldGroup?.findOne('.field-rect');
+    const fieldWidth = fieldRect ? fieldRect.width() : (fieldGroup?.width() ?? 0);
+    const fieldHeight = fieldRect ? fieldRect.height() : (fieldGroup?.height() ?? 0);
+
+    const loadingSpinnerGroup = createSpinner({
+      fieldWidth,
+      fieldHeight,
+    });
+
+    fieldGroup?.add(loadingSpinnerGroup);
+
+    try {
+      await signField(fieldToCommit.id, { type: fieldToCommit.type, value });
+
+      // Only close the field if the user hasn't already clicked into a different field
+      // while this commit was processing in the background.
+      setActiveInlineFieldIdRef.current((current) => (current === fieldId ? null : current));
+    } finally {
+      loadingSpinnerGroup.destroy();
+    }
+  };
+
+  const isInlineTextOrNumber =
+    activeInlineField?.type === FieldType.TEXT || activeInlineField?.type === FieldType.NUMBER;
+  const isInlineDropdown = activeInlineField?.type === FieldType.DROPDOWN;
+  const isInlineDate = activeInlineField?.type === FieldType.DATE;
+
   if (!currentEnvelopeItem) {
     return null;
   }
@@ -591,7 +751,8 @@ export const EnvelopeSignerPageRenderer = ({ pageData }: { pageData: PageRenderD
       {showPendingFieldTooltip &&
         recipientFieldsRemaining.length > 0 &&
         recipientFieldsRemaining[0]?.envelopeItemId === currentEnvelopeItem?.id &&
-        recipientFieldsRemaining[0]?.page === pageNumber && (
+        recipientFieldsRemaining[0]?.page === pageNumber &&
+        recipientFieldsRemaining[0]?.id !== activeInlineFieldId && (
           <EnvelopeFieldToolTip
             key={recipientFieldsRemaining[0].id}
             field={recipientFieldsRemaining[0]}
@@ -609,6 +770,44 @@ export const EnvelopeSignerPageRenderer = ({ pageData }: { pageData: PageRenderD
           showRecipientTooltip={true}
         />
       ))}
+
+      {activeInlineField && isInlineTextOrNumber && (
+        <InlineFieldOverlay
+          key={activeInlineField.id}
+          field={{
+            ...activeInlineField,
+            fieldMeta: activeInlineFieldMeta as TTextFieldMeta | TNumberFieldMeta | null,
+          }}
+          scale={scale}
+          onCommit={(value) => handleInlineFieldCommit(activeInlineField.id, value)}
+          onCancel={() => setActiveInlineFieldId(null)}
+        />
+      )}
+
+      {activeInlineField && isInlineDropdown && (
+        <InlineDropdownOverlay
+          key={activeInlineField.id}
+          field={{
+            ...activeInlineField,
+            fieldMeta: activeInlineFieldMeta as TDropdownFieldMeta | null,
+          }}
+          onCommit={(value) => handleInlineFieldCommit(activeInlineField.id, value)}
+          onCancel={() => setActiveInlineFieldId(null)}
+        />
+      )}
+
+      {activeInlineField && isInlineDate && (
+        <InlineDateOverlay
+          key={activeInlineField.id}
+          field={{
+            ...activeInlineField,
+            fieldMeta: activeInlineFieldMeta as TDateFieldMeta | null,
+          }}
+          dateFormat={envelope.documentMeta.dateFormat ?? undefined}
+          onCommit={(value) => handleInlineFieldCommit(activeInlineField.id, value)}
+          onCancel={() => setActiveInlineFieldId(null)}
+        />
+      )}
 
       {/* The element Konva will inject it's canvas into. */}
       <div className="konva-container absolute inset-0 z-10 w-full" ref={konvaContainer}></div>

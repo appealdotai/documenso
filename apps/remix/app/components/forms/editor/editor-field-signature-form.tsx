@@ -11,11 +11,17 @@ import { useEffect } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import type { z } from 'zod';
 
-import { EditorGenericFontSizeField } from './editor-field-generic-field-forms';
+import {
+  EditorGenericFontSizeField,
+  EditorGenericLabelField,
+  EditorGenericRequiredField,
+} from './editor-field-generic-field-forms';
 
 const ZSignatureFieldFormSchema = ZSignatureFieldMeta.pick({
   fontSize: true,
   overflow: true,
+  label: true,
+  required: true,
 });
 
 type TSignatureFieldFormSchema = z.infer<typeof ZSignatureFieldFormSchema>;
@@ -37,6 +43,8 @@ export const EditorFieldSignatureForm = ({
     defaultValues: {
       overflow: value.overflow || FIELD_SIGNATURE_META_DEFAULT_VALUES.overflow,
       fontSize: value.fontSize || DEFAULT_SIGNATURE_TEXT_FONT_SIZE,
+      label: value.label || '',
+      required: value.required !== false,
     },
   });
 
@@ -67,6 +75,12 @@ export const EditorFieldSignatureForm = ({
             <p className="mt-0.5 text-muted-foreground text-xs">
               <Trans>The typed signature font size</Trans>
             </p>
+          </div>
+
+          <EditorGenericLabelField formControl={form.control} />
+
+          <div className="mt-1">
+            <EditorGenericRequiredField formControl={form.control} />
           </div>
         </fieldset>
       </form>

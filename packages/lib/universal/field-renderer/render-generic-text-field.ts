@@ -1,3 +1,4 @@
+import { FieldType } from '@prisma/client';
 import Konva from 'konva';
 
 import { DEFAULT_STANDARD_FONT_SIZE } from '../../constants/pdf';
@@ -23,7 +24,7 @@ import { calculateFieldPosition } from './field-renderer';
 const DEFAULT_TEXT_X_PADDING = 6;
 
 const upsertFieldText = (field: FieldToRender, options: RenderFieldElementOptions) => {
-  const { pageWidth, pageHeight, mode = 'edit', pageLayer, translations } = options;
+  const { pageWidth, pageHeight, mode = 'edit', pageLayer, translations, signPlaceholders } = options;
 
   const { fieldX, fieldY, fieldWidth, fieldHeight } = calculateFieldPosition(field, pageWidth, pageHeight);
 
@@ -54,7 +55,40 @@ const upsertFieldText = (field: FieldToRender, options: RenderFieldElementOption
   let textLineHeight = FIELD_DEFAULT_LINE_HEIGHT;
   let textLetterSpacing = FIELD_DEFAULT_LETTER_SPACING;
 
+  // On the recipient signing surface, show editor-prefilled values or the generic prompt.
+  if (mode === 'sign' && (field.type === FieldType.TEXT || field.type === FieldType.NUMBER) && !field.inserted) {
+    if (fieldMeta?.type === 'text' || fieldMeta?.type === 'number') {
+      const prefilledValue = fieldMeta.type === 'text' ? fieldMeta.text : fieldMeta.value;
+
+      if (prefilledValue) {
+        isLabel = false;
+        textToRender = prefilledValue;
+
+        textVerticalAlign = fieldMeta.verticalAlign || FIELD_DEFAULT_GENERIC_VERTICAL_ALIGN;
+        textAlign = fieldMeta.textAlign || FIELD_DEFAULT_GENERIC_ALIGN;
+        textLetterSpacing = fieldMeta.letterSpacing || FIELD_DEFAULT_LETTER_SPACING;
+        textLineHeight = fieldMeta.lineHeight || FIELD_DEFAULT_LINE_HEIGHT;
+      } else {
+        textToRender = signPlaceholders?.[field.type] ?? '';
+      }
+    } else {
+      textToRender = signPlaceholders?.[field.type] ?? '';
+    }
+  }
+
   // Render default values for text/number if provided for editing mode.
+  // On the recipient signing surface, show prefilled date value or format placeholder.
+  if (mode === 'sign' && field.type === FieldType.DATE && !field.inserted) {
+    if (fieldMeta?.type === 'date' && fieldMeta.value) {
+      isLabel = false;
+      textToRender = fieldMeta.value;
+      textAlign = fieldMeta.textAlign || FIELD_DEFAULT_GENERIC_ALIGN;
+    } else {
+      textToRender = signPlaceholders?.[field.type] ?? fieldTypeName;
+    }
+  }
+
+  // Render default values for text/number/date if provided for editing mode.
   if (mode === 'edit' && (fieldMeta?.type === 'text' || fieldMeta?.type === 'number')) {
     const value = fieldMeta?.type === 'text' ? fieldMeta.text : fieldMeta.value;
 
@@ -69,6 +103,12 @@ const upsertFieldText = (field: FieldToRender, options: RenderFieldElementOption
     }
   }
 
+  if (mode === 'edit' && fieldMeta?.type === 'date' && fieldMeta.value) {
+    isLabel = false;
+    textToRender = fieldMeta.value;
+    textAlign = fieldMeta.textAlign || FIELD_DEFAULT_GENERIC_ALIGN;
+  }
+
   // Default to blank for export mode since we want to ensure we don't show
   // any placeholder text or labels unless actually it's inserted.
   if (mode === 'export') {
@@ -76,17 +116,22 @@ const upsertFieldText = (field: FieldToRender, options: RenderFieldElementOption
   }
 
   // Fallback render readonly fields if prefilled value exists.
-  if (field?.fieldMeta?.readOnly && (fieldMeta?.type === 'text' || fieldMeta?.type === 'number')) {
+  if (
+    field?.fieldMeta?.readOnly &&
+    (fieldMeta?.type === 'text' || fieldMeta?.type === 'number' || fieldMeta?.type === 'date')
+  ) {
     const value = fieldMeta?.type === 'text' ? fieldMeta.text : fieldMeta.value;
 
     if (value) {
       isLabel = false;
       textToRender = value;
-
-      textVerticalAlign = fieldMeta.verticalAlign || FIELD_DEFAULT_GENERIC_VERTICAL_ALIGN;
       textAlign = fieldMeta.textAlign || FIELD_DEFAULT_GENERIC_ALIGN;
-      textLetterSpacing = fieldMeta.letterSpacing || FIELD_DEFAULT_LETTER_SPACING;
-      textLineHeight = fieldMeta.lineHeight || FIELD_DEFAULT_LINE_HEIGHT;
+
+      if (fieldMeta.type === 'text' || fieldMeta.type === 'number') {
+        textVerticalAlign = fieldMeta.verticalAlign || FIELD_DEFAULT_GENERIC_VERTICAL_ALIGN;
+        textLetterSpacing = fieldMeta.letterSpacing || FIELD_DEFAULT_LETTER_SPACING;
+        textLineHeight = fieldMeta.lineHeight || FIELD_DEFAULT_LINE_HEIGHT;
+      }
     }
   }
 
@@ -172,7 +217,7 @@ export const renderGenericTextFieldElement = (field: FieldToRender, options: Ren
   }
 
   // Render the field background and text.
-  const fieldRect = upsertFieldRect(field, options);
+  const fieldRect = upsertFieldRect(field, options, fieldGroup);
   const {
     fieldText,
     isLabel,

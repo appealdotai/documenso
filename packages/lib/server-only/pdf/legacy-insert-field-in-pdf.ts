@@ -219,6 +219,7 @@ export const legacy_insertFieldInPDF = async (pdf: PDFDocument, field: FieldWith
 
       const selected: string[] = fromCheckboxValue(field.customText);
 
+      // Option wording lives on the PDF; Documenso only seals the tick.
       for (const [index, item] of (values ?? []).entries()) {
         const offsetY = index * 16;
 
@@ -227,14 +228,6 @@ export const legacy_insertFieldInPDF = async (pdf: PDFDocument, field: FieldWith
         if (selected.includes(item.value)) {
           checkbox.check();
         }
-
-        page.drawText(item.value.includes('empty-value-') ? '' : item.value, {
-          x: fieldX + 16,
-          y: pageHeight - (fieldY + offsetY),
-          size: 12,
-          font,
-          rotate: degrees(pageRotationInDegrees),
-        });
 
         checkbox.addToPage(page, {
           x: fieldX,

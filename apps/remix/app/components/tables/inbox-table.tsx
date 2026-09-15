@@ -9,18 +9,18 @@ import { DataTable } from '@documenso/ui/primitives/data-table';
 import { DataTablePagination } from '@documenso/ui/primitives/data-table-pagination';
 import { Skeleton } from '@documenso/ui/primitives/skeleton';
 import { TableCell } from '@documenso/ui/primitives/table';
-import { useToast } from '@documenso/ui/primitives/use-toast';
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
 import { DocumentStatus as DocumentStatusEnum, RecipientRole, SigningStatus } from '@prisma/client';
-import { CheckCircleIcon, DownloadIcon, EyeIcon, Loader, PencilIcon } from 'lucide-react';
+import { BanIcon, CheckCircleIcon, DownloadIcon, EyeIcon, Loader, PencilIcon } from 'lucide-react';
 import { DateTime } from 'luxon';
 import { useMemo, useTransition } from 'react';
 import { useSearchParams } from 'react-router';
 import { match } from 'ts-pattern';
 
 import { DocumentStatus } from '~/components/general/document/document-status';
+import { DocumentSigningRejectDialog } from '~/components/general/document-signing/document-signing-reject-dialog';
 import { useOptionalCurrentTeam } from '~/providers/team';
 
 import { EnvelopeDownloadDialog } from '../dialogs/envelope-download-dialog';
@@ -173,8 +173,7 @@ export type InboxTableActionButtonProps = {
 
 export const InboxTableActionButton = ({ row }: InboxTableActionButtonProps) => {
   const { user } = useSession();
-  const { toast } = useToast();
-  const { _ } = useLingui();
+  const utils = trpc.useUtils();
 
   const recipient = row.recipients.find((recipient) => recipient.email === user.email);
 
@@ -182,6 +181,13 @@ export const InboxTableActionButton = ({ row }: InboxTableActionButtonProps) => 
   const isComplete = isDocumentCompleted(row.status);
   const isSigned = recipient?.signingStatus === SigningStatus.SIGNED;
   const role = recipient?.role;
+  const canReject =
+    isPending && !isSigned && recipient?.role !== RecipientRole.CC && recipient?.role !== RecipientRole.ASSISTANT;
+
+  const handleRejected = async () => {
+    await utils.document.inbox.find.invalidate();
+    await utils.document.inbox.getCount.invalidate();
+  };
 
   if (!recipient) {
     return null;
@@ -199,29 +205,48 @@ export const InboxTableActionButton = ({ row }: InboxTableActionButtonProps) => 
     internalVersion: row.internalVersion,
   })
     .with({ isPending: true, isSigned: false }, () => (
-      <Button className="w-32" asChild>
-        <a href={`/sign/${recipient?.token}`}>
-          {match(role)
-            .with(RecipientRole.SIGNER, () => (
-              <>
-                <PencilIcon className="mr-2 -ml-1 h-4 w-4" />
-                <Trans>Sign</Trans>
-              </>
-            ))
-            .with(RecipientRole.APPROVER, () => (
-              <>
-                <CheckCircleIcon className="mr-2 -ml-1 h-4 w-4" />
-                <Trans>Approve</Trans>
-              </>
-            ))
-            .otherwise(() => (
-              <>
-                <EyeIcon className="mr-2 -ml-1 h-4 w-4" />
-                <Trans>View</Trans>
-              </>
-            ))}
-        </a>
-      </Button>
+      <div className="flex items-center gap-2">
+        <Button className="w-32" asChild>
+          <a href={`/sign/${recipient?.token}`}>
+            {match(role)
+              .with(RecipientRole.SIGNER, () => (
+                <>
+                  <PencilIcon className="mr-2 -ml-1 h-4 w-4" />
+                  <Trans>Sign</Trans>
+                </>
+              ))
+              .with(RecipientRole.APPROVER, () => (
+                <>
+                  <CheckCircleIcon className="mr-2 -ml-1 h-4 w-4" />
+                  <Trans>Approve</Trans>
+                </>
+              ))
+              .otherwise(() => (
+                <>
+                  <EyeIcon className="mr-2 -ml-1 h-4 w-4" />
+                  <Trans>View</Trans>
+                </>
+              ))}
+          </a>
+        </Button>
+
+        {canReject && (
+          <DocumentSigningRejectDialog
+            documentId={row.id}
+            token={recipient.token}
+            onRejected={handleRejected}
+            trigger={
+              <Button
+                variant="outline"
+                className="w-28 border-destructive/60 bg-destructive/10 text-destructive hover:border-destructive hover:bg-destructive/15 hover:text-destructive dark:border-destructive/70 dark:bg-destructive/20 dark:hover:bg-destructive/30"
+              >
+                <BanIcon className="mr-2 -ml-1 h-4 w-4" />
+                <Trans>Reject</Trans>
+              </Button>
+            }
+          />
+        )}
+      </div>
     ))
     .with({ isPending: true, isSigned: true }, () => (
       <Button className="w-32" disabled={true}>

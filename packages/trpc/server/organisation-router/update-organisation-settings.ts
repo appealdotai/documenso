@@ -46,8 +46,14 @@ export const updateOrganisationSettingsRoute = authenticatedProcedure
       brandingEnabled,
       brandingUrl,
       brandingCompanyDetails,
+      brandingEmail,
+      brandingName,
+      brandingHideWatermark,
       brandingColors,
       brandingCss,
+      recipientForceLightMode,
+
+      useEnvelopeTitleForDownload,
 
       // Email related settings.
       emailId,
@@ -174,8 +180,14 @@ export const updateOrganisationSettingsRoute = authenticatedProcedure
             brandingEnabled,
             brandingUrl,
             brandingCompanyDetails,
+            brandingEmail,
+            brandingName,
+            brandingHideWatermark,
             brandingColors: normalizedBrandingColors === null ? Prisma.DbNull : normalizedBrandingColors,
             brandingCss: sanitizedBrandingCss,
+            recipientForceLightMode,
+
+            useEnvelopeTitleForDownload,
 
             // Email related settings.
             emailId,

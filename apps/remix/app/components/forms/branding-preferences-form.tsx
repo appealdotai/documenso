@@ -5,9 +5,15 @@ import {
   BRANDING_LOGO_MAX_SIZE_BYTES,
   BRANDING_LOGO_MAX_SIZE_MB,
 } from '@documenso/lib/constants/branding';
-import { DEFAULT_BRAND_COLORS, DEFAULT_BRAND_RADIUS } from '@documenso/lib/constants/theme';
+import { DEFAULT_BRAND_COLORS, DEFAULT_BRAND_LENGTHS, DEFAULT_BRAND_RADIUS } from '@documenso/lib/constants/theme';
 import { ZCssVarsSchema } from '@documenso/lib/types/css-vars';
 import { normalizeBrandingColors } from '@documenso/lib/utils/normalize-branding-colors';
+import {
+  normalizeSigningFieldHighlightColor,
+  resolveSigningFieldHighlightColors,
+  SIGNING_FIELD_BACKGROUND_COLOR_KEYS,
+} from '@documenso/lib/utils/signing-field-highlight-colors';
+import { zEmail } from '@documenso/lib/utils/zod';
 import { cn } from '@documenso/ui/lib/utils';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@documenso/ui/primitives/accordion';
 import { Button } from '@documenso/ui/primitives/button';
@@ -26,6 +32,7 @@ import { z } from 'zod';
 
 import { BrandingPreferencesResetDialog } from '~/components/dialogs/branding-preferences-reset-dialog';
 import { useOptionalCurrentTeam } from '~/providers/team';
+import { toNativeCssVars } from '~/utils/css-vars';
 import { useCspNonce } from '~/utils/nonce';
 
 import { FormStickySaveBar } from './form-sticky-save-bar';
@@ -33,6 +40,7 @@ import { InheritableField } from './inheritable-field';
 
 const ZBrandingPreferencesFormSchema = z.object({
   brandingEnabled: z.boolean().nullable(),
+  recipientForceLightMode: z.boolean().nullable(),
   brandingLogo: z
     .instanceof(File)
     .refine(
@@ -43,6 +51,9 @@ const ZBrandingPreferencesFormSchema = z.object({
     .nullish(),
   brandingUrl: z.string().url().optional().or(z.literal('')),
   brandingCompanyDetails: z.string().max(500).optional(),
+  brandingEmail: z.union([zEmail(), z.literal('')]).optional(),
+  brandingName: z.string().max(100).optional(),
+  brandingHideWatermark: z.boolean().nullable().optional(),
   brandingColors: ZCssVarsSchema.default({}),
   brandingCss: z.string().max(10_000).default(''),
 });
@@ -51,7 +62,16 @@ export type TBrandingPreferencesFormSchema = z.infer<typeof ZBrandingPreferences
 
 type SettingsSubset = Pick<
   TeamGlobalSettings,
-  'brandingEnabled' | 'brandingLogo' | 'brandingUrl' | 'brandingCompanyDetails' | 'brandingColors' | 'brandingCss'
+  | 'brandingEnabled'
+  | 'recipientForceLightMode'
+  | 'brandingLogo'
+  | 'brandingUrl'
+  | 'brandingCompanyDetails'
+  | 'brandingEmail'
+  | 'brandingName'
+  | 'brandingHideWatermark'
+  | 'brandingColors'
+  | 'brandingCss'
 >;
 
 export type BrandingPreferencesFormProps = {
@@ -80,15 +100,35 @@ export function BrandingPreferencesForm({
   const [colorPickerKey, setColorPickerKey] = useState(0);
 
   const parsedColors = ZCssVarsSchema.safeParse(settings.brandingColors);
-  const initialColors = parsedColors.success ? parsedColors.data : {};
+  const initialColors = (() => {
+    if (!parsedColors.success) {
+      return {};
+    }
+
+    const colors = { ...parsedColors.data };
+
+    for (const key of SIGNING_FIELD_BACKGROUND_COLOR_KEYS) {
+      const value = colors[key];
+
+      if (typeof value === 'string' && value.trim() !== '') {
+        colors[key] = normalizeSigningFieldHighlightColor(key, value);
+      }
+    }
+
+    return colors;
+  })();
 
   // The saved state the form maps to. Used both as the reactive `values` source and as
   // the explicit target for a Reset (see handleReset).
   const savedValues: TBrandingPreferencesFormSchema = {
     brandingEnabled: settings.brandingEnabled ?? null,
+    recipientForceLightMode: settings.recipientForceLightMode ?? null,
     brandingUrl: settings.brandingUrl ?? '',
     brandingLogo: undefined,
     brandingCompanyDetails: settings.brandingCompanyDetails ?? '',
+    brandingEmail: settings.brandingEmail ?? '',
+    brandingName: settings.brandingName ?? '',
+    brandingHideWatermark: settings.brandingHideWatermark ?? null,
     brandingColors: initialColors,
     brandingCss: settings.brandingCss ?? '',
   };
@@ -99,6 +139,8 @@ export function BrandingPreferencesForm({
   });
 
   const isBrandingEnabled = form.watch('brandingEnabled');
+  const brandingColors = form.watch('brandingColors');
+  const fieldHighlightPreviewVars = toNativeCssVars(resolveSigningFieldHighlightColors(brandingColors));
 
   const hasResetBrandingColors =
     settings.brandingColors === null ||
@@ -109,18 +151,26 @@ export function BrandingPreferencesForm({
   // defaults, so it never renders as a pointless disabled button.
   const isResetToDefaultsVisible =
     settings.brandingEnabled !== (canInherit ? null : false) ||
+    settings.recipientForceLightMode !== (canInherit ? null : false) ||
     !!settings.brandingLogo ||
     !!settings.brandingUrl ||
     !!settings.brandingCompanyDetails ||
+    !!settings.brandingEmail ||
+    !!settings.brandingName ||
+    settings.brandingHideWatermark !== (canInherit ? null : false) ||
     !!settings.brandingCss ||
     !hasResetBrandingColors;
 
   const handleResetToDefaults = async () => {
     const data: TBrandingPreferencesFormSchema = {
       brandingEnabled: canInherit ? null : false,
+      recipientForceLightMode: canInherit ? null : false,
       brandingLogo: null,
       brandingUrl: '',
       brandingCompanyDetails: '',
+      brandingEmail: '',
+      brandingName: '',
+      brandingHideWatermark: canInherit ? null : false,
       brandingColors: {},
       brandingCss: '',
     };
@@ -256,6 +306,55 @@ export function BrandingPreferencesForm({
                   )}
                 </FormDescription>
               </InheritableField>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="recipientForceLightMode"
+            render={({ field }) => (
+              <FormItem className="flex-1">
+                <FormLabel>
+                  <Trans>Force light mode for recipients</Trans>
+                </FormLabel>
+
+                <FormControl>
+                  <Select
+                    {...field}
+                    value={field.value === null ? '-1' : field.value.toString()}
+                    onValueChange={(value) =>
+                      field.onChange(value === 'true' ? true : value === 'false' ? false : null)
+                    }
+                  >
+                    <SelectTrigger className="bg-background text-muted-foreground">
+                      <SelectValue />
+                    </SelectTrigger>
+
+                    <SelectContent className="z-[9999]">
+                      <SelectItem value="true">
+                        <Trans>Yes</Trans>
+                      </SelectItem>
+
+                      <SelectItem value="false">
+                        <Trans>No</Trans>
+                      </SelectItem>
+
+                      {canInherit && (
+                        <SelectItem value={'-1'}>
+                          <Trans>Inherit from organisation</Trans>
+                        </SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </FormControl>
+
+                <FormDescription>
+                  <Trans>
+                    When enabled, recipient signing pages and recipient emails always use a light theme, regardless of
+                    the signer&apos;s system or browser theme.
+                  </Trans>
+                </FormDescription>
+              </FormItem>
             )}
           />
 
@@ -414,6 +513,110 @@ export function BrandingPreferencesForm({
                     )}
                   </FormDescription>
                 </InheritableField>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="brandingEmail"
+              render={({ field }) => (
+                <FormItem className="flex-1">
+                  <FormLabel>
+                    <Trans>Brand Email</Trans>
+                  </FormLabel>
+
+                  <FormControl>
+                    <Input type="email" placeholder="sender@example.com" disabled={!isBrandingEnabled} {...field} />
+                  </FormControl>
+
+                  <FormDescription>
+                    <Trans>Customize the email address that appears in the body of emails</Trans>
+
+                    {canInherit && (
+                      <span>
+                        {'. '}
+                        <Trans>Leave blank to inherit from the organisation.</Trans>
+                      </span>
+                    )}
+                  </FormDescription>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="brandingName"
+              render={({ field }) => (
+                <FormItem className="flex-1">
+                  <FormLabel>
+                    <Trans>Brand Name</Trans>
+                  </FormLabel>
+
+                  <FormControl>
+                    <Input type="text" placeholder="Acme Corp" disabled={!isBrandingEnabled} {...field} />
+                  </FormControl>
+
+                  <FormDescription>
+                    <Trans>Customize the sender name that appears in the body of emails</Trans>
+
+                    {canInherit && (
+                      <span>
+                        {'. '}
+                        <Trans>Leave blank to inherit from the organisation.</Trans>
+                      </span>
+                    )}
+                  </FormDescription>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="brandingHideWatermark"
+              render={({ field }) => (
+                <FormItem className="flex-1">
+                  <FormLabel>
+                    <Trans>Hide Report Sender Warning</Trans>
+                  </FormLabel>
+
+                  <FormControl>
+                    <Select
+                      {...field}
+                      value={field.value === null || field.value === undefined ? '-1' : field.value.toString()}
+                      disabled={!isBrandingEnabled}
+                      onValueChange={(value) =>
+                        field.onChange(value === 'true' ? true : value === 'false' ? false : null)
+                      }
+                    >
+                      <SelectTrigger className="bg-background text-muted-foreground">
+                        <SelectValue />
+                      </SelectTrigger>
+
+                      <SelectContent className="z-[9999]">
+                        <SelectItem value="true">
+                          <Trans>Yes</Trans>
+                        </SelectItem>
+
+                        <SelectItem value="false">
+                          <Trans>No</Trans>
+                        </SelectItem>
+
+                        {canInherit && (
+                          <SelectItem value={'-1'}>
+                            <Trans>Inherit from organisation</Trans>
+                          </SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </FormControl>
+
+                  <FormDescription>
+                    <Trans>
+                      Hide the &quot;Report Sender&quot; warning at the bottom of recipient emails. Hiding &quot;Powered
+                      by Documenso&quot; still requires the hide branding plan entitlement.
+                    </Trans>
+                  </FormDescription>
+                </FormItem>
               )}
             />
           </div>
@@ -600,6 +803,501 @@ export function BrandingPreferencesForm({
                       </FormItem>
                     )}
                   />
+                </div>
+              </div>
+
+              <div>
+                <FormLabel>
+                  <Trans>Signing Field Highlights</Trans>
+                </FormLabel>
+
+                <FormDescription className="mt-1 mb-4">
+                  <Trans>
+                    Customise how unsigned and filled fields appear to recipients. Required and optional fields can use
+                    different colours, borders, and opacity.
+                  </Trans>
+                </FormDescription>
+
+                <div className="mb-6 rounded-lg border border-border bg-background p-4">
+                  <p className="mb-1 font-medium text-sm">
+                    <Trans>Preview</Trans>
+                  </p>
+                  <p className="mb-3 text-muted-foreground text-xs">
+                    <Trans>Hover the Required and Optional samples to preview the hover border colour.</Trans>
+                  </p>
+
+                  <div className="documenso-branded flex flex-wrap gap-4" style={fieldHighlightPreviewVars}>
+                    <div
+                      className="field--FieldRootContainer field-card-container flex h-12 min-w-[8rem] cursor-pointer items-center justify-center rounded-[2px] px-3 text-sm"
+                      data-inserted="false"
+                      data-readonly="false"
+                      data-field-required="true"
+                      data-editing="false"
+                      data-validate="false"
+                    >
+                      <Trans>Required</Trans>
+                    </div>
+
+                    <div
+                      className="field--FieldRootContainer field-card-container flex h-12 min-w-[8rem] cursor-pointer items-center justify-center rounded-[2px] px-3 text-sm"
+                      data-inserted="true"
+                      data-readonly="false"
+                      data-field-required="true"
+                      data-editing="false"
+                      data-validate="false"
+                    >
+                      <Trans>Required filled</Trans>
+                    </div>
+
+                    <div
+                      className="field--FieldRootContainer field-card-container flex h-12 min-w-[8rem] cursor-pointer items-center justify-center rounded-[2px] px-3 text-sm"
+                      data-inserted="false"
+                      data-readonly="false"
+                      data-field-required="false"
+                      data-editing="false"
+                      data-validate="false"
+                    >
+                      <Trans>Optional</Trans>
+                    </div>
+
+                    <div
+                      className="field--FieldRootContainer field-card-container flex h-12 min-w-[8rem] cursor-pointer items-center justify-center rounded-[2px] px-3 text-sm"
+                      data-inserted="true"
+                      data-readonly="false"
+                      data-field-required="false"
+                      data-editing="false"
+                      data-validate="false"
+                    >
+                      <Trans>Optional filled</Trans>
+                    </div>
+
+                    <div
+                      className="field--FieldRootContainer field-card-container flex h-12 min-w-[8rem] items-center justify-center rounded-[2px] px-3 text-sm"
+                      data-inserted="false"
+                      data-readonly="false"
+                      data-field-required="true"
+                      data-editing="false"
+                      data-validate="true"
+                    >
+                      <Trans>Missing</Trans>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  <div>
+                    <p className="mb-3 font-medium text-sm">
+                      <Trans>Required fields</Trans>
+                    </p>
+
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                      <p className="text-muted-foreground text-sm">
+                        <Trans>Background</Trans>
+                      </p>
+                      <p className="text-muted-foreground text-sm">
+                        <Trans>Border</Trans>
+                      </p>
+                      <p className="text-muted-foreground text-sm">
+                        <Trans>Border (Hover)</Trans>
+                      </p>
+
+                      <FormField
+                        control={form.control}
+                        name="brandingColors.fieldRequiredCard"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <ColorPicker
+                                nonce={nonce}
+                                value={field.value ?? ''}
+                                defaultValue={DEFAULT_BRAND_COLORS.fieldRequiredCard}
+                                enableAlpha
+                                onChange={(color) => field.onChange(color)}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="brandingColors.fieldRequiredCardBorder"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <ColorPicker
+                                nonce={nonce}
+                                value={field.value ?? ''}
+                                defaultValue={DEFAULT_BRAND_COLORS.fieldRequiredCardBorder}
+                                enableAlpha
+                                onChange={(color) => field.onChange(color)}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="brandingColors.fieldRequiredCardBorderHover"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <ColorPicker
+                                nonce={nonce}
+                                value={field.value ?? ''}
+                                defaultValue={DEFAULT_BRAND_COLORS.fieldRequiredCardBorderHover}
+                                enableAlpha
+                                onChange={(color) => field.onChange(color)}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <FormField
+                      control={form.control}
+                      name="brandingColors.fieldRequiredCardBorderWidth"
+                      render={({ field }) => (
+                        <FormItem className="mt-4 max-w-xs">
+                          <FormLabel>
+                            <Trans>Border width</Trans>
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              type="text"
+                              placeholder={DEFAULT_BRAND_LENGTHS.fieldRequiredCardBorderWidth}
+                              value={field.value ?? ''}
+                              onChange={(e) => field.onChange(e.target.value)}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            <Trans>Border width in px or rem (e.g. 2px).</Trans>
+                          </FormDescription>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div>
+                    <p className="mb-3 font-medium text-sm">
+                      <Trans>Required filled fields</Trans>
+                    </p>
+
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                      <p className="text-muted-foreground text-sm">
+                        <Trans>Background</Trans>
+                      </p>
+                      <p className="text-muted-foreground text-sm">
+                        <Trans>Border</Trans>
+                      </p>
+                      <p className="text-muted-foreground text-sm">
+                        <Trans>Border (Hover)</Trans>
+                      </p>
+
+                      <FormField
+                        control={form.control}
+                        name="brandingColors.fieldRequiredFilledCard"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <ColorPicker
+                                nonce={nonce}
+                                value={field.value ?? ''}
+                                defaultValue={DEFAULT_BRAND_COLORS.fieldRequiredFilledCard}
+                                enableAlpha
+                                onChange={(color) => field.onChange(color)}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="brandingColors.fieldRequiredFilledCardBorder"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <ColorPicker
+                                nonce={nonce}
+                                value={field.value ?? ''}
+                                defaultValue={DEFAULT_BRAND_COLORS.fieldRequiredFilledCardBorder}
+                                enableAlpha
+                                onChange={(color) => field.onChange(color)}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="brandingColors.fieldRequiredFilledCardBorderHover"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <ColorPicker
+                                nonce={nonce}
+                                value={field.value ?? ''}
+                                defaultValue={DEFAULT_BRAND_COLORS.fieldRequiredFilledCardBorderHover}
+                                enableAlpha
+                                onChange={(color) => field.onChange(color)}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <FormField
+                      control={form.control}
+                      name="brandingColors.fieldRequiredFilledCardBorderWidth"
+                      render={({ field }) => (
+                        <FormItem className="mt-4 max-w-xs">
+                          <FormLabel>
+                            <Trans>Border width</Trans>
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              type="text"
+                              placeholder={DEFAULT_BRAND_LENGTHS.fieldRequiredFilledCardBorderWidth}
+                              value={field.value ?? ''}
+                              onChange={(e) => field.onChange(e.target.value)}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            <Trans>Border width in px or rem (e.g. 2px).</Trans>
+                          </FormDescription>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div>
+                    <p className="mb-3 font-medium text-sm">
+                      <Trans>Optional fields</Trans>
+                    </p>
+
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                      <p className="text-muted-foreground text-sm">
+                        <Trans>Background</Trans>
+                      </p>
+                      <p className="text-muted-foreground text-sm">
+                        <Trans>Border</Trans>
+                      </p>
+                      <p className="text-muted-foreground text-sm">
+                        <Trans>Border (Hover)</Trans>
+                      </p>
+
+                      <FormField
+                        control={form.control}
+                        name="brandingColors.fieldOptionalCard"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <ColorPicker
+                                nonce={nonce}
+                                value={field.value ?? ''}
+                                defaultValue={DEFAULT_BRAND_COLORS.fieldOptionalCard}
+                                enableAlpha
+                                onChange={(color) => field.onChange(color)}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="brandingColors.fieldOptionalCardBorder"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <ColorPicker
+                                nonce={nonce}
+                                value={field.value ?? ''}
+                                defaultValue={DEFAULT_BRAND_COLORS.fieldOptionalCardBorder}
+                                enableAlpha
+                                onChange={(color) => field.onChange(color)}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="brandingColors.fieldOptionalCardBorderHover"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <ColorPicker
+                                nonce={nonce}
+                                value={field.value ?? ''}
+                                defaultValue={DEFAULT_BRAND_COLORS.fieldOptionalCardBorderHover}
+                                enableAlpha
+                                onChange={(color) => field.onChange(color)}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <FormField
+                      control={form.control}
+                      name="brandingColors.fieldOptionalCardBorderWidth"
+                      render={({ field }) => (
+                        <FormItem className="mt-4 max-w-xs">
+                          <FormLabel>
+                            <Trans>Border width</Trans>
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              type="text"
+                              placeholder={DEFAULT_BRAND_LENGTHS.fieldOptionalCardBorderWidth}
+                              value={field.value ?? ''}
+                              onChange={(e) => field.onChange(e.target.value)}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            <Trans>Border width in px or rem (e.g. 2px).</Trans>
+                          </FormDescription>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div>
+                    <p className="mb-3 font-medium text-sm">
+                      <Trans>Optional filled fields</Trans>
+                    </p>
+
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                      <p className="text-muted-foreground text-sm">
+                        <Trans>Background</Trans>
+                      </p>
+                      <p className="text-muted-foreground text-sm">
+                        <Trans>Border</Trans>
+                      </p>
+                      <p className="text-muted-foreground text-sm">
+                        <Trans>Border (Hover)</Trans>
+                      </p>
+
+                      <FormField
+                        control={form.control}
+                        name="brandingColors.fieldOptionalFilledCard"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <ColorPicker
+                                nonce={nonce}
+                                value={field.value ?? ''}
+                                defaultValue={DEFAULT_BRAND_COLORS.fieldOptionalFilledCard}
+                                enableAlpha
+                                onChange={(color) => field.onChange(color)}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="brandingColors.fieldOptionalFilledCardBorder"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <ColorPicker
+                                nonce={nonce}
+                                value={field.value ?? ''}
+                                defaultValue={DEFAULT_BRAND_COLORS.fieldOptionalFilledCardBorder}
+                                enableAlpha
+                                onChange={(color) => field.onChange(color)}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="brandingColors.fieldOptionalFilledCardBorderHover"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <ColorPicker
+                                nonce={nonce}
+                                value={field.value ?? ''}
+                                defaultValue={DEFAULT_BRAND_COLORS.fieldOptionalFilledCardBorderHover}
+                                enableAlpha
+                                onChange={(color) => field.onChange(color)}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <FormField
+                      control={form.control}
+                      name="brandingColors.fieldOptionalFilledCardBorderWidth"
+                      render={({ field }) => (
+                        <FormItem className="mt-4 max-w-xs">
+                          <FormLabel>
+                            <Trans>Border width</Trans>
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              type="text"
+                              placeholder={DEFAULT_BRAND_LENGTHS.fieldOptionalFilledCardBorderWidth}
+                              value={field.value ?? ''}
+                              onChange={(e) => field.onChange(e.target.value)}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            <Trans>Border width in px or rem (e.g. 2px).</Trans>
+                          </FormDescription>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div>
+                    <p className="mb-1 font-medium text-sm">
+                      <Trans>Validation</Trans>
+                    </p>
+                    <p className="mb-3 text-muted-foreground text-sm">
+                      <Trans>Shown when a recipient tries to complete without filling required fields.</Trans>
+                    </p>
+
+                    <div className="grid max-w-md grid-cols-2 gap-4">
+                      <p className="text-muted-foreground text-sm">
+                        <Trans>Border</Trans>
+                      </p>
+                      <div />
+
+                      <FormField
+                        control={form.control}
+                        name="brandingColors.fieldValidationCardBorder"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <ColorPicker
+                                nonce={nonce}
+                                value={field.value ?? ''}
+                                defaultValue={DEFAULT_BRAND_COLORS.fieldValidationCardBorder}
+                                enableAlpha
+                                onChange={(color) => field.onChange(color)}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
 

@@ -25,6 +25,7 @@ import { createDocumentAuditLogData } from '../../../utils/document-audit-logs';
 import { unsafeBuildEnvelopeIdQuery } from '../../../utils/envelope';
 import { renderCustomEmailTemplate } from '../../../utils/render-custom-email-template';
 import { renderEmailWithI18N } from '../../../utils/render-email-with-i18n';
+import { resolveBrandedInviter } from '../../../utils/resolve-branded-inviter';
 import type { JobRunIO } from '../../client/_internal/job';
 import type { TSendSigningEmailJobDefinition } from './send-signing-email';
 
@@ -148,11 +149,15 @@ export const run = async ({ payload, io }: { payload: TSendSigningEmailJobDefini
     emailMessage = customEmail?.message ?? '';
 
     if (!emailMessage) {
-      const inviterName = user.name || '';
+      const { inviterName } = resolveBrandedInviter({
+        settings,
+        fallbackName: user.name,
+        fallbackEmail: user.email,
+      });
 
       emailMessage = i18n._(
         settings.includeSenderDetails
-          ? msg`${inviterName} on behalf of "${team.name}" has invited you to ${recipientActionVerb} the document "${envelope.title}".`
+          ? msg`${inviterName || ''} on behalf of "${team.name}" has invited you to ${recipientActionVerb} the document "${envelope.title}".`
           : msg`${team.name} has invited you to ${recipientActionVerb} the document "${envelope.title}".`,
       );
     }
@@ -168,11 +173,17 @@ export const run = async ({ payload, io }: { payload: TSendSigningEmailJobDefini
   const signDocumentLink = `${NEXT_PUBLIC_WEBAPP_URL()}/sign/${recipient.token}`;
   const reportUrl = `${NEXT_PUBLIC_WEBAPP_URL()}/report/${recipient.token}`;
 
+  const { inviterName, inviterEmail } = resolveBrandedInviter({
+    settings,
+    fallbackName: user.name,
+    fallbackEmail:
+      organisationType === OrganisationType.ORGANISATION ? team?.teamEmail?.email || user.email : user.email,
+  });
+
   const template = createElement(DocumentInviteEmailTemplate, {
     documentName: envelope.title,
-    inviterName: user.name || undefined,
-    inviterEmail:
-      organisationType === OrganisationType.ORGANISATION ? team?.teamEmail?.email || user.email : user.email,
+    inviterName,
+    inviterEmail,
     assetBaseUrl,
     signDocumentLink,
     customBody: renderCustomEmailTemplate(emailMessage, customEmailTemplate),

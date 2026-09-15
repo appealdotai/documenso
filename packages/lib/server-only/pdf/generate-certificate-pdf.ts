@@ -2,12 +2,12 @@ import { PDF } from '@libpdf/core';
 import { i18n } from '@lingui/core';
 import { msg } from '@lingui/core/macro';
 import type { DocumentMeta, Envelope, Field, Recipient, Signature } from '@prisma/client';
-import { FieldType } from '@prisma/client';
 import { prop, sortBy } from 'remeda';
 import { match } from 'ts-pattern';
 
 import { ZSupportedLanguageCodeSchema } from '../../constants/i18n';
 import type { TDocumentAuditLogBaseSchema } from '../../types/document-audit-logs';
+import { findSignatureFieldForCertificate } from '../../utils/certificate-signature-field';
 import { extractDocumentAuthMethods } from '../../utils/document-auth';
 import { getTranslations } from '../../utils/i18n';
 import { getDocumentCertificateAuditLogs } from '../document/get-document-certificate-audit-logs';
@@ -60,8 +60,8 @@ export const generateCertificatePdf = async (options: GenerateCertificatePdfOpti
     recipients: recipients.map((recipient) => {
       const recipientId = recipient.id;
 
-      const signatureField = fields.find(
-        (field) => field.recipientId === recipient.id && field.type === FieldType.SIGNATURE,
+      const signatureField = findSignatureFieldForCertificate(
+        fields.filter((field) => field.recipientId === recipient.id),
       );
 
       const emailSent: TDocumentAuditLogBaseSchema | undefined = auditLogs['EMAIL_SENT'].find(

@@ -4,6 +4,7 @@ import type { Transporter } from 'nodemailer';
 import { createTransport } from 'nodemailer';
 
 import { MailChannelsTransport } from './mailchannels';
+import { wrapTransportWithRateLimit } from './wrap-transport-with-rate-limit';
 
 export const buildTransport = (config: TEmailTransportConfig): Transporter => {
   switch (config.type) {
@@ -16,10 +17,12 @@ export const buildTransport = (config: TEmailTransportConfig): Transporter => {
       );
 
     case 'RESEND':
-      return createTransport(
-        ResendTransport.makeTransport({
-          apiKey: config.apiKey,
-        }),
+      return wrapTransportWithRateLimit(
+        createTransport(
+          ResendTransport.makeTransport({
+            apiKey: config.apiKey,
+          }),
+        ),
       );
 
     case 'SMTP_API':

@@ -115,6 +115,9 @@ type EnvelopeEditorProviderValue = {
   navigationBlocker: ReturnType<typeof useBlocker>;
 
   organisationEmails?: { id: string; email: string }[];
+
+  isSnappingEnabled: boolean;
+  setIsSnappingEnabled: (enabled: boolean) => void;
 };
 
 interface EnvelopeEditorProviderProps {
@@ -182,6 +185,7 @@ export const EnvelopeEditorProvider = ({
   const envelope = useSyncExternalStore(subscribeToEnvelopeStore, getEnvelope, getEnvelope);
 
   const [autosaveError, setAutosaveError] = useState<boolean>(false);
+  const [isSnappingEnabled, setIsSnappingEnabled] = useState(true);
 
   const isCscMode = IS_INSTANCE_CSC_MODE();
 
@@ -837,6 +841,8 @@ export const EnvelopeEditorProvider = ({
         registerPendingMutation,
         navigationBlocker,
         organisationEmails,
+        isSnappingEnabled,
+        setIsSnappingEnabled,
       }}
     >
       {children}

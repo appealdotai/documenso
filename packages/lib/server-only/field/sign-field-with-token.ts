@@ -6,13 +6,10 @@ import { validateTextField } from '@documenso/lib/advanced-fields-validation/val
 import { fromCheckboxValue } from '@documenso/lib/universal/field-checkbox';
 import { prisma } from '@documenso/prisma';
 import { DocumentStatus, FieldType, RecipientRole, SigningStatus } from '@prisma/client';
-import { DateTime } from 'luxon';
 import { isDeepEqual } from 'remeda';
 import { match } from 'ts-pattern';
 
 import { AUTO_SIGNABLE_FIELD_TYPES } from '../../constants/autosign';
-import { DEFAULT_DOCUMENT_DATE_FORMAT } from '../../constants/date-formats';
-import { DEFAULT_DOCUMENT_TIME_ZONE } from '../../constants/time-zones';
 import { DOCUMENT_AUDIT_LOG_TYPE } from '../../types/document-audit-logs';
 import type { TRecipientActionAuth } from '../../types/document-auth';
 import {
@@ -24,6 +21,7 @@ import {
 } from '../../types/field-meta';
 import type { RequestMetadata } from '../../universal/extract-request-metadata';
 import { createDocumentAuditLogData } from '../../utils/document-audit-logs';
+import { formatDateFieldCustomText } from '../../utils/envelope-signing';
 import { assertRecipientNotExpired } from '../../utils/recipients';
 import { validateFieldAuth } from '../document/validate-field-auth';
 
@@ -115,7 +113,9 @@ export const signFieldWithToken = async ({
     throw new Error(`Recipient ${recipient.id} has already signed`);
   }
 
-  if (field.inserted) {
+  const isSignatureField = field.type === FieldType.SIGNATURE || field.type === FieldType.FREE_SIGNATURE;
+
+  if (field.inserted && !isSignatureField) {
     throw new Error(`Field ${fieldId} has already been inserted`);
   }
 
@@ -187,17 +187,21 @@ export const signFieldWithToken = async ({
     },
   });
 
-  const isSignatureField = field.type === FieldType.SIGNATURE || field.type === FieldType.FREE_SIGNATURE;
-
   let customText = !isSignatureField ? value : undefined;
 
   const signatureImageAsBase64 = isSignatureField && isBase64 ? value : undefined;
   const typedSignature = isSignatureField && !isBase64 ? value : undefined;
 
   if (field.type === FieldType.DATE) {
-    customText = DateTime.now()
-      .setZone(documentMeta?.timezone ?? DEFAULT_DOCUMENT_TIME_ZONE)
-      .toFormat(documentMeta?.dateFormat ?? DEFAULT_DOCUMENT_DATE_FORMAT);
+    const formatted = formatDateFieldCustomText({
+      value,
+      documentMeta: {
+        timezone: documentMeta?.timezone,
+        dateFormat: documentMeta?.dateFormat,
+      },
+    });
+
+    customText = formatted.customText;
   }
 
   if (isSignatureField && !signatureImageAsBase64 && !typedSignature) {

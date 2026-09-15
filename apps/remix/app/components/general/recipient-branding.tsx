@@ -1,10 +1,15 @@
 import type { TCssVarsSchema } from '@documenso/lib/types/css-vars';
+import {
+  omitSigningFieldHighlightColors,
+  resolveSigningFieldHighlightColors,
+} from '@documenso/lib/utils/signing-field-highlight-colors';
 import { useEffect } from 'react';
 
 import { toNativeCssVarsString } from '~/utils/css-vars';
 
 export type RecipientBrandingPayload = {
   allowCustomBranding: boolean;
+  recipientForceLightMode: boolean;
   colors?: TCssVarsSchema | null;
   css?: string | null;
 };
@@ -48,22 +53,39 @@ export type RecipientBrandingProps = {
  * matches the current route on both initial load and subsequent navigations.
  */
 export const RecipientBranding = ({ branding, cspNonce }: RecipientBrandingProps) => {
-  const varsString = toNativeCssVarsString(branding?.colors ?? {});
+  const fieldHighlightVarsString = toNativeCssVarsString(resolveSigningFieldHighlightColors(branding?.colors));
+
+  const brandingVarsString = branding?.allowCustomBranding
+    ? toNativeCssVarsString(omitSigningFieldHighlightColors(branding?.colors ?? {}))
+    : '';
 
   const userCss = branding?.css ?? '';
 
-  const hasVars = varsString.trim().length > 0;
+  const hasFieldHighlightVars = fieldHighlightVarsString.trim().length > 0;
+  const hasBrandingVars = brandingVarsString.trim().length > 0;
   const hasUserCss = userCss.trim().length > 0;
 
-  const innerBody = `${hasVars ? `${varsString}\n` : ''}${hasUserCss ? userCss : ''}`.trim();
-  const css = `.documenso-branded { ${innerBody} }`;
+  const css = [
+    hasFieldHighlightVars ? `:root, .documenso-branded { ${fieldHighlightVarsString} }` : '',
+    hasBrandingVars || hasUserCss
+      ? `.documenso-branded { ${hasBrandingVars ? `${brandingVarsString}\n` : ''}${hasUserCss ? userCss : ''} }`
+      : '',
+  ]
+    .filter(Boolean)
+    .join('\n');
 
   useEffect(() => {
-    if (!branding?.allowCustomBranding) {
-      return;
-    }
+    if (branding?.recipientForceLightMode) {
+      document.documentElement.classList.add('dark-mode-disabled');
 
-    if (!hasVars && !hasUserCss) {
+      return () => {
+        document.documentElement.classList.remove('dark-mode-disabled');
+      };
+    }
+  }, [branding?.recipientForceLightMode]);
+
+  useEffect(() => {
+    if (!css.trim()) {
       return;
     }
 
@@ -76,13 +98,13 @@ export const RecipientBranding = ({ branding, cspNonce }: RecipientBrandingProps
     return () => {
       document.head.removeChild(style);
     };
-  }, [branding, cspNonce, css, hasUserCss, hasVars]);
+  }, [branding, cspNonce, css]);
 
-  if (!branding?.allowCustomBranding) {
+  if (!branding?.recipientForceLightMode && !css.trim()) {
     return null;
   }
 
-  if (!hasVars && !hasUserCss) {
+  if (!css.trim()) {
     return null;
   }
 

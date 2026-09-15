@@ -119,6 +119,7 @@ const createFieldSignature = (field: FieldToRender, options: RenderFieldElementO
 
   const { fieldX, fieldY, fieldWidth, fieldHeight } = calculateFieldPosition(field, pageWidth, pageHeight);
   const fontSize = field.fieldMeta?.fontSize || DEFAULT_SIGNATURE_TEXT_FONT_SIZE;
+  const fieldMeta = field.fieldMeta as TSignatureFieldMeta | undefined;
 
   const fieldText = new Konva.Text({
     id: `${field.renderId}-text`,
@@ -127,18 +128,19 @@ const createFieldSignature = (field: FieldToRender, options: RenderFieldElementO
   });
 
   const fieldTypeName = translations?.[field.type] || field.type;
+  const placeholderValue = fieldTypeName;
 
   // Calculate text positioning based on alignment
   const textX = 0;
   const textY = 0;
 
-  let textToRender: string = fieldTypeName;
+  let textToRender: string = placeholderValue;
 
   const signature = field.signature;
 
   // Handle edit mode.
   if (mode === 'edit') {
-    textToRender = fieldTypeName;
+    textToRender = fieldMeta?.label || placeholderValue;
 
     // If the field has already been signed and we have the signature data
     // available, render it. Otherwise leave the field type label as a placeholder.
@@ -155,9 +157,17 @@ const createFieldSignature = (field: FieldToRender, options: RenderFieldElementO
     }
   }
 
-  // Handle sign mode.
+  // Handle sign and export mode.
   if (mode === 'sign' || mode === 'export') {
-    textToRender = fieldTypeName;
+    if (mode === 'sign') {
+      textToRender = placeholderValue;
+    }
+
+    // Default to blank for export mode so optional unsigned fields don't burn
+    // the field type name (e.g. "SIGNATURE") into the sealed PDF.
+    if (mode === 'export') {
+      textToRender = '';
+    }
 
     if (field.inserted && !signature) {
       throw new AppError('MISSING_SIGNATURE');
@@ -175,8 +185,6 @@ const createFieldSignature = (field: FieldToRender, options: RenderFieldElementO
       };
     }
   }
-
-  const fieldMeta = field.fieldMeta as TSignatureFieldMeta | undefined;
 
   // Whether we're rendering the field type name (like "Signature") vs actual signed content.
   // Overflow should not apply to the label.
@@ -235,7 +243,7 @@ export const renderSignatureFieldElement = (field: FieldToRender, options: Rende
   }
 
   // Render the field background and text.
-  const fieldRect = upsertFieldRect(field, options);
+  const fieldRect = upsertFieldRect(field, options, fieldGroup);
   const { node: fieldSignature, isImageSignature, isLabel } = createFieldSignature(field, options);
 
   fieldGroup.add(fieldRect);

@@ -19,6 +19,8 @@ export const DEFAULT_FIELD_FONT_SIZE = 12;
 export const DEFAULT_SIGNATURE_OVERFLOW_MODE = 'auto';
 export const DEFAULT_DATE_OVERFLOW_MODE = 'auto';
 export const DEFAULT_EMAIL_OVERFLOW_MODE = 'auto';
+export const DEFAULT_TEXT_OVERFLOW_MODE = 'vertical';
+export const DEFAULT_TEXT_VERTICAL_ALIGN = 'top';
 
 /**
  * The overflow mode for a field.
@@ -104,6 +106,7 @@ export type TEmailFieldMeta = z.infer<typeof ZEmailFieldMeta>;
 
 export const ZDateFieldMeta = ZBaseFieldMeta.extend({
   type: z.literal('date'),
+  value: z.string().optional(),
   textAlign: ZFieldTextAlignSchema.optional(),
   overflow: ZFieldOverflowMode.optional().default(DEFAULT_DATE_OVERFLOW_MODE),
 });
@@ -118,6 +121,7 @@ export const ZTextFieldMeta = ZBaseFieldMeta.extend({
   lineHeight: ZFieldMetaLineHeight.nullish(),
   letterSpacing: ZFieldMetaLetterSpacing.nullish(),
   verticalAlign: ZFieldMetaVerticalAlign.nullish(),
+  overflow: ZFieldOverflowMode.optional(),
 });
 
 export type TTextFieldMeta = z.infer<typeof ZTextFieldMeta>;
@@ -309,12 +313,16 @@ export const FIELD_DATE_META_DEFAULT_VALUES: TDateFieldMeta = {
   fontSize: DEFAULT_FIELD_FONT_SIZE,
   textAlign: 'left',
   overflow: DEFAULT_DATE_OVERFLOW_MODE,
+  value: '',
+  readOnly: false,
 };
 
 export const FIELD_TEXT_META_DEFAULT_VALUES: TTextFieldMeta = {
   type: 'text',
   fontSize: DEFAULT_FIELD_FONT_SIZE,
   textAlign: 'left',
+  overflow: DEFAULT_TEXT_OVERFLOW_MODE,
+  verticalAlign: DEFAULT_TEXT_VERTICAL_ALIGN,
   label: '',
   placeholder: '',
   text: '',

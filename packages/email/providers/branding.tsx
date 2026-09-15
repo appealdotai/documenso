@@ -6,7 +6,11 @@ type BrandingContextValue = {
   brandingUrl: string;
   brandingLogo: string;
   brandingCompanyDetails: string;
+  brandingEmail?: string;
+  brandingName?: string;
   brandingHidePoweredBy: boolean;
+  brandingHideWatermark: boolean;
+  forceLightMode?: boolean;
   brandingColors?: EmailBrandingColors;
 };
 
@@ -17,7 +21,10 @@ const defaultBrandingContextValue: BrandingContextValue = {
   brandingUrl: '',
   brandingLogo: '',
   brandingCompanyDetails: '',
+  brandingEmail: '',
+  brandingName: '',
   brandingHidePoweredBy: false,
+  brandingHideWatermark: false,
 };
 
 export const BrandingProvider = (props: { branding?: BrandingContextValue; children: React.ReactNode }) => {

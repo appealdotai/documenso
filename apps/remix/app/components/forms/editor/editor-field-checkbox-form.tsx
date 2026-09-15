@@ -25,6 +25,7 @@ import { z } from 'zod';
 
 import {
   EditorGenericFontSizeField,
+  EditorGenericLabelField,
   EditorGenericReadOnlyField,
   EditorGenericRequiredField,
 } from './editor-field-generic-field-forms';
@@ -151,6 +152,8 @@ export const EditorFieldCheckboxForm = ({
     <Form {...form}>
       <form>
         <fieldset className="flex flex-col gap-2">
+          <EditorGenericLabelField formControl={form.control} />
+
           <EditorGenericFontSizeField formControl={form.control} />
 
           <FormField

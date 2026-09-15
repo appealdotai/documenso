@@ -12,6 +12,7 @@ import { assertOrganisationRatesAndLimits } from '../../../server-only/rate-limi
 import { extractDerivedDocumentEmailSettings } from '../../../types/document-email';
 import { unsafeBuildEnvelopeIdQuery } from '../../../utils/envelope';
 import { renderEmailWithI18N } from '../../../utils/render-email-with-i18n';
+import { resolveBrandedInviter } from '../../../utils/resolve-branded-inviter';
 import type { JobRunIO } from '../../client/_internal/job';
 import type { TSendDocumentCancelledEmailsJobDefinition } from './send-document-cancelled-emails';
 
@@ -47,15 +48,24 @@ export const run = async ({ payload, io }: { payload: TSendDocumentCancelledEmai
     },
   });
 
-  const { branding, emailLanguage, senderEmail, replyToEmail, organisationId, claims, emailsDisabled, emailTransport } =
-    await getEmailContext({
-      emailType: 'RECIPIENT',
-      source: {
-        type: 'team',
-        teamId: envelope.teamId,
-      },
-      meta: envelope.documentMeta,
-    });
+  const {
+    branding,
+    emailLanguage,
+    settings,
+    senderEmail,
+    replyToEmail,
+    organisationId,
+    claims,
+    emailsDisabled,
+    emailTransport,
+  } = await getEmailContext({
+    emailType: 'RECIPIENT',
+    source: {
+      type: 'team',
+      teamId: envelope.teamId,
+    },
+    meta: envelope.documentMeta,
+  });
 
   const { documentMeta, user: documentOwner } = envelope;
 
@@ -125,10 +135,16 @@ export const run = async ({ payload, io }: { payload: TSendDocumentCancelledEmai
           return;
         }
 
+        const { inviterName, inviterEmail } = resolveBrandedInviter({
+          settings,
+          fallbackName: documentOwner.name,
+          fallbackEmail: documentOwner.email,
+        });
+
         const template = createElement(DocumentCancelTemplate, {
           documentName: envelope.title,
-          inviterName: documentOwner.name || undefined,
-          inviterEmail: documentOwner.email,
+          inviterName,
+          inviterEmail,
           assetBaseUrl: NEXT_PUBLIC_WEBAPP_URL(),
           cancellationReason: cancellationReason || 'The document has been cancelled.',
         });
