@@ -203,6 +203,7 @@ export const EnvelopeEditorProvider = ({
    * server.  Only meaningful when auto-save is disabled.
    */
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const previousAutoSaveEnabledRef = useRef(isAutoSaveEnabled);
 
   const setIsAutoSaveEnabled = useCallback((enabled: boolean) => {
     _setIsAutoSaveEnabled(enabled);
@@ -280,13 +281,21 @@ export const EnvelopeEditorProvider = ({
       setFieldsDebounced(fields);
     },
     /**
-     * Called by undo/redo to bypass the 2-second debounce and immediately
-     * persist the restored snapshot to the server (or mark unsaved in manual mode).
+     * Called by undo/redo to bypass the 2-second debounce in auto-save mode.
+     * Manual-save mode keeps the restored snapshot queued for the Save action.
      */
     handleFieldsFlush: async () => {
-      await flushSetFields();
+      if (isAutoSaveEnabledRef.current) {
+        await flushSetFields();
+      }
     },
   });
+
+  useEffect(() => {
+    if (!isAutoSaveEnabledRef.current) {
+      setHasUnsavedChanges(editorFields.isDirty);
+    }
+  }, [editorFields.isDirty]);
 
   const editorRecipients = useEditorRecipients({
     envelope,
@@ -353,6 +362,8 @@ export const EnvelopeEditorProvider = ({
         variant: 'destructive',
         duration: 7500,
       });
+
+      throw err;
     }
   }, 1000);
 
@@ -437,6 +448,8 @@ export const EnvelopeEditorProvider = ({
         variant: 'destructive',
         duration: 7500,
       });
+
+      throw err;
     }
   }, 2000);
 
@@ -513,6 +526,8 @@ export const EnvelopeEditorProvider = ({
         variant: 'destructive',
         duration: 7500,
       });
+
+      throw err;
     }
   }, 1000);
 
@@ -716,6 +731,23 @@ export const EnvelopeEditorProvider = ({
     return getEnvelope();
   };
 
+  useEffect(() => {
+    const wasAutoSaveEnabled = previousAutoSaveEnabledRef.current;
+    previousAutoSaveEnabledRef.current = isAutoSaveEnabled;
+
+    if (!isAutoSaveEnabled || wasAutoSaveEnabled) {
+      return;
+    }
+
+    void flushAutosave()
+      .then(() => {
+        editorFields.markSaved();
+        setHasUnsavedChanges(false);
+        setAutosaveError(false);
+      })
+      .catch(() => undefined);
+  }, [editorFields.markSaved, flushAutosave, isAutoSaveEnabled]);
+
   /**
    * Manually persist all pending local changes to the server.
    *
@@ -728,6 +760,7 @@ export const EnvelopeEditorProvider = ({
 
     try {
       await flushAutosave();
+      editorFields.markSaved();
       setHasUnsavedChanges(false);
       setAutosaveError(false);
     } finally {
