@@ -72,7 +72,7 @@ export function useEnvelopeAutosave<T>(saveFn: (data: T) => Promise<void>, delay
 
       timeoutRef.current = setTimeout(() => {
         timeoutRef.current = null;
-        void commit();
+        void commit().catch(() => undefined);
       }, delay);
     },
     [commit, delay],

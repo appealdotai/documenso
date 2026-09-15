@@ -54,8 +54,9 @@ export const UnsavedChangesDialog = () => {
     const handleSaveAndLeave = async () => {
       try {
         await saveNow();
-      } finally {
         navigationBlocker.proceed?.();
+      } catch {
+        // Keep the dialog open so the user can retry after a failed save.
       }
     };
 

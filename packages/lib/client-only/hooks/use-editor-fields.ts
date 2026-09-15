@@ -49,6 +49,8 @@ type EditorFieldsProps = {
 
 type UseEditorFieldsResponse = {
   localFields: TLocalField[];
+  isDirty: boolean;
+  markSaved: () => void;
 
   // Selected field
   selectedField: TLocalField | undefined;
@@ -140,8 +142,16 @@ export const useEditorFields = ({
     keyName: 'react-hook-form-id',
   });
 
+  const savedFieldsRef = useRef<TLocalField[]>(structuredClone(form.getValues().fields) as TLocalField[]);
+  const [isDirty, setIsDirty] = useState(false);
+
+  const serializeFields = (fields: TLocalField[]) =>
+    JSON.stringify(fields.map(({ formId: _formId, ...field }) => field));
+
   const triggerFieldsUpdate = () => {
-    void handleFieldsUpdate(form.getValues().fields);
+    const fields = form.getValues().fields;
+    setIsDirty(serializeFields(fields) !== serializeFields(savedFieldsRef.current));
+    void handleFieldsUpdate(fields);
   };
 
   /**
@@ -340,8 +350,16 @@ export const useEditorFields = ({
     historyPastRef.current = [];
     historyFutureRef.current = [];
     bumpHistory();
-    form.reset(generateDefaultValues(fields));
+    const nextFields = generateDefaultValues(fields).fields;
+    savedFieldsRef.current = structuredClone(nextFields) as TLocalField[];
+    setIsDirty(false);
+    form.reset({ fields: nextFields });
   };
+
+  const markSaved = useCallback(() => {
+    savedFieldsRef.current = structuredClone(form.getValues().fields) as TLocalField[];
+    setIsDirty(false);
+  }, [form]);
 
   /**
    * Restore the previous snapshot.
@@ -366,6 +384,7 @@ export const useEditorFields = ({
     bumpHistory();
 
     form.reset({ fields: snapshot });
+    setIsDirty(serializeFields(snapshot) !== serializeFields(savedFieldsRef.current));
     void handleFieldsUpdate(snapshot);
     // Bypass the debounce — flush immediately so the save doesn't lag 2s.
     void handleFieldsFlush?.();
@@ -389,6 +408,7 @@ export const useEditorFields = ({
     bumpHistory();
 
     form.reset({ fields: snapshot });
+    setIsDirty(serializeFields(snapshot) !== serializeFields(savedFieldsRef.current));
     void handleFieldsUpdate(snapshot);
     // Bypass the debounce — flush immediately so the save doesn't lag 2s.
     void handleFieldsFlush?.();
@@ -403,6 +423,8 @@ export const useEditorFields = ({
   return {
     // Core state
     localFields,
+    isDirty,
+    markSaved,
 
     // Field operations
     addField,
