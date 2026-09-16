@@ -48,7 +48,11 @@ const parseFilenameFromContentDisposition = (header: string | null): string | nu
   return filename?.[1]?.trim() ?? null;
 };
 
-export const downloadPDF = async ({ envelopeItem, token, fileName, version = 'signed' }: DownloadPDFProps) => {
+/**
+ * Fetches a PDF for an envelope item and returns it as a blob alongside the
+ * filename it should be saved as. Throws on non-OK responses.
+ */
+export const fetchPDF = async ({ envelopeItem, token, fileName, version = 'signed' }: DownloadPDFProps) => {
   const downloadUrl = getEnvelopeItemPdfUrl({
     type: 'download',
     envelopeItem: envelopeItem,
@@ -57,6 +61,11 @@ export const downloadPDF = async ({ envelopeItem, token, fileName, version = 'si
   });
 
   const response = await fetch(downloadUrl);
+
+  if (!response.ok) {
+    throw new Error(`Failed to download PDF: ${response.status}`);
+  }
+
   const blob = await response.blob();
 
   const filenameFromHeader = parseFilenameFromContentDisposition(response.headers.get('Content-Disposition'));
@@ -72,8 +81,23 @@ export const downloadPDF = async ({ envelopeItem, token, fileName, version = 'si
 
   const baseTitle = (fileName ?? 'document').replace(/\.pdf$/i, '');
 
-  downloadFile({
+  return {
     filename: `${baseTitle}${versionToFilenameSuffix(version)}`,
+    blob,
+  };
+};
+
+export const downloadPDF = async (options: DownloadPDFProps) => {
+  const result = await fetchPDF(options);
+
+  if (!result) {
+    return;
+  }
+
+  const { filename, blob } = result;
+
+  downloadFile({
+    filename,
     data: blob,
   });
 };

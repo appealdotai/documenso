@@ -1,3 +1,6 @@
+import { formatPath } from '@documenso/lib/constants/app';
+import { getAppBrandConfig } from '@documenso/lib/constants/brand';
+import { PREFERRED_TEAM_URL_COOKIE } from '@documenso/lib/constants/cookies';
 import { AppDebugger } from '@documenso/lib/utils/debugger';
 import type { Context, Next } from 'hono';
 import { setCookie } from 'hono/cookie';
@@ -19,13 +22,32 @@ export const appMiddleware = async (c: Context, next: Next) => {
   const { req } = c;
   const { path } = req;
 
+  if (path.startsWith('/.well-known/appspecific/')) {
+    return c.body(null, 404);
+  }
+
+  const brandConfig = getAppBrandConfig();
+  const legacyAssetRedirects: Record<string, string> = {
+    '/site.webmanifest': brandConfig.manifestPath,
+    '/favicon.ico': `${brandConfig.assetPath}/favicon.ico`,
+    '/favicon-16x16.png': `${brandConfig.assetPath}/favicon-16x16.png`,
+    '/favicon-32x32.png': `${brandConfig.assetPath}/favicon-32x32.png`,
+    '/apple-touch-icon.png': `${brandConfig.assetPath}/apple-touch-icon.png`,
+  };
+
+  const legacyAssetPath = legacyAssetRedirects[path];
+
+  if (legacyAssetPath) {
+    return c.redirect(formatPath(legacyAssetPath), 308);
+  }
+
   // Paths to ignore.
   if (nonPagePathRegex.test(path)) {
     return next();
   }
 
   // PRE-HANDLER CODE: Place code here to execute BEFORE the route handler runs.
-  const redirectPath = await handleRedirects(c);
+  const redirectPath = handleRedirects(c);
 
   if (redirectPath) {
     debug.log('Redirecting from', path);
@@ -49,7 +71,7 @@ export const appMiddleware = async (c: Context, next: Next) => {
   if (pathname.startsWith('/t/')) {
     debug.log('Setting preferred team url cookie');
 
-    setCookie(c, 'preferred-team-url', pathname.split('/')[2], {
+    setCookie(c, PREFERRED_TEAM_URL_COOKIE, pathname.split('/')[2], {
       sameSite: 'lax',
     });
 
@@ -63,4 +85,4 @@ export const appMiddleware = async (c: Context, next: Next) => {
 // 3. Starts with /favicon (like /favicon.ico)
 // The ^ ensures matching from the beginning of the string
 // The | acts as OR operator between different patterns
-const nonPagePathRegex = /^(\/api\/|\/ingest\/|\/__manifest|\/assets\/|\/apple-.*|\/favicon.*)/;
+const nonPagePathRegex = /^(\/api\/|\/ingest\/|\/__manifest|\/assets\/|\/apple-.*|\/favicon.*|\/branding\/)/;

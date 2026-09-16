@@ -11,17 +11,20 @@ import {
   Globe2Icon,
   LockIcon,
   MagnetIcon,
+  Redo2Icon,
   RefreshCwIcon,
   SendIcon,
   SettingsIcon,
+  Undo2Icon,
 } from 'lucide-react';
-import { useMemo } from 'react';
+import { type MouseEvent, useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { match } from 'ts-pattern';
 
 import { EnvelopeDistributeDialog } from '~/components/dialogs/envelope-distribute-dialog';
 import { EnvelopeRedistributeDialog } from '~/components/dialogs/envelope-redistribute-dialog';
 import { TemplateUseDialog } from '~/components/dialogs/template-use-dialog';
+import { UnsavedChangesDialog } from '~/components/dialogs/unsaved-changes-dialog';
 import { BrandingLogo } from '~/components/general/branding-logo';
 import { DocumentAttachmentsPopover } from '~/components/general/document/document-attachments-popover';
 import { EmbeddedEditorAttachmentPopover } from '~/components/general/document/embedded-editor-attachment-popover';
@@ -43,6 +46,11 @@ export default function EnvelopeEditorHeader() {
     relativePath,
     editorConfig,
     flushAutosave,
+    editorFields,
+    isAutoSaveEnabled,
+    hasUnsavedChanges,
+    saveNow,
+    discardChanges,
     isSnappingEnabled,
     setIsSnappingEnabled,
   } = useCurrentEnvelopeEditor();
@@ -57,6 +65,33 @@ export default function EnvelopeEditorHeader() {
     () => getEnvelopeItemPermissions(envelope, envelope.recipients),
     [envelope, envelope.recipients],
   );
+
+  const [isTemplateUseDialogOpen, setIsTemplateUseDialogOpen] = useState(false);
+  const [isTemplateUseGuardOpen, setIsTemplateUseGuardOpen] = useState(false);
+
+  const shouldBlockTemplateUse = !isAutoSaveEnabled && hasUnsavedChanges;
+
+  const handleTemplateUseClick = (event: MouseEvent<HTMLButtonElement>) => {
+    if (!shouldBlockTemplateUse) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    setIsTemplateUseGuardOpen(true);
+  };
+
+  const handleSaveBeforeTemplateUse = async () => {
+    await saveNow();
+    setIsTemplateUseGuardOpen(false);
+    setIsTemplateUseDialogOpen(true);
+  };
+
+  const handleDiscardBeforeTemplateUse = async () => {
+    await discardChanges();
+    setIsTemplateUseGuardOpen(false);
+    setIsTemplateUseDialogOpen(true);
+  };
 
   const handleCreateEmbeddedEnvelope = async () => {
     const latestEnvelope = await flushAutosave();
@@ -82,6 +117,41 @@ export default function EnvelopeEditorHeader() {
             </Link>
           )}
           <Separator orientation="vertical" className="h-6 shrink-0" />
+
+          {/* Undo / Redo buttons — only shown on the Add Fields step where history
+              is tracked, and only when auto-save is enabled (otherwise they live
+              in the FloatingSaveBar) */}
+          {isAutoSaveEnabled && (editorFields.canUndo || editorFields.canRedo) && (
+            <>
+              <div className="flex items-center gap-1">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 p-0"
+                  disabled={!editorFields.canUndo}
+                  title={t`Undo (Ctrl+Z)`}
+                  onClick={() => editorFields.undo()}
+                >
+                  <Undo2Icon className="h-4 w-4" />
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 p-0"
+                  disabled={!editorFields.canRedo}
+                  title={t`Redo (Ctrl+Shift+Z)`}
+                  onClick={() => editorFields.redo()}
+                >
+                  <Redo2Icon className="h-4 w-4" />
+                </Button>
+              </div>
+
+              <Separator orientation="vertical" className="h-6 shrink-0" />
+            </>
+          )}
 
           <div className="flex min-w-0 items-center space-x-2">
             <EnvelopeItemTitleInput
@@ -166,6 +236,7 @@ export default function EnvelopeEditorHeader() {
                 </Badge>
 
                 <button
+                  type="button"
                   onClick={() => {
                     window.location.reload();
                   }}
@@ -232,18 +303,28 @@ export default function EnvelopeEditorHeader() {
               </>
             ))
             .with({ isEmbedded: false, isTemplate: true, allowDistributing: true }, () => (
-              <TemplateUseDialog
-                envelopeId={envelope.id}
-                templateId={mapSecondaryIdToTemplateId(envelope.secondaryId)}
-                templateSigningOrder={envelope.documentMeta?.signingOrder}
-                recipients={envelope.recipients}
-                documentRootPath={relativePath.documentRootPath}
-                trigger={
-                  <Button size="sm">
-                    <Trans>Use Template</Trans>
-                  </Button>
-                }
-              />
+              <>
+                <TemplateUseDialog
+                  envelopeId={envelope.id}
+                  templateId={mapSecondaryIdToTemplateId(envelope.secondaryId)}
+                  templateSigningOrder={envelope.documentMeta?.signingOrder}
+                  recipients={envelope.recipients}
+                  documentRootPath={relativePath.documentRootPath}
+                  open={isTemplateUseDialogOpen}
+                  onOpenChange={setIsTemplateUseDialogOpen}
+                  trigger={
+                    <Button size="sm" onClick={handleTemplateUseClick}>
+                      <Trans>Use Template</Trans>
+                    </Button>
+                  }
+                />
+                <UnsavedChangesDialog
+                  open={isTemplateUseGuardOpen}
+                  onCancel={() => setIsTemplateUseGuardOpen(false)}
+                  onSaveAndContinue={handleSaveBeforeTemplateUse}
+                  onDiscardAndContinue={handleDiscardBeforeTemplateUse}
+                />
+              </>
             ))
 
             .otherwise(() => null)}

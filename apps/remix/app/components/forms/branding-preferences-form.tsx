@@ -36,6 +36,7 @@ import { toNativeCssVars } from '~/utils/css-vars';
 import { useCspNonce } from '~/utils/nonce';
 
 import { FormStickySaveBar } from './form-sticky-save-bar';
+import { InheritableField } from './inheritable-field';
 
 const ZBrandingPreferencesFormSchema = z.object({
   brandingEnabled: z.boolean().nullable(),
@@ -260,11 +261,13 @@ export function BrandingPreferencesForm({
             control={form.control}
             name="brandingEnabled"
             render={({ field }) => (
-              <FormItem className="flex-1">
-                <FormLabel>
-                  <Trans>Enable Custom Branding</Trans>
-                </FormLabel>
-
+              <InheritableField
+                className="flex-1"
+                canInherit={canInherit}
+                isInherited={field.value === null}
+                label={<Trans>Enable Custom Branding</Trans>}
+                testId="branding-enabled"
+              >
                 <FormControl>
                   <Select
                     {...field}
@@ -302,7 +305,7 @@ export function BrandingPreferencesForm({
                     <Trans>Enable custom branding for all documents in this organisation</Trans>
                   )}
                 </FormDescription>
-              </FormItem>
+              </InheritableField>
             )}
           />
 
@@ -362,11 +365,13 @@ export function BrandingPreferencesForm({
               control={form.control}
               name="brandingLogo"
               render={({ field: { value: _value, onChange, ...field } }) => (
-                <FormItem className="flex-1">
-                  <FormLabel>
-                    <Trans>Branding Logo</Trans>
-                  </FormLabel>
-
+                <InheritableField
+                  className="flex-1"
+                  canInherit={canInherit}
+                  isInherited={!previewUrl}
+                  label={<Trans>Branding Logo</Trans>}
+                  testId="branding-logo"
+                >
                   <div className="flex flex-col gap-4">
                     <div className="relative h-48 w-full overflow-hidden rounded-lg border border-border bg-background">
                       {previewUrl ? (
@@ -444,7 +449,7 @@ export function BrandingPreferencesForm({
                       )}
                     </FormDescription>
                   </div>
-                </FormItem>
+                </InheritableField>
               )}
             />
 
@@ -452,11 +457,13 @@ export function BrandingPreferencesForm({
               control={form.control}
               name="brandingUrl"
               render={({ field }) => (
-                <FormItem className="flex-1">
-                  <FormLabel>
-                    <Trans>Brand Website</Trans>
-                  </FormLabel>
-
+                <InheritableField
+                  className="flex-1"
+                  canInherit={canInherit}
+                  isInherited={!field.value}
+                  label={<Trans>Brand Website</Trans>}
+                  testId="branding-url"
+                >
                   <FormControl>
                     <Input type="url" placeholder="https://example.com" disabled={!isBrandingEnabled} {...field} />
                   </FormControl>
@@ -471,7 +478,7 @@ export function BrandingPreferencesForm({
                       </span>
                     )}
                   </FormDescription>
-                </FormItem>
+                </InheritableField>
               )}
             />
 
@@ -479,11 +486,13 @@ export function BrandingPreferencesForm({
               control={form.control}
               name="brandingCompanyDetails"
               render={({ field }) => (
-                <FormItem className="flex-1">
-                  <FormLabel>
-                    <Trans>Brand Details</Trans>
-                  </FormLabel>
-
+                <InheritableField
+                  className="flex-1"
+                  canInherit={canInherit}
+                  isInherited={!field.value}
+                  label={<Trans>Brand Details</Trans>}
+                  testId="branding-company-details"
+                >
                   <FormControl>
                     <Textarea
                       placeholder={t`Enter your brand details`}
@@ -503,7 +512,7 @@ export function BrandingPreferencesForm({
                       </span>
                     )}
                   </FormDescription>
-                </FormItem>
+                </InheritableField>
               )}
             />
 

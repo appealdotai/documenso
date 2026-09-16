@@ -60,6 +60,7 @@ CLAUDE.md
 
 # agents
 .specs
+.ua/
 
 # scripts
 scripts/output*

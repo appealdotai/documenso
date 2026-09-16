@@ -1,3 +1,4 @@
+import { useAnalytics } from '@documenso/lib/client-only/hooks/use-analytics';
 import { usePageRenderer } from '@documenso/lib/client-only/hooks/use-page-renderer';
 import {
   type PageRenderData,
@@ -78,6 +79,7 @@ export const EnvelopeSignerPageRenderer = ({ pageData }: { pageData: PageRenderD
 
   const { executeActionAuthProcedure } = useRequiredDocumentSigningAuthContext();
   const { toast } = useToast();
+  const analytics = useAnalytics();
 
   const {
     envelopeData,
@@ -453,6 +455,14 @@ export const EnvelopeSignerPageRenderer = ({ pageData }: { pageData: PageRenderD
       unsafeRenderFieldOnLayer(unparsedField, fieldCanvasStyleCache);
     } catch (err) {
       console.error(err);
+
+      analytics.captureException(err, {
+        source: 'signing',
+        location: 'page_render',
+        recipientId: recipient.id,
+        envelopeId: envelope.id,
+      });
+
       setRenderError(true);
     }
   };
@@ -535,6 +545,14 @@ export const EnvelopeSignerPageRenderer = ({ pageData }: { pageData: PageRenderD
       }
     } catch (err) {
       console.error(err);
+
+      analytics.captureException(err, {
+        source: 'signing',
+        location: 'sign_field',
+        fieldType: payload.type,
+        recipientId: recipient.id,
+        envelopeId: envelope.id,
+      });
 
       toast({
         title: t`Error`,

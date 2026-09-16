@@ -10,8 +10,8 @@ type BrandingContextValue = {
   brandingName?: string;
   brandingHidePoweredBy: boolean;
   brandingHideWatermark: boolean;
-  brandingColors?: EmailBrandingColors;
   forceLightMode?: boolean;
+  brandingColors?: EmailBrandingColors;
 };
 
 const BrandingContext = createContext<BrandingContextValue | undefined>(undefined);

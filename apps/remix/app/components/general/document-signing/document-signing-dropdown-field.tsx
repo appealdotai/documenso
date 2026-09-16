@@ -1,3 +1,4 @@
+import { useAnalytics } from '@documenso/lib/client-only/hooks/use-analytics';
 import { DO_NOT_INVALIDATE_QUERY_ON_MUTATION } from '@documenso/lib/constants/trpc';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import type { TRecipientActionAuth } from '@documenso/lib/types/document-auth';
@@ -39,6 +40,7 @@ export const DocumentSigningDropdownField = ({
   const { t } = useLingui();
   const { toast } = useToast();
   const { revalidate } = useRevalidator();
+  const analytics = useAnalytics();
 
   const { recipient, isAssistantMode } = useDocumentSigningRecipientContext();
   const { executeActionAuthProcedure } = useRequiredDocumentSigningAuthContext();
@@ -114,6 +116,13 @@ export const DocumentSigningDropdownField = ({
 
       console.error(err);
 
+      analytics.captureException(err, {
+        source: 'signing',
+        location: 'sign_field',
+        fieldType: field.type,
+        recipientId: field.recipientId,
+      });
+
       toast({
         title: t`Error`,
         description: isAssistantMode
@@ -140,6 +149,13 @@ export const DocumentSigningDropdownField = ({
       await revalidate();
     } catch (err) {
       console.error(err);
+
+      analytics.captureException(err, {
+        source: 'signing',
+        location: 'remove_field',
+        fieldType: field.type,
+        recipientId: field.recipientId,
+      });
 
       toast({
         title: t`Error`,

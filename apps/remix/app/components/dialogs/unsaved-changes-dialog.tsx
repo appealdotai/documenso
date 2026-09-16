@@ -12,6 +12,13 @@ import {
 import { Trans } from '@lingui/react/macro';
 import { useEffect } from 'react';
 
+type UnsavedChangesDialogProps = {
+  open?: boolean;
+  onCancel?: () => void;
+  onSaveAndContinue?: () => Promise<void>;
+  onDiscardAndContinue?: () => Promise<void>;
+};
+
 /**
  * Modal dialog shown when the user attempts in-app navigation while:
  * - an autosave is in-progress or the last save failed, OR
@@ -20,7 +27,12 @@ import { useEffect } from 'react';
  * Driven entirely by the `navigationBlocker` from the envelope editor context,
  * so it mounts once at the editor root and requires no per-link wiring.
  */
-export const UnsavedChangesDialog = () => {
+export const UnsavedChangesDialog = ({
+  open,
+  onCancel,
+  onSaveAndContinue,
+  onDiscardAndContinue,
+}: UnsavedChangesDialogProps = {}) => {
   const {
     navigationBlocker,
     isAutosaving,
@@ -32,7 +44,7 @@ export const UnsavedChangesDialog = () => {
     discardChanges,
   } = useCurrentEnvelopeEditor();
 
-  const isBlocked = navigationBlocker.state === 'blocked';
+  const isBlocked = open ?? navigationBlocker.state === 'blocked';
 
   /**
    * Auto-proceed once the in-progress save finishes — the user chose "Wait"
@@ -52,6 +64,11 @@ export const UnsavedChangesDialog = () => {
   // ---- Auto-save OFF path: user has unsaved manual changes ----
   if (!isAutoSaveEnabled && hasUnsavedChanges) {
     const handleSaveAndLeave = async () => {
+      if (onSaveAndContinue) {
+        await onSaveAndContinue();
+        return;
+      }
+
       try {
         await saveNow();
         navigationBlocker.proceed?.();
@@ -61,11 +78,21 @@ export const UnsavedChangesDialog = () => {
     };
 
     const handleDiscardAndLeave = async () => {
+      if (onDiscardAndContinue) {
+        await onDiscardAndContinue();
+        return;
+      }
+
       await discardChanges();
       navigationBlocker.proceed?.();
     };
 
     const handleCancel = () => {
+      if (onCancel) {
+        onCancel();
+        return;
+      }
+
       navigationBlocker.reset?.();
     };
 

@@ -92,12 +92,12 @@ export const EnvelopeEditor = () => {
     syncEnvelope,
     flushAutosave,
     resetForms,
+    editorFields,
     isAutoSaveEnabled,
     setIsAutoSaveEnabled,
-    hasUnsavedChanges,
     isSnappingEnabled,
     setIsSnappingEnabled,
-    editorFields,
+    hasUnsavedChanges,
   } = useCurrentEnvelopeEditor();
 
   const [searchParams, setSearchParams] = useSearchParams();
@@ -508,6 +508,35 @@ export const EnvelopeEditor = () => {
                 }}
               />
             )}
+
+            {/* Auto-save toggle */}
+            <button
+              type="button"
+              className={cn(
+                'flex w-full cursor-pointer items-center rounded-md px-2 py-1.5 transition-colors hover:bg-accent',
+                {
+                  'justify-center': minimizeLeftSidebar,
+                  'justify-between': !minimizeLeftSidebar,
+                },
+              )}
+              title={isAutoSaveEnabled ? t`Auto-save is on` : t`Auto-save is off`}
+              onClick={() => setIsAutoSaveEnabled(!isAutoSaveEnabled)}
+            >
+              {!minimizeLeftSidebar && (
+                <span className="text-muted-foreground text-sm">
+                  <Trans>Auto-save</Trans>
+                </span>
+              )}
+
+              <Switch
+                checked={isAutoSaveEnabled}
+                onCheckedChange={setIsAutoSaveEnabled}
+                // Prevent the button click from double-firing
+                onClick={(e) => e.stopPropagation()}
+                className="pointer-events-none"
+                aria-label={isAutoSaveEnabled ? t`Auto-save is on` : t`Auto-save is off`}
+              />
+            </button>
           </div>
 
           {/* Editor Tools — only shown on the Add Fields step */}

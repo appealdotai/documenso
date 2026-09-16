@@ -1,3 +1,4 @@
+import { useAnalytics } from '@documenso/lib/client-only/hooks/use-analytics';
 import { DO_NOT_INVALIDATE_QUERY_ON_MUTATION } from '@documenso/lib/constants/trpc';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import type { TRecipientActionAuth } from '@documenso/lib/types/document-auth';
@@ -46,6 +47,7 @@ export const DocumentSigningSignatureField = ({
   const { _ } = useLingui();
   const { toast } = useToast();
   const { revalidate } = useRevalidator();
+  const analytics = useAnalytics();
 
   const { recipient } = useDocumentSigningRecipientContext();
 
@@ -139,6 +141,11 @@ export const DocumentSigningSignatureField = ({
     await revalidate();
   };
 
+  const onPreSign = () => {
+    void openSignatureDialog();
+    return false;
+  };
+
   const openSignatureDialog = async () => {
     try {
       const result = await handleSignatureFieldClick({
@@ -182,6 +189,13 @@ export const DocumentSigningSignatureField = ({
 
       console.error(err);
 
+      analytics.captureException(err, {
+        source: 'signing',
+        location: 'sign_field',
+        fieldType: field.type,
+        recipientId: field.recipientId,
+      });
+
       toast({
         title: _(msg`Error`),
         description: _(msg`An error occurred while signing the document.`),
@@ -190,9 +204,37 @@ export const DocumentSigningSignatureField = ({
     }
   };
 
-  const onPreSign = () => {
-    void openSignatureDialog();
-    return false;
+  const onRemove = async () => {
+    try {
+      const payload: TRemovedSignedFieldWithTokenMutationSchema = {
+        token: recipient.token,
+        fieldId: field.id,
+      };
+
+      if (onUnsignField) {
+        await onUnsignField(payload);
+        return;
+      } else {
+        await removeSignedFieldWithToken(payload);
+      }
+
+      await revalidate();
+    } catch (err) {
+      console.error(err);
+
+      analytics.captureException(err, {
+        source: 'signing',
+        location: 'remove_field',
+        fieldType: field.type,
+        recipientId: field.recipientId,
+      });
+
+      toast({
+        title: _(msg`Error`),
+        description: _(msg`An error occurred while removing the signature.`),
+        variant: 'destructive',
+      });
+    }
   };
 
   useLayoutEffect(() => {

@@ -1,5 +1,7 @@
 import { getOptionalSession } from '@documenso/auth/server/lib/utils/get-session';
+import { useAnalytics } from '@documenso/lib/client-only/hooks/use-analytics';
 import { SessionProvider } from '@documenso/lib/client-only/providers/session';
+import { getBasePath } from '@documenso/lib/constants/app';
 import { getAppBrandConfig, getAppBrandIconLinks } from '@documenso/lib/constants/brand';
 import { APP_I18N_OPTIONS, type SupportedLanguageCodes } from '@documenso/lib/constants/i18n';
 import { createPublicEnv } from '@documenso/lib/utils/env';
@@ -9,6 +11,7 @@ import { getOrganisationSession } from '@documenso/trpc/server/organisation-rout
 import { Toaster } from '@documenso/ui/primitives/toaster';
 import { TooltipProvider } from '@documenso/ui/primitives/tooltip';
 import { NuqsAdapter } from 'nuqs/adapters/react-router/v7';
+import { useEffect } from 'react';
 import {
   data,
   isRouteErrorResponse,
@@ -21,14 +24,16 @@ import {
   useMatches,
 } from 'react-router';
 import { PreventFlashOnWrongTheme, ThemeProvider, useTheme } from 'remix-themes';
-
+import { nonceMiddleware } from '~/middleware/nonce';
 import type { Route } from './+types/root';
 import stylesheet from './app.css?url';
 import { GenericErrorLayout } from './components/general/generic-error-layout';
 import { langCookie } from './storage/lang-cookie.server';
 import { themeSessionResolver } from './storage/theme-session.server';
 import { appMetaTags } from './utils/meta';
-import { nonce } from './utils/nonce';
+import { nonce, nonceContext } from './utils/nonce';
+
+export const middleware = [nonceMiddleware];
 
 export const links: Route.LinksFunction = () => [{ rel: 'stylesheet', href: stylesheet }];
 
@@ -69,10 +74,11 @@ export async function loader({ context, request }: Route.LoaderArgs) {
       lang,
       theme: getTheme(),
       disableAnimations,
+      basePath: getBasePath(),
       // Surface the per-request CSP nonce produced by `securityHeadersMiddleware` so all
       // SSR-rendered <script>/<style> elements in this layout (and child
       // routes that need it) can carry the matching nonce attribute.
-      nonce: context.nonce,
+      nonce: context.get(nonceContext),
       session: session.isAuthenticated
         ? {
             user: session.user,
@@ -91,10 +97,10 @@ export async function loader({ context, request }: Route.LoaderArgs) {
 }
 
 export function Layout({ children }: { children: React.ReactNode }) {
-  const { theme } = useLoaderData<typeof loader>() || {};
+  const { theme, basePath } = useLoaderData<typeof loader>() || {};
 
   return (
-    <ThemeProvider specifiedTheme={theme} themeAction="/api/theme">
+    <ThemeProvider specifiedTheme={theme} themeAction={`${basePath ?? ''}/api/theme`}>
       <LayoutContent>{children}</LayoutContent>
     </ThemeProvider>
   );
@@ -111,6 +117,8 @@ export function LayoutContent({ children }: { children: React.ReactNode }) {
   } = useLoaderData<typeof loader>() || {};
 
   const [theme] = useTheme();
+
+  const basePath = data.basePath ?? '';
 
   // Recipient routes (signing pages) put `documenso-branded` on <body> so the
   // <style> block from `RecipientBranding` applies to BOTH the main tree and
@@ -130,16 +138,10 @@ export function LayoutContent({ children }: { children: React.ReactNode }) {
       <head>
         <meta charSet="utf-8" />
         {brandIconLinks.map((icon) => (
-          <link
-            key={icon.href}
-            rel={icon.rel}
-            href={icon.href}
-            {...(icon.sizes ? { sizes: icon.sizes } : {})}
-            {...(icon.type ? { type: icon.type } : {})}
-          />
+          <link key={`${icon.rel}-${icon.href}`} {...icon} href={`${basePath}${icon.href}`} />
         ))}
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="manifest" href={manifestPath} />
+        <link rel="manifest" href={`${basePath}${manifestPath}`} />
         <meta name="google" content="notranslate" />
         <Meta />
         <Links nonce={nonce(cspNonce)} />
@@ -206,11 +208,19 @@ export default function App() {
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
+  const analytics = useAnalytics();
+
   const errorCode = isRouteErrorResponse(error) ? error.status : 500;
 
   if (errorCode !== 404) {
     console.error('[RootErrorBoundary]', error);
   }
+
+  useEffect(() => {
+    if (errorCode !== 404) {
+      analytics.captureException(error, { source: 'app', location: 'root_boundary' });
+    }
+  }, [error]);
 
   return <GenericErrorLayout errorCode={errorCode} />;
 }

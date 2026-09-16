@@ -15,7 +15,7 @@ import { Trans } from '@lingui/react/macro';
 import type { OrganisationClaim, OrganisationMonthlyStat } from '@prisma/client';
 import type { LucideIcon } from 'lucide-react';
 import { FileIcon, MailIcon, MailOpenIcon, PlugIcon, UsersIcon, UsersRoundIcon } from 'lucide-react';
-import type { ReactNode } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 import { useId, useState } from 'react';
 
 import { OrganisationUsageResetButton } from './organisation-usage-reset-button';
@@ -24,6 +24,8 @@ type CapacityUsage = {
   members: number;
   teams: number;
 };
+
+type StaticReactNode = ReactElement | string | number | null;
 
 type UsageRow = {
   counter: 'document' | 'email' | 'api';
@@ -51,13 +53,13 @@ type UsageCardState = {
   percent: number;
   hasFiniteLimit: boolean;
   progressClassName: string;
-  subtext: ReactNode;
+  subtext: StaticReactNode;
 };
 
 type UsageCardStateOptions = {
   used: number;
   limit: number | null | undefined;
-  footnote?: ReactNode;
+  footnote?: StaticReactNode;
 };
 
 const getUsageCardState = ({ used, limit, footnote }: UsageCardStateOptions): UsageCardState => {
@@ -130,8 +132,8 @@ type UsageStatCardProps = {
   limit: number | null | undefined;
   /** When true the card is a plain counter with no limit, status or progress. */
   countOnly?: boolean;
-  footnote?: ReactNode;
-  action?: ReactNode;
+  footnote?: StaticReactNode;
+  action?: StaticReactNode;
 };
 
 const UsageStatCard = ({ label, icon: Icon, used, limit, countOnly = false, footnote, action }: UsageStatCardProps) => {
