@@ -17,13 +17,14 @@ import {
   SettingsIcon,
   Undo2Icon,
 } from 'lucide-react';
-import { useMemo } from 'react';
+import { type MouseEvent, useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { match } from 'ts-pattern';
 
 import { EnvelopeDistributeDialog } from '~/components/dialogs/envelope-distribute-dialog';
 import { EnvelopeRedistributeDialog } from '~/components/dialogs/envelope-redistribute-dialog';
 import { TemplateUseDialog } from '~/components/dialogs/template-use-dialog';
+import { UnsavedChangesDialog } from '~/components/dialogs/unsaved-changes-dialog';
 import { BrandingLogo } from '~/components/general/branding-logo';
 import { DocumentAttachmentsPopover } from '~/components/general/document/document-attachments-popover';
 import { EmbeddedEditorAttachmentPopover } from '~/components/general/document/embedded-editor-attachment-popover';
@@ -47,6 +48,9 @@ export default function EnvelopeEditorHeader() {
     flushAutosave,
     editorFields,
     isAutoSaveEnabled,
+    hasUnsavedChanges,
+    saveNow,
+    discardChanges,
     isSnappingEnabled,
     setIsSnappingEnabled,
   } = useCurrentEnvelopeEditor();
@@ -61,6 +65,33 @@ export default function EnvelopeEditorHeader() {
     () => getEnvelopeItemPermissions(envelope, envelope.recipients),
     [envelope, envelope.recipients],
   );
+
+  const [isTemplateUseDialogOpen, setIsTemplateUseDialogOpen] = useState(false);
+  const [isTemplateUseGuardOpen, setIsTemplateUseGuardOpen] = useState(false);
+
+  const shouldBlockTemplateUse = !isAutoSaveEnabled && hasUnsavedChanges;
+
+  const handleTemplateUseClick = (event: MouseEvent<HTMLButtonElement>) => {
+    if (!shouldBlockTemplateUse) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    setIsTemplateUseGuardOpen(true);
+  };
+
+  const handleSaveBeforeTemplateUse = async () => {
+    await saveNow();
+    setIsTemplateUseGuardOpen(false);
+    setIsTemplateUseDialogOpen(true);
+  };
+
+  const handleDiscardBeforeTemplateUse = async () => {
+    await discardChanges();
+    setIsTemplateUseGuardOpen(false);
+    setIsTemplateUseDialogOpen(true);
+  };
 
   const handleCreateEmbeddedEnvelope = async () => {
     const latestEnvelope = await flushAutosave();
@@ -205,6 +236,7 @@ export default function EnvelopeEditorHeader() {
                 </Badge>
 
                 <button
+                  type="button"
                   onClick={() => {
                     window.location.reload();
                   }}
@@ -271,18 +303,28 @@ export default function EnvelopeEditorHeader() {
               </>
             ))
             .with({ isEmbedded: false, isTemplate: true, allowDistributing: true }, () => (
-              <TemplateUseDialog
-                envelopeId={envelope.id}
-                templateId={mapSecondaryIdToTemplateId(envelope.secondaryId)}
-                templateSigningOrder={envelope.documentMeta?.signingOrder}
-                recipients={envelope.recipients}
-                documentRootPath={relativePath.documentRootPath}
-                trigger={
-                  <Button size="sm">
-                    <Trans>Use Template</Trans>
-                  </Button>
-                }
-              />
+              <>
+                <TemplateUseDialog
+                  envelopeId={envelope.id}
+                  templateId={mapSecondaryIdToTemplateId(envelope.secondaryId)}
+                  templateSigningOrder={envelope.documentMeta?.signingOrder}
+                  recipients={envelope.recipients}
+                  documentRootPath={relativePath.documentRootPath}
+                  open={isTemplateUseDialogOpen}
+                  onOpenChange={setIsTemplateUseDialogOpen}
+                  trigger={
+                    <Button size="sm" onClick={handleTemplateUseClick}>
+                      <Trans>Use Template</Trans>
+                    </Button>
+                  }
+                />
+                <UnsavedChangesDialog
+                  open={isTemplateUseGuardOpen}
+                  onCancel={() => setIsTemplateUseGuardOpen(false)}
+                  onSaveAndContinue={handleSaveBeforeTemplateUse}
+                  onDiscardAndContinue={handleDiscardBeforeTemplateUse}
+                />
+              </>
             ))
 
             .otherwise(() => null)}
