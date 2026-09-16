@@ -993,9 +993,6 @@ model OrganisationGlobalSettings {
 
   useEnvelopeTitleForDownload Boolean @default(false)
 
-  recipientForceLightMode     Boolean @default(false)
-  useEnvelopeTitleForDownload Boolean @default(false)
-
   envelopeExpirationPeriod Json? /// [EnvelopeExpirationPeriod] @zod.custom.use(ZEnvelopeExpirationPeriodSchema)
 
   reminderSettings Json? /// [EnvelopeReminderSettings] @zod.custom.use(ZEnvelopeReminderSettingsSchema)
@@ -1043,9 +1040,6 @@ model TeamGlobalSettings {
   brandingCss            String?
   recipientForceLightMode Boolean?
 
-  useEnvelopeTitleForDownload Boolean?
-
-  recipientForceLightMode     Boolean?
   useEnvelopeTitleForDownload Boolean?
 
   envelopeExpirationPeriod Json? /// [EnvelopeExpirationPeriod] @zod.custom.use(ZEnvelopeExpirationPeriodSchema)
