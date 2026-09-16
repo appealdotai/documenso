@@ -10,6 +10,12 @@ import { Hono } from 'hono';
 
 import type { HonoEnv } from '../../router';
 import {
+  checkEnvelopeFileAccess,
+  handleEnvelopeItemFileRequest,
+  resolveEnvelopeItemFileDownloadTitle,
+  resolveFileUploadUserId,
+} from './files.helpers';
+import {
   ZGetEnvelopeItemFileDownloadRequestParamsSchema,
   ZGetEnvelopeItemFileRequestParamsSchema,
   ZGetEnvelopeItemFileRequestQuerySchema,
@@ -19,12 +25,6 @@ import {
 } from './files.types';
 import getEnvelopeItemPdfRoute from './routes/get-envelope-item-pdf';
 import getEnvelopeItemPdfByTokenRoute from './routes/get-envelope-item-pdf-by-token';
-import {
-  checkEnvelopeFileAccess,
-  handleEnvelopeItemFileRequest,
-  resolveEnvelopeItemFileDownloadTitle,
-  resolveFileUploadUserId,
-} from './files.helpers';
 
 export const filesRoute = new Hono<HonoEnv>()
   /**

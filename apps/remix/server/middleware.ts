@@ -1,6 +1,6 @@
-import { PREFERRED_TEAM_URL_COOKIE } from '@documenso/lib/constants/cookies';
 import { formatPath } from '@documenso/lib/constants/app';
 import { getAppBrandConfig } from '@documenso/lib/constants/brand';
+import { PREFERRED_TEAM_URL_COOKIE } from '@documenso/lib/constants/cookies';
 import { AppDebugger } from '@documenso/lib/utils/debugger';
 import type { Context, Next } from 'hono';
 import { setCookie } from 'hono/cookie';

@@ -8,7 +8,8 @@ import type { HonoEnv } from './router';
  * Browsers ignore CSP and friends on non-document responses, so we skip
  * them to keep API/manifest/asset responses clean.
  */
-const NON_PAGE_PATH_REGEX = /^(\/api\/|\/ingest\/|\/__manifest|\/assets\/|\/apple-.*|\/favicon.*|\/branding\/|\/.well-known\/)/;
+const NON_PAGE_PATH_REGEX =
+  /^(\/api\/|\/ingest\/|\/__manifest|\/assets\/|\/apple-.*|\/favicon.*|\/branding\/|\/.well-known\/)/;
 
 /**
  * Embed routes serve our white-label embed UI. Customers iframe these from
