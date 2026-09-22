@@ -12,7 +12,6 @@ import { isDocumentCompleted } from '../../utils/document';
 import { createDocumentAuditLogData } from '../../utils/document-audit-logs';
 import { type EnvelopeIdOptions, unsafeBuildEnvelopeIdQuery } from '../../utils/envelope';
 import { isRecipientEmailValidForSending } from '../../utils/recipients';
-import { resolveBrandedInviter } from '../../utils/resolve-branded-inviter';
 import { getEmailContext } from '../email/get-email-context';
 import { getEnvelopeWhereInput } from '../envelope/get-envelope-by-id';
 import { triggerWebhook } from '../webhooks/trigger/trigger-webhook';
@@ -134,7 +133,7 @@ const handleDocumentOwnerDelete = async ({ envelope, user, requestMetadata }: Ha
     return;
   }
 
-  const { emailLanguage, emailsDisabled, settings } = await getEmailContext({
+  const { emailLanguage, emailsDisabled } = await getEmailContext({
     emailType: 'RECIPIENT',
     source: {
       type: 'team',
@@ -222,11 +221,8 @@ const handleDocumentOwnerDelete = async ({ envelope, user, requestMetadata }: Ha
       payload: {
         teamId: envelope.teamId,
         documentName: envelope.title,
-        ...resolveBrandedInviter({
-          settings,
-          fallbackName: user.name,
-          fallbackEmail: user.email,
-        }),
+        inviterName: user.name || undefined,
+        inviterEmail: user.email,
         meta: envelope.documentMeta
           ? {
               emailId: envelope.documentMeta.emailId,

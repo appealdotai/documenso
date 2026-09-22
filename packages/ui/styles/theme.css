@@ -261,119 +261,36 @@
   display: none;
 }
 
-@layer components {
-  .field--FieldRootContainer.field-card-container[data-inserted="true"][data-field-required="true"] {
-    background-color: hsl(var(--field-required-filled-card));
-    border-color: hsl(var(--field-required-filled-card-border));
-    border-style: solid;
-    border-width: var(--field-required-filled-card-border-width);
-  }
+/*
+ * Scrollbar hidden until the element is hovered, then a thin thumb is revealed.
+ * The track keeps a constant width so revealing the thumb doesn't shift layout;
+ * the thumb colour transitions in on WebKit (Firefox snaps, which is fine).
+ */
+.hover-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
 
-  .field--FieldRootContainer.field-card-container[data-inserted="true"][data-field-required="false"]:not(
-      [data-readonly="true"]
-    ):not([data-editing="true"]) {
-    background-color: hsl(var(--field-optional-filled-card));
-    border-color: hsl(var(--field-optional-filled-card-border));
-    border-style: solid;
-    border-width: 0 0 var(--field-optional-filled-card-border-width) 0;
-    box-shadow: none;
-  }
+.hover-scrollbar:hover {
+  scrollbar-color: hsl(var(--muted-foreground) / 0.4) transparent;
+}
 
-  .field--FieldRootContainer.field-card-container[data-readonly="true"] {
-    background-color: rgb(255 255 255 / 0.9);
-    border-color: rgb(176 176 176);
-    border-style: solid;
-    border-width: 2px;
-  }
+.hover-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+  background: transparent;
+}
 
-  .field--FieldRootContainer.field-card-container[data-inserted="false"][data-readonly="false"][data-field-required="true"]:not(
-      [data-validate="true"]
-    ):not([data-editing="true"]) {
-    background-color: hsl(var(--field-required-card));
-    border-color: hsl(var(--field-required-card-border));
-    border-style: solid;
-    border-width: var(--field-required-card-border-width);
-  }
+.hover-scrollbar::-webkit-scrollbar-thumb {
+  background-color: transparent;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  border-radius: 9999px;
+  transition: background-color 200ms ease;
+}
 
-  .field--FieldRootContainer.field-card-container[data-inserted="false"][data-readonly="false"][data-field-required="true"]:not(
-      [data-validate="true"]
-    ):not([data-editing="true"]):hover,
-  .field--FieldRootContainer.field-card-container[data-inserted="false"][data-field-required="true"][data-editing="true"] {
-    border-color: hsl(var(--field-required-card-border-hover));
-    border-style: solid;
-    border-width: var(--field-required-card-border-width);
-    /* Outer ring approximates a thicker border without shifting layout. */
-    box-shadow: 0 0 0 1px hsl(var(--field-required-card-border-hover));
-  }
-
-  .field--FieldRootContainer.field-card-container[data-inserted="false"][data-readonly="false"][data-field-required="true"][data-editing="true"] {
-    background-color: hsl(var(--field-required-card));
-  }
-
-  .field--FieldRootContainer.field-card-container[data-inserted="true"][data-field-required="true"]:hover,
-  .field--FieldRootContainer.field-card-container[data-inserted="true"][data-field-required="true"][data-editing="true"] {
-    background-color: hsl(var(--field-required-filled-card));
-    border-color: hsl(var(--field-required-filled-card-border-hover));
-    border-style: solid;
-    border-width: var(--field-required-filled-card-border-width);
-    box-shadow: 0 0 0 1px hsl(var(--field-required-filled-card-border-hover));
-  }
-
-  .field--FieldRootContainer.field-card-container[data-inserted="false"][data-readonly="false"][data-field-required="false"]:not(
-      [data-validate="true"]
-    ):not([data-editing="true"]) {
-    background-color: hsl(var(--field-optional-card));
-    border-color: hsl(var(--field-optional-card-border));
-    border-style: solid;
-    border-width: 0 0 var(--field-optional-card-border-width) 0;
-    box-shadow: none;
-  }
-
-  .field--FieldRootContainer.field-card-container[data-inserted="false"][data-readonly="false"][data-field-required="false"]:not(
-      [data-validate="true"]
-    ):not([data-editing="true"]):hover,
-  .field--FieldRootContainer.field-card-container[data-inserted="false"][data-field-required="false"][data-editing="true"]:not(
-      [data-readonly="true"]
-    ) {
-    border-color: hsl(var(--field-optional-card-border-hover));
-    border-style: solid;
-    /* Keep bottom-only real border; fake L/T/R + thicker bottom via shadows (no layout jump). */
-    border-width: 0 0 var(--field-optional-card-border-width) 0;
-    box-shadow:
-      0 -1px 0 0 hsl(var(--field-optional-card-border-hover) / 0.4),
-      1px 0 0 0 hsl(var(--field-optional-card-border-hover) / 0.4),
-      -1px 0 0 0 hsl(var(--field-optional-card-border-hover) / 0.4),
-      0 1px 0 0 hsl(var(--field-optional-card-border-hover));
-  }
-
-  .field--FieldRootContainer.field-card-container[data-inserted="false"][data-readonly="false"][data-field-required="false"][data-editing="true"] {
-    background-color: hsl(var(--field-optional-card));
-  }
-
-  .field--FieldRootContainer.field-card-container[data-inserted="true"][data-field-required="false"]:not(
-      [data-readonly="true"]
-    ):not([data-editing="true"]):hover,
-  .field--FieldRootContainer.field-card-container[data-inserted="true"][data-field-required="false"][data-editing="true"]:not(
-      [data-readonly="true"]
-    ) {
-    background-color: hsl(var(--field-optional-filled-card));
-    border-color: hsl(var(--field-optional-filled-card-border-hover));
-    border-style: solid;
-    border-width: 0 0 var(--field-optional-filled-card-border-width) 0;
-    box-shadow:
-      0 -1px 0 0 hsl(var(--field-optional-filled-card-border-hover) / 0.4),
-      1px 0 0 0 hsl(var(--field-optional-filled-card-border-hover) / 0.4),
-      -1px 0 0 0 hsl(var(--field-optional-filled-card-border-hover) / 0.4),
-      0 1px 0 0 hsl(var(--field-optional-filled-card-border-hover));
-  }
-
-  .field--FieldRootContainer.field-card-container[data-inserted="false"][data-readonly="false"][data-validate="true"][data-field-required="true"] {
-    background-color: transparent;
-    border-color: hsl(var(--field-validation-card-border));
-    border-style: solid;
-    border-width: calc(var(--field-required-card-border-width) + 1px);
-    box-shadow: none;
-  }
+.hover-scrollbar:hover::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--muted-foreground) / 0.4);
 }
 
 /* .custom-scrollbar::-webkit-scrollbar-track {

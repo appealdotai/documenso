@@ -60,6 +60,7 @@ CLAUDE.md
 
 # agents
 .specs
+.ua/
 
 # scripts
 scripts/output*
@@ -74,3 +75,8 @@ tmp/
 
 # opencode
 .opencode/package-lock.json
+
+# undersatnd-anything plugin
+.ua/intermediate/
+.ua/diff-overlay.json
+.ua/.trash-*/

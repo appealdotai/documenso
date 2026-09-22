@@ -72,7 +72,7 @@ export function useEnvelopeAutosave<T>(saveFn: (data: T) => Promise<void>, delay
 
       timeoutRef.current = setTimeout(() => {
         timeoutRef.current = null;
-        void commit();
+        void commit().catch(() => undefined);
       }, delay);
     },
     [commit, delay],
@@ -82,6 +82,10 @@ export function useEnvelopeAutosave<T>(saveFn: (data: T) => Promise<void>, delay
    * Skip the debounce and save now. The editor calls this when it needs
    * everything persisted, e.g. before sending or switching steps.
    */
+  const setData = useCallback((data: T) => {
+    pendingRef.current = { value: data };
+    setIsPending(true);
+  }, []);
   const flush = useCallback(async () => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
@@ -91,11 +95,27 @@ export function useEnvelopeAutosave<T>(saveFn: (data: T) => Promise<void>, delay
     await commit();
   }, [commit]);
 
-  // Last-ditch attempt to save if the tab closes with unsaved edits.
+  /**
+   * Cancel any pending debounce and discard queued data without sending it
+   * to the server. Used when the user explicitly discards changes.
+   */
+  const abort = useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+
+    pendingRef.current = null;
+    setIsPending(false);
+  }, []);
+
   useEffect(() => {
-    const handleBeforeUnload = () => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
       if (timeoutRef.current || pendingRef.current || commitPromiseRef.current) {
-        void flush();
+        // Setting returnValue triggers the browser's native "Leave site?" dialog.
+        event.preventDefault();
+        // Legacy support for older browsers.
+        event.returnValue = '';
       }
     };
 
@@ -104,5 +124,5 @@ export function useEnvelopeAutosave<T>(saveFn: (data: T) => Promise<void>, delay
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [flush]);
 
-  return { triggerSave, flush, isPending, isCommiting };
+  return { triggerSave, setData, flush, abort, isPending, isCommiting };
 }

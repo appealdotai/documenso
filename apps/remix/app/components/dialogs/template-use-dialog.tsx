@@ -70,6 +70,8 @@ export type TemplateUseDialogProps = {
   documentDistributionMethod?: DocumentDistributionMethod;
   documentRootPath: string;
   trigger?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 };
 
 export function TemplateUseDialog({
@@ -80,13 +82,28 @@ export function TemplateUseDialog({
   templateId,
   templateSigningOrder,
   trigger,
+  open: controlledOpen,
+  onOpenChange,
 }: TemplateUseDialogProps) {
   const { toast } = useToast();
   const { _ } = useLingui();
 
   const navigate = useNavigate();
 
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen ?? internalOpen;
+
+  const handleOpenChange = (value: boolean) => {
+    if (form.formState.isSubmitting) {
+      return;
+    }
+
+    onOpenChange?.(value);
+
+    if (controlledOpen === undefined) {
+      setInternalOpen(value);
+    }
+  };
 
   const { data: response, isLoading: isLoadingEnvelopeItems } = trpc.envelope.item.getMany.useQuery(
     {
@@ -214,7 +231,7 @@ export function TemplateUseDialog({
   }, [envelopeItems, form, open]);
 
   return (
-    <Dialog open={open} onOpenChange={(value) => !form.formState.isSubmitting && setOpen(value)}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         {trigger || (
           <Button variant="outline" className="bg-background">
