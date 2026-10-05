@@ -226,18 +226,21 @@ export const resendDocument = async ({ id, userId, recipients, teamId, requestMe
       }
 
       if (organisationType === OrganisationType.ORGANISATION) {
-        const { inviterName } = resolveBrandedInviter({
-          settings,
-          fallbackName: user.name,
-          fallbackEmail: user.email,
-        });
-
         emailSubject = i18n._(msg`Reminder: ${envelope.team.name} invited you to ${recipientActionVerb} a document`);
-        emailMessage =
-          envelope.documentMeta.message ||
-          i18n._(
-            msg`${inviterName || user.email} on behalf of "${envelope.team.name}" has invited you to ${recipientActionVerb} the document "${envelope.title}".`,
+
+        if (!emailMessage) {
+          const { inviterName } = resolveBrandedInviter({
+            settings,
+            fallbackName: user.name,
+            fallbackEmail: user.email,
+          });
+
+          emailMessage = i18n._(
+            settings.includeSenderDetails
+              ? msg`${inviterName || user.email} on behalf of "${envelope.team.name}" has invited you to ${recipientActionVerb} the document "${envelope.title}".`
+              : msg`${envelope.team.name} has invited you to ${recipientActionVerb} the document "${envelope.title}".`,
           );
+        }
       }
 
       const customEmailTemplate = {
@@ -270,6 +273,7 @@ export const resendDocument = async ({ id, userId, recipients, teamId, requestMe
         selfSigner,
         organisationType,
         teamName: envelope.team?.name,
+        includeSenderDetails: settings.includeSenderDetails,
         reportUrl,
       });
 
