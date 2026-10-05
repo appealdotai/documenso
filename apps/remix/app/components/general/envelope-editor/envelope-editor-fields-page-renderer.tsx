@@ -1,6 +1,6 @@
 import { useAnalytics } from '@documenso/lib/client-only/hooks/use-analytics';
 import { useDebouncedValue } from '@documenso/lib/client-only/hooks/use-debounced-value';
-import type { TLocalField } from '@documenso/lib/client-only/hooks/use-editor-fields';
+import type { FieldLayerDirection, TLocalField } from '@documenso/lib/client-only/hooks/use-editor-fields';
 import { usePageRenderer } from '@documenso/lib/client-only/hooks/use-page-renderer';
 import { useCurrentEnvelopeEditor } from '@documenso/lib/client-only/providers/envelope-editor-provider';
 import {
@@ -35,13 +35,30 @@ import {
   CommandItem,
   CommandList,
 } from '@documenso/ui/primitives/command';
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuShortcut,
+  ContextMenuTrigger,
+} from '@documenso/ui/primitives/context-menu';
 import { FRIENDLY_FIELD_TYPE } from '@documenso/ui/primitives/document-flow/types';
-import { useLingui } from '@lingui/react/macro';
+import { Trans, useLingui } from '@lingui/react/macro';
 import { FieldType } from '@prisma/client';
 import Konva from 'konva';
 import type { KonvaEventObject } from 'konva/lib/Node';
 import type { Transformer } from 'konva/lib/shapes/Transformer';
-import { CopyPlusIcon, ShapesIcon, SquareStackIcon, TrashIcon, UserCircleIcon } from 'lucide-react';
+import {
+  BringToFrontIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
+  CopyPlusIcon,
+  SendToBackIcon,
+  ShapesIcon,
+  SquareStackIcon,
+  TrashIcon,
+  UserCircleIcon,
+} from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { fieldButtonList } from './envelope-editor-fields-drag-drop';
@@ -113,9 +130,10 @@ export const EnvelopeEditorFieldsPageRenderer = ({ pageData }: { pageData: PageR
 
   const localPageFields = useMemo(
     () =>
-      editorFields.localFields.filter(
-        (field) => field.page === pageNumber && field.envelopeItemId === currentEnvelopeItem?.id,
-      ),
+      editorFields.localFields
+        .filter((field) => field.page === pageNumber && field.envelopeItemId === currentEnvelopeItem?.id)
+        // Paint order follows the persisted stacking order (higher = on top).
+        .sort((a, b) => a.order - b.order || (a.formId < b.formId ? -1 : 1)),
     [editorFields.localFields, pageNumber, currentEnvelopeItem?.id],
   );
 
@@ -132,6 +150,7 @@ export const EnvelopeEditorFieldsPageRenderer = ({ pageData }: { pageData: PageR
     const pairs = getOverlappingFieldPairs(
       debouncedPageFields.map((field) => ({
         id: field.formId,
+        type: field.type,
         envelopeItemId: field.envelopeItemId,
         page: field.page,
         positionX: field.positionX,
@@ -155,27 +174,50 @@ export const EnvelopeEditorFieldsPageRenderer = ({ pageData }: { pageData: PageR
     const fieldGroup = event.target as Konva.Group;
     const fieldFormId = fieldGroup.id();
 
-    // Note: This values are scaled.
-    const {
-      width: fieldPixelWidth,
-      height: fieldPixelHeight,
-      x: fieldX,
-      y: fieldY,
-    } = fieldGroup.getClientRect({
-      skipStroke: true,
-      skipShadow: true,
-    });
+    // Measure the `.field-rect` (the true field bounds), not the group client
+    // rect: overflow text nodes can extend to the page edges, which would
+    // otherwise commit page-wide dimensions (and drifted positions) on resize.
+    // Groups without a rect (e.g. shapes) measure the group itself.
+    const fieldRect = fieldGroup.findOne('.field-rect') as Konva.Rect | undefined;
+    const groupScaleX = fieldGroup.scaleX() || 1;
+    const groupScaleY = fieldGroup.scaleY() || 1;
 
-    const pageHeight = scaledViewport.height;
-    const pageWidth = scaledViewport.width;
+    let positionPercentX: number;
+    let positionPercentY: number;
+    let fieldPageWidth: number;
+    let fieldPageHeight: number;
 
-    // Calculate x and y as a percentage of the page width and height
-    const positionPercentX = (fieldX / pageWidth) * 100;
-    const positionPercentY = (fieldY / pageHeight) * 100;
+    if (fieldRect) {
+      // Layer coordinates (fieldGroup.x/y and fieldRect.width/height) are in
+      // unscaled PDF units. We must divide by the unscaled viewport to get the
+      // correct percentage.
+      const fieldPixelWidth = fieldRect.width() * groupScaleX;
+      const fieldPixelHeight = fieldRect.height() * groupScaleY;
+      const fieldX = fieldGroup.x();
+      const fieldY = fieldGroup.y();
 
-    // Get the bounds as a percentage of the page width and height
-    const fieldPageWidth = (fieldPixelWidth / pageWidth) * 100;
-    const fieldPageHeight = (fieldPixelHeight / pageHeight) * 100;
+      positionPercentX = (fieldX / unscaledViewport.width) * 100;
+      positionPercentY = (fieldY / unscaledViewport.height) * 100;
+      fieldPageWidth = (fieldPixelWidth / unscaledViewport.width) * 100;
+      fieldPageHeight = (fieldPixelHeight / unscaledViewport.height) * 100;
+    } else {
+      // getClientRect returns values in stage coordinates (which include the
+      // page scale). We must divide by the scaled viewport to get the percentage.
+      const groupRect = fieldGroup.getClientRect({
+        skipStroke: true,
+        skipShadow: true,
+      });
+
+      const fieldPixelWidth = groupRect.width;
+      const fieldPixelHeight = groupRect.height;
+      const fieldX = groupRect.x;
+      const fieldY = groupRect.y;
+
+      positionPercentX = (fieldX / scaledViewport.width) * 100;
+      positionPercentY = (fieldY / scaledViewport.height) * 100;
+      fieldPageWidth = (fieldPixelWidth / scaledViewport.width) * 100;
+      fieldPageHeight = (fieldPixelHeight / scaledViewport.height) * 100;
+    }
 
     const fieldUpdates: Partial<TLocalField> = {
       positionX: positionPercentX,
@@ -665,6 +707,19 @@ export const EnvelopeEditorFieldsPageRenderer = ({ pageData }: { pageData: PageR
       renderFieldOnLayer(field);
     });
 
+    // Mirror the persisted stacking order onto the canvas. Field renders reuse
+    // their existing Konva nodes, so data-driven reorders (arrange actions,
+    // undo/redo) would otherwise only become visible after a reload.
+    for (const field of localPageFields) {
+      const fieldGroup = pageLayer.current.findOne(`#${field.formId}`);
+
+      if (fieldGroup && fieldGroup.name() === 'field-group') {
+        fieldGroup.moveToTop();
+      }
+    }
+
+    pageLayer.current.batchDraw();
+
     // Reconcile selection state with live field nodes after flush/sync updates.
     const liveSelectedFieldGroups = selectedKonvaFieldGroups.filter((fieldGroup) => {
       if (!fieldGroup.getStage() || !fieldGroup.getParent()) {
@@ -743,12 +798,43 @@ export const EnvelopeEditorFieldsPageRenderer = ({ pageData }: { pageData: PageR
       }
     };
 
+    const handleLayerKeyDown = (event: KeyboardEvent) => {
+      // Don't hijack keystrokes while typing in inputs.
+      const target = event.target as HTMLElement | null;
+
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+        return;
+      }
+
+      if (!event.altKey || event.ctrlKey || event.metaKey) {
+        return;
+      }
+
+      const formIds = selectedKonvaFieldGroups.map((field) => field.id()).filter((field) => field !== undefined);
+
+      if (formIds.length === 0) {
+        return;
+      }
+
+      if (event.key === ']') {
+        event.preventDefault();
+        editorFields.moveFieldsByFormId(formIds, event.shiftKey ? 'front' : 'forward');
+      }
+
+      if (event.key === '[') {
+        event.preventDefault();
+        editorFields.moveFieldsByFormId(formIds, event.shiftKey ? 'back' : 'backward');
+      }
+    };
+
     window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keydown', handleLayerKeyDown);
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keydown', handleLayerKeyDown);
     };
-  }, [editorFields.undo, editorFields.redo]);
+  }, [editorFields.undo, editorFields.redo, editorFields.moveFieldsByFormId, selectedKonvaFieldGroups]);
 
   const setSelectedFields = (nodes: Konva.Node[], options?: { isAutoSelect?: boolean }) => {
     // Any explicit (user-driven) selection shows the action toolbar; only auto-selection
@@ -771,8 +857,10 @@ export const EnvelopeEditorFieldsPageRenderer = ({ pageData }: { pageData: PageR
     if (fieldGroups.length === 1) {
       const fieldGroup = fieldGroups[0];
 
+      // Note: selection must not restack the canvas. Stacking order is owned
+      // by the persisted field `order` (see moveFieldsByFormId); Konva already
+      // dispatches the click to the topmost group.
       editorFields.setSelectedField(fieldGroup.id());
-      fieldGroup.moveToTop();
     }
   };
 
@@ -782,6 +870,12 @@ export const EnvelopeEditorFieldsPageRenderer = ({ pageData }: { pageData: PageR
     editorFields.removeFieldsByFormId(fieldFormids);
 
     setSelectedFields([]);
+  };
+
+  const moveSelectedFields = (direction: FieldLayerDirection) => {
+    const fieldFormids = selectedKonvaFieldGroups.map((field) => field.id()).filter((field) => field !== undefined);
+
+    editorFields.moveFieldsByFormId(fieldFormids, direction);
   };
 
   const changeSelectedFieldsRecipients = (recipientId: number) => {
@@ -900,6 +994,7 @@ export const EnvelopeEditorFieldsPageRenderer = ({ pageData }: { pageData: PageR
             handleDeleteSelectedFields={deletedSelectedFields}
             handleChangeRecipient={changeSelectedFieldsRecipients}
             handleChangeFieldType={changeSelectedFieldsType}
+            handleMoveSelectedFields={moveSelectedFields}
             selectedFieldFormId={selectedKonvaFieldGroups.map((field) => field.id())}
             style={{
               position: 'absolute',
@@ -940,7 +1035,38 @@ export const EnvelopeEditorFieldsPageRenderer = ({ pageData }: { pageData: PageR
       )}
 
       {/* The element Konva will inject it's canvas into. */}
-      <div className="konva-container absolute inset-0 z-10 w-full" ref={konvaContainer}></div>
+      <ContextMenu>
+        <ContextMenuTrigger asChild>
+          <div className="konva-container absolute inset-0 z-10 w-full" ref={konvaContainer}></div>
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          <ContextMenuItem
+            disabled={selectedKonvaFieldGroups.length === 0}
+            onSelect={() => moveSelectedFields('front')}
+          >
+            <Trans>Bring to front</Trans>
+            <ContextMenuShortcut>⌥⇧]</ContextMenuShortcut>
+          </ContextMenuItem>
+          <ContextMenuItem
+            disabled={selectedKonvaFieldGroups.length === 0}
+            onSelect={() => moveSelectedFields('forward')}
+          >
+            <Trans>Bring forward</Trans>
+            <ContextMenuShortcut>⌥]</ContextMenuShortcut>
+          </ContextMenuItem>
+          <ContextMenuItem
+            disabled={selectedKonvaFieldGroups.length === 0}
+            onSelect={() => moveSelectedFields('backward')}
+          >
+            <Trans>Send backward</Trans>
+            <ContextMenuShortcut>⌥[</ContextMenuShortcut>
+          </ContextMenuItem>
+          <ContextMenuItem disabled={selectedKonvaFieldGroups.length === 0} onSelect={() => moveSelectedFields('back')}>
+            <Trans>Send to back</Trans>
+            <ContextMenuShortcut>⌥⇧[</ContextMenuShortcut>
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
     </>
   );
 };
@@ -951,6 +1077,7 @@ type FieldActionButtonsProps = React.HTMLAttributes<HTMLDivElement> & {
   handleDeleteSelectedFields: () => void;
   handleChangeRecipient: (recipientId: number) => void;
   handleChangeFieldType: (type: FieldType) => void;
+  handleMoveSelectedFields: (direction: FieldLayerDirection) => void;
   selectedFieldFormId: string[];
 };
 
@@ -960,6 +1087,7 @@ const FieldActionButtons = ({
   handleDeleteSelectedFields,
   handleChangeRecipient,
   handleChangeFieldType,
+  handleMoveSelectedFields,
   selectedFieldFormId,
   ...props
 }: FieldActionButtonsProps) => {
@@ -1067,6 +1195,46 @@ const FieldActionButtons = ({
           onTouchEnd={handleDuplicateSelectedFieldsOnAllPages}
         >
           <SquareStackIcon className="h-3 w-3" />
+        </button>
+
+        <button
+          type="button"
+          title={t`Bring Forward`}
+          className="rounded-sm p-1.5 text-gray-400 transition-colors hover:bg-white/10 hover:text-gray-100"
+          onClick={() => handleMoveSelectedFields('forward')}
+          onTouchEnd={() => handleMoveSelectedFields('forward')}
+        >
+          <ChevronUpIcon className="h-3 w-3" />
+        </button>
+
+        <button
+          type="button"
+          title={t`Bring to Front`}
+          className="rounded-sm p-1.5 text-gray-400 transition-colors hover:bg-white/10 hover:text-gray-100"
+          onClick={() => handleMoveSelectedFields('front')}
+          onTouchEnd={() => handleMoveSelectedFields('front')}
+        >
+          <BringToFrontIcon className="h-3 w-3" />
+        </button>
+
+        <button
+          type="button"
+          title={t`Send Backward`}
+          className="rounded-sm p-1.5 text-gray-400 transition-colors hover:bg-white/10 hover:text-gray-100"
+          onClick={() => handleMoveSelectedFields('backward')}
+          onTouchEnd={() => handleMoveSelectedFields('backward')}
+        >
+          <ChevronDownIcon className="h-3 w-3" />
+        </button>
+
+        <button
+          type="button"
+          title={t`Send to Back`}
+          className="rounded-sm p-1.5 text-gray-400 transition-colors hover:bg-white/10 hover:text-gray-100"
+          onClick={() => handleMoveSelectedFields('back')}
+          onTouchEnd={() => handleMoveSelectedFields('back')}
+        >
+          <SendToBackIcon className="h-3 w-3" />
         </button>
 
         <button

@@ -453,6 +453,7 @@ export const createDocumentFromDirectTemplate = async ({
           positionY: field.positionY,
           width: field.width,
           height: field.height,
+          order: field.order,
           customText: '',
           inserted: false,
           fieldMeta: field.fieldMeta,
@@ -643,6 +644,10 @@ export const createDocumentFromDirectTemplate = async ({
                   data: field.customText,
                 }),
               )
+              .with(FieldType.SHAPE, (type) => ({
+                type,
+                data: field.customText,
+              }))
               .exhaustive(),
             fieldSecurity: derivedRecipientActionAuth
               ? {

@@ -25,6 +25,12 @@ export const ZSetEnvelopeFieldsRequestSchema = z.object({
       positionY: ZClampedFieldPositionYSchema,
       width: ZClampedFieldWidthSchema,
       height: ZClampedFieldHeightSchema,
+      order: z
+        .number()
+        .int()
+        .min(0)
+        .optional()
+        .describe('The stacking order of the field. Higher values paint on top.'),
       fieldMeta: ZFieldMetaSchema,
     }),
   ),

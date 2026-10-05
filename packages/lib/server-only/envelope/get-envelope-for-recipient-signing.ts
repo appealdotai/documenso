@@ -5,7 +5,14 @@ import EnvelopeSchema from '@documenso/prisma/generated/zod/modelSchema/Envelope
 import SignatureSchema from '@documenso/prisma/generated/zod/modelSchema/SignatureSchema';
 import TeamSchema from '@documenso/prisma/generated/zod/modelSchema/TeamSchema';
 import UserSchema from '@documenso/prisma/generated/zod/modelSchema/UserSchema';
-import { DocumentSigningOrder, DocumentStatus, EnvelopeType, RecipientRole, SigningStatus } from '@prisma/client';
+import {
+  DocumentSigningOrder,
+  DocumentStatus,
+  EnvelopeType,
+  FieldType,
+  RecipientRole,
+  SigningStatus,
+} from '@prisma/client';
 import { z } from 'zod';
 
 import { AppError, AppErrorCode } from '../../errors/app-error';
@@ -147,6 +154,30 @@ export const ZEnvelopeForSigningResponse = z.object({
 });
 
 export type EnvelopeForSigningResponse = z.infer<typeof ZEnvelopeForSigningResponse>;
+
+type SigningRecipientWithFields = {
+  id: number;
+  fields: { type: FieldType; recipientId: number }[];
+};
+
+/**
+ * Decorative shapes belong to no workflow: every recipient sees all of the
+ * envelope's shapes alongside their own fields. Shapes owned by other
+ * recipients are appended without duplicating the recipient's own.
+ */
+export const withEnvelopeShapes = <TRecipient extends SigningRecipientWithFields>(
+  recipient: TRecipient,
+  recipients: { fields: { type: FieldType; recipientId: number }[] }[],
+): TRecipient => {
+  const sharedShapes = recipients
+    .flatMap((envelopeRecipient) => envelopeRecipient.fields)
+    .filter((field) => field.type === FieldType.SHAPE && field.recipientId !== recipient.id);
+
+  return {
+    ...recipient,
+    fields: [...recipient.fields, ...sharedShapes] as TRecipient['fields'],
+  };
+};
 
 /**
  * Get all the values and details for an envelope that a recipient requires
@@ -290,7 +321,7 @@ export const getEnvelopeForRecipientSigning = async ({
 
   return ZEnvelopeForSigningResponse.parse({
     envelope,
-    recipient,
+    recipient: withEnvelopeShapes(recipient, envelope.recipients),
     recipientSignature,
     isRecipientsTurn,
     isCompleted: recipient.signingStatus === SigningStatus.SIGNED || envelope.status === DocumentStatus.COMPLETED,

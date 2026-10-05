@@ -302,6 +302,10 @@ export const signFieldWithToken = async ({
               type,
               data: updatedField.customText,
             }))
+            .with(FieldType.SHAPE, (type) => ({
+              type,
+              data: updatedField.customText,
+            }))
             .exhaustive(),
           fieldSecurity: derivedRecipientActionAuth
             ? {

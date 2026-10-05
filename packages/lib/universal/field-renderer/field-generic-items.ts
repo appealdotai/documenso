@@ -38,6 +38,20 @@ export const upsertFieldGroup = (field: FieldToRender, options: RenderFieldEleme
     },
   } satisfies Partial<Konva.GroupConfig>);
 
+  // Override the group's getClientRect to only consider the `.field-rect` child.
+  // This ensures that the interactive transformer (and marquee selection) wraps tightly
+  // around the actual field boundaries, completely ignoring any overflowing text nodes
+  // which might extend to the page edges.
+  fieldGroup.getClientRect = function (config) {
+    const fieldRect = this.findOne('.field-rect');
+
+    if (fieldRect) {
+      return fieldRect.getClientRect(config);
+    }
+
+    return Konva.Group.prototype.getClientRect.call(this, config);
+  };
+
   return fieldGroup;
 };
 

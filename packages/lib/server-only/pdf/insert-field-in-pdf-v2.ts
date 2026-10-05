@@ -20,8 +20,11 @@ export const insertFieldInPDFV2 = async ({ pageWidth, pageHeight, fields }: Inse
   let stage: Konva.Stage | null = new Konva.Stage({ width: pageWidth, height: pageHeight });
   let layer: Konva.Layer | null = new Konva.Layer();
 
-  // Render the fields onto the layer.
-  for (const field of fields) {
+  // Render the fields onto the layer. Paint order follows the persisted
+  // stacking order (higher = on top).
+  const orderedFields = [...fields].sort((a, b) => a.order - b.order || a.id - b.id);
+
+  for (const field of orderedFields) {
     renderField({
       scale: 1,
       field: {

@@ -1,4 +1,5 @@
 import type { TCssVarsSchema } from '@documenso/lib/types/css-vars';
+import { getFieldMetaReadOnly } from '@documenso/lib/types/field-meta';
 import { isRequiredField } from '@documenso/lib/utils/advanced-fields-helpers';
 import {
   getSigningFieldHighlightCacheKey,
@@ -9,6 +10,7 @@ import {
   FIELD_ROOT_CONTAINER_PROBE_CLASS_NAME,
 } from '@documenso/ui/lib/field-root-container-classes';
 import type { Field } from '@prisma/client';
+import { FieldType } from '@prisma/client';
 import { colord } from 'colord';
 import type { FieldCanvasStyle, FieldRenderMode, FieldToRender } from './field-renderer';
 
@@ -17,9 +19,24 @@ export type FieldCanvasStyleCache = Map<string, FieldCanvasStyle | undefined>;
 export const createFieldCanvasStyleCache = (): FieldCanvasStyleCache => new Map();
 
 export const getFieldCanvasStyleCacheKey = (field: FieldToRender) => {
-  const isRequired = !field.fieldMeta?.readOnly && isRequiredField(field as unknown as Field);
+  const isRequired = !getFieldMetaReadOnly(field.fieldMeta) && isRequiredField(field as unknown as Field);
+  const shapeMeta =
+    field.type === FieldType.SHAPE
+      ? (field.fieldMeta as {
+          shape?: string;
+          fillColor?: string | null;
+          fillOpacity?: number;
+          borderColor?: string;
+          borderWidth?: number;
+          borderStyle?: string;
+          cornerRadius?: number;
+        } | null)
+      : null;
+  const shapeKey = shapeMeta
+    ? `:${shapeMeta.shape ?? ''}:${shapeMeta.fillColor ?? ''}:${shapeMeta.fillOpacity ?? ''}:${shapeMeta.borderColor ?? ''}:${shapeMeta.borderWidth ?? ''}:${shapeMeta.borderStyle ?? ''}:${shapeMeta.cornerRadius ?? ''}`
+    : '';
 
-  return `${field.type}:${field.inserted}:${field.fieldMeta?.readOnly ?? false}:${field.isValidating ?? false}:${field.isEditing ?? false}:${isRequired ? 'required' : 'optional'}`;
+  return `${field.type}:${field.inserted}:${field.fieldMeta?.readOnly ?? false}:${field.isValidating ?? false}:${field.isEditing ?? false}:${isRequired ? 'required' : 'optional'}${shapeKey}`;
 };
 
 export const getPixelValue = (value: string) => {
@@ -92,10 +109,10 @@ const createFieldProbeElement = (field: FieldToRender): HTMLElement => {
   $probe.dataset.fieldType = field.type;
   $probe.dataset.inserted = field.inserted ? 'true' : 'false';
   $probe.dataset.validate = field.isValidating ? 'true' : 'false';
-  $probe.dataset.readonly = field.fieldMeta?.readOnly ? 'true' : 'false';
+  $probe.dataset.readonly = getFieldMetaReadOnly(field.fieldMeta) ? 'true' : 'false';
   $probe.dataset.editing = field.isEditing ? 'true' : 'false';
   $probe.dataset.fieldRequired =
-    !field.fieldMeta?.readOnly && isRequiredField(field as unknown as Field) ? 'true' : 'false';
+    !getFieldMetaReadOnly(field.fieldMeta) && isRequiredField(field as unknown as Field) ? 'true' : 'false';
 
   Object.assign($probe.style, {
     position: 'absolute',
@@ -196,7 +213,7 @@ const resolveFieldCanvasStyleFromCssVars = (field: FieldToRender): FieldCanvasSt
     borderHoverColor: optionalBorderHoverColor,
   };
 
-  if (field.fieldMeta?.readOnly) {
+  if (getFieldMetaReadOnly(field.fieldMeta)) {
     return {
       backgroundColor: readOnlyBackground,
       borderColor: 'rgb(176, 176, 176)',

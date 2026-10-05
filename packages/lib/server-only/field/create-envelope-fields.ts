@@ -247,14 +247,30 @@ export const createEnvelopeFields = async ({
   const createdFields = await prisma.$transaction(async (tx) => {
     await assertEnvelopeMutable(envelope, tx);
 
+    // New API fields land on top of the existing stacking order.
+    const maxOrderField = await tx.field.findFirst({
+      where: {
+        envelopeId: envelope.id,
+      },
+      orderBy: {
+        order: 'desc',
+      },
+      select: {
+        order: true,
+      },
+    });
+
+    const baseOrder = (maxOrderField?.order ?? -1) + 1;
+
     const newlyCreatedFields = await tx.field.createManyAndReturn({
-      data: validatedFields.map((field) => ({
+      data: validatedFields.map((field, index) => ({
         type: field.type,
         page: field.page,
         positionX: field.positionX,
         positionY: field.positionY,
         width: field.width,
         height: field.height,
+        order: baseOrder + index,
         customText: '',
         inserted: false,
         fieldMeta: field.fieldMeta,

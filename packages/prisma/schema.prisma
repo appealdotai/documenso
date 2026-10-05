@@ -683,6 +683,7 @@ enum FieldType {
   RADIO
   CHECKBOX
   DROPDOWN
+  SHAPE
 }
 
 /// @zod.import(["import { ZFieldMetaNotOptionalSchema } from '@documenso/lib/types/field-meta';"])
@@ -698,6 +699,7 @@ model Field {
   positionY      Decimal      @default(0)
   width          Decimal      @default(-1)
   height         Decimal      @default(-1)
+  order          Int          @default(0)
   customText     String
   inserted       Boolean
   envelopeItem   EnvelopeItem @relation(fields: [envelopeItemId], references: [id], onDelete: Cascade)

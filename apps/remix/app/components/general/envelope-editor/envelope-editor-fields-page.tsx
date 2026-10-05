@@ -14,6 +14,7 @@ import {
   type TNameFieldMeta,
   type TNumberFieldMeta,
   type TRadioFieldMeta,
+  type TShapeFieldMeta,
   type TSignatureFieldMeta,
   type TTextFieldMeta,
 } from '@documenso/lib/types/field-meta';
@@ -47,6 +48,7 @@ import { EditorFieldInitialsForm } from '~/components/forms/editor/editor-field-
 import { EditorFieldNameForm } from '~/components/forms/editor/editor-field-name-form';
 import { EditorFieldNumberForm } from '~/components/forms/editor/editor-field-number-form';
 import { EditorFieldRadioForm } from '~/components/forms/editor/editor-field-radio-form';
+import { EditorFieldShapeForm } from '~/components/forms/editor/editor-field-shape-form';
 import { EditorFieldSignatureForm } from '~/components/forms/editor/editor-field-signature-form';
 import { EditorFieldTextForm } from '~/components/forms/editor/editor-field-text-form';
 import { EnvelopePdfViewer } from '~/components/general/pdf-viewer/envelope-pdf-viewer';
@@ -70,6 +72,7 @@ const FieldSettingsTypeTranslations: Record<FieldType, MessageDescriptor> = {
   [FieldType.RADIO]: msg`Radio Settings`,
   [FieldType.CHECKBOX]: msg`Checkbox Settings`,
   [FieldType.DROPDOWN]: msg`Dropdown Settings`,
+  [FieldType.SHAPE]: msg`Shape Settings`,
 };
 
 export const EnvelopeEditorFieldsPage = () => {
@@ -112,6 +115,7 @@ export const EnvelopeEditorFieldsPage = () => {
       getOverlappingFieldPairs(
         debouncedLocalFields.map((field) => ({
           id: field.formId,
+          type: field.type,
           envelopeItemId: field.envelopeItemId,
           page: field.page,
           positionX: field.positionX,
@@ -327,32 +331,44 @@ export const EnvelopeEditorFieldsPage = () => {
       {/* Right Section - Form Fields Panel */}
       {currentEnvelopeItem && envelope.recipients.length > 0 && (
         <div className="sticky top-0 h-full w-80 flex-shrink-0 overflow-y-auto border-border border-l bg-background py-4">
-          {/* Recipient selector section. */}
-          <section className="px-4">
-            <h3 className="mb-2 font-semibold text-foreground text-sm">
-              <Trans>Selected Recipient</Trans>
-            </h3>
+          {/* Recipient selector section. Hidden for shapes: decorative shapes
+              belong to no recipient and are sealed into the PDF as-is. */}
+          {selectedField?.type === FieldType.SHAPE ? (
+            <section className="px-4">
+              <h3 className="mb-2 font-semibold text-foreground text-sm">
+                <Trans>Selected Recipient</Trans>
+              </h3>
+              <p className="text-muted-foreground text-xs">
+                <Trans>Shapes are decorative and belong to no recipient.</Trans>
+              </p>
+            </section>
+          ) : (
+            <section className="px-4">
+              <h3 className="mb-2 font-semibold text-foreground text-sm">
+                <Trans>Selected Recipient</Trans>
+              </h3>
 
-            <EnvelopeRecipientSelector
-              selectedRecipient={editorFields.selectedRecipient}
-              onSelectedRecipientChange={(recipient) => editorFields.setSelectedRecipient(recipient.id)}
-              recipients={envelope.recipients}
-              fields={envelope.fields}
-              className="w-full"
-              align="end"
-            />
+              <EnvelopeRecipientSelector
+                selectedRecipient={editorFields.selectedRecipient}
+                onSelectedRecipientChange={(recipient) => editorFields.setSelectedRecipient(recipient.id)}
+                recipients={envelope.recipients}
+                fields={envelope.fields}
+                className="w-full"
+                align="end"
+              />
 
-            {editorFields.selectedRecipient &&
-              !canRecipientFieldsBeModified(editorFields.selectedRecipient, envelope.fields) && (
-                <Alert className="mt-4" variant="warning">
-                  <AlertDescription>
-                    <Trans>
-                      This recipient can no longer be modified as they have signed a field, or completed the document.
-                    </Trans>
-                  </AlertDescription>
-                </Alert>
-              )}
-          </section>
+              {editorFields.selectedRecipient &&
+                !canRecipientFieldsBeModified(editorFields.selectedRecipient, envelope.fields) && (
+                  <Alert className="mt-4" variant="warning">
+                    <AlertDescription>
+                      <Trans>
+                        This recipient can no longer be modified as they have signed a field, or completed the document.
+                      </Trans>
+                    </AlertDescription>
+                  </Alert>
+                )}
+            </section>
+          )}
 
           <Separator className="my-4" />
 
@@ -523,6 +539,12 @@ export const EnvelopeEditorFieldsPage = () => {
                     .with(FieldType.TEXT, () => (
                       <EditorFieldTextForm
                         value={selectedField?.fieldMeta as TTextFieldMeta | undefined}
+                        onValueChange={(value) => updateSelectedFieldMeta(value)}
+                      />
+                    ))
+                    .with(FieldType.SHAPE, () => (
+                      <EditorFieldShapeForm
+                        value={selectedField?.fieldMeta as TShapeFieldMeta | undefined}
                         onValueChange={(value) => updateSelectedFieldMeta(value)}
                       />
                     ))

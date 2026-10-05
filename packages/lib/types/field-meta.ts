@@ -189,6 +189,99 @@ export const ZSignatureFieldMeta = ZBaseFieldMeta.extend({
 
 export type TSignatureFieldMeta = z.infer<typeof ZSignatureFieldMeta>;
 
+export const ZShapeType = z.enum(['rectangle', 'ellipse', 'triangle', 'line', 'arrow']);
+
+export type TShapeType = z.infer<typeof ZShapeType>;
+
+export const ZBorderStyle = z.enum(['solid', 'dashed', 'none']);
+
+export type TBorderStyle = z.infer<typeof ZBorderStyle>;
+
+export const SHAPE_FILL_PRESETS = ['#000000', '#EF4444', '#FACC15', '#22C55E', '#3B82F6'] as const;
+
+export const DEFAULT_SHAPE_BORDER_COLOR = '#000000';
+export const DEFAULT_SHAPE_BORDER_WIDTH = 2;
+export const MAX_SHAPE_BORDER_WIDTH = 20;
+export const MAX_SHAPE_CORNER_RADIUS = 100;
+
+const ZShapeHexColorSchema = z
+  .string()
+  .regex(/^#([0-9a-fA-F]{6})$/, 'Must be a hex color (#RRGGBB)')
+  .describe('A hex color (#RRGGBB)');
+
+/**
+ * Normalizes shape meta written by the previous iteration of the feature
+ * (`shapeKind`, `transparent` / 8-digit fill, wider border widths) to the
+ * current schema so already-saved shapes keep loading with sensible values.
+ */
+const normalizeLegacyShapeMeta = (value: unknown) => {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return value;
+  }
+
+  const meta = { ...(value as Record<string, unknown>) };
+
+  if (meta.shape === undefined && typeof meta.shapeKind === 'string') {
+    meta.shape = meta.shapeKind;
+  }
+
+  delete meta.shapeKind;
+
+  if (meta.fillColor === 'transparent') {
+    meta.fillColor = null;
+  }
+
+  if (typeof meta.fillColor === 'string' && /^#[0-9a-fA-F]{8}$/.test(meta.fillColor)) {
+    meta.fillColor = meta.fillColor.slice(0, 7);
+  }
+
+  if (typeof meta.borderColor === 'string' && /^#[0-9a-fA-F]{8}$/.test(meta.borderColor)) {
+    meta.borderColor = meta.borderColor.slice(0, 7);
+  }
+
+  return meta;
+};
+
+export const ZShapeFieldMeta = ZBaseFieldMeta.extend({
+  type: z.literal('shape'),
+  shape: ZShapeType.default('rectangle'),
+  fillColor: ZShapeHexColorSchema.nullable().default(null),
+  fillOpacity: z.number().min(0).max(1).default(1),
+  borderColor: ZShapeHexColorSchema.default(DEFAULT_SHAPE_BORDER_COLOR),
+  borderWidth: z.number().int().min(0).max(MAX_SHAPE_BORDER_WIDTH).default(DEFAULT_SHAPE_BORDER_WIDTH),
+  borderStyle: ZBorderStyle.default('solid'),
+  cornerRadius: z.number().int().min(0).max(MAX_SHAPE_CORNER_RADIUS).default(0),
+});
+
+export type TShapeFieldMeta = z.infer<typeof ZShapeFieldMeta>;
+
+/**
+ * Lenient shape parser for persisted data. Normalizes meta written by the
+ * previous iteration (`shapeKind`, `transparent` / 8-digit colors) before
+ * validating so already-saved shapes keep loading with sensible values.
+ */
+export const ZShapeFieldMetaLenientSchema = z.preprocess(normalizeLegacyShapeMeta, ZShapeFieldMeta);
+
+/**
+ * Read the optional `readOnly` flag from any field meta. Shape meta does not
+ * carry the flag, so plain property access does not typecheck on the union.
+ */
+export const getFieldMetaReadOnly = (meta: unknown): boolean => {
+  return !!meta && typeof meta === 'object' && 'readOnly' in meta && meta.readOnly === true;
+};
+
+/**
+ * Read the optional `required` flag from any field meta. Returns undefined
+ * when the meta type does not carry the flag (e.g. shapes).
+ */
+export const getFieldMetaRequired = (meta: unknown): boolean | undefined => {
+  if (!meta || typeof meta !== 'object' || !('required' in meta)) {
+    return undefined;
+  }
+
+  return meta.required === true ? true : meta.required === false ? false : undefined;
+};
+
 export const ZFieldMetaNotOptionalSchema = z.discriminatedUnion('type', [
   ZSignatureFieldMeta,
   ZInitialsFieldMeta,
@@ -200,6 +293,7 @@ export const ZFieldMetaNotOptionalSchema = z.discriminatedUnion('type', [
   ZRadioFieldMeta,
   ZCheckboxFieldMeta,
   ZDropdownFieldMeta,
+  ZShapeFieldMeta,
 ]);
 
 export type TFieldMetaNotOptionalSchema = z.infer<typeof ZFieldMetaNotOptionalSchema>;
@@ -246,65 +340,95 @@ export const ZFieldMetaPrefillFieldsSchema = z
 
 export type TFieldMetaPrefillFieldsSchema = z.infer<typeof ZFieldMetaPrefillFieldsSchema>;
 
-export const ZFieldMetaSchema = z
-  .union([
-    // Handles an empty object being provided as fieldMeta.
-    z
-      .object({})
-      .strict()
-      .transform(() => undefined),
-    ZFieldMetaNotOptionalSchema,
-  ])
-  .optional();
+export const ZFieldMetaSchema = z.preprocess(
+  normalizeLegacyShapeMeta,
+  z
+    .union([
+      // Handles an empty object being provided as fieldMeta.
+      z
+        .object({})
+        .strict()
+        .transform(() => undefined),
+      ZFieldMetaNotOptionalSchema,
+    ])
+    .optional(),
+);
 
 export type TFieldMetaSchema = z.infer<typeof ZFieldMetaSchema>;
 
-export const ZFieldAndMetaSchema = z.discriminatedUnion('type', [
-  z.object({
-    type: z.literal(FieldType.SIGNATURE),
-    fieldMeta: ZSignatureFieldMeta.optional(),
-  }),
-  z.object({
-    type: z.literal(FieldType.FREE_SIGNATURE),
-    fieldMeta: z.undefined(),
-  }),
-  z.object({
-    type: z.literal(FieldType.INITIALS),
-    fieldMeta: ZInitialsFieldMeta.optional(),
-  }),
-  z.object({
-    type: z.literal(FieldType.NAME),
-    fieldMeta: ZNameFieldMeta.optional(),
-  }),
-  z.object({
-    type: z.literal(FieldType.EMAIL),
-    fieldMeta: ZEmailFieldMeta.optional(),
-  }),
-  z.object({
-    type: z.literal(FieldType.DATE),
-    fieldMeta: ZDateFieldMeta.optional(),
-  }),
-  z.object({
-    type: z.literal(FieldType.TEXT),
-    fieldMeta: ZTextFieldMeta.optional(),
-  }),
-  z.object({
-    type: z.literal(FieldType.NUMBER),
-    fieldMeta: ZNumberFieldMeta.optional(),
-  }),
-  z.object({
-    type: z.literal(FieldType.RADIO),
-    fieldMeta: ZRadioFieldMeta.optional(),
-  }),
-  z.object({
-    type: z.literal(FieldType.CHECKBOX),
-    fieldMeta: ZCheckboxFieldMeta.optional(),
-  }),
-  z.object({
-    type: z.literal(FieldType.DROPDOWN),
-    fieldMeta: ZDropdownFieldMeta.optional(),
-  }),
-]);
+/**
+ * Normalizes a `{ type, fieldMeta }` wrapper's legacy shape meta, if any.
+ */
+export const normalizeLegacyShapeFieldWrapper = (value: unknown) => {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return value;
+  }
+
+  const wrapper = value as Record<string, unknown>;
+
+  if (wrapper.fieldMeta === undefined) {
+    return value;
+  }
+
+  return {
+    ...wrapper,
+    fieldMeta: normalizeLegacyShapeMeta(wrapper.fieldMeta),
+  };
+};
+
+export const ZFieldAndMetaSchema = z.preprocess(
+  normalizeLegacyShapeFieldWrapper,
+  z.discriminatedUnion('type', [
+    z.object({
+      type: z.literal(FieldType.SIGNATURE),
+      fieldMeta: ZSignatureFieldMeta.optional(),
+    }),
+    z.object({
+      type: z.literal(FieldType.FREE_SIGNATURE),
+      fieldMeta: z.undefined(),
+    }),
+    z.object({
+      type: z.literal(FieldType.INITIALS),
+      fieldMeta: ZInitialsFieldMeta.optional(),
+    }),
+    z.object({
+      type: z.literal(FieldType.NAME),
+      fieldMeta: ZNameFieldMeta.optional(),
+    }),
+    z.object({
+      type: z.literal(FieldType.EMAIL),
+      fieldMeta: ZEmailFieldMeta.optional(),
+    }),
+    z.object({
+      type: z.literal(FieldType.DATE),
+      fieldMeta: ZDateFieldMeta.optional(),
+    }),
+    z.object({
+      type: z.literal(FieldType.TEXT),
+      fieldMeta: ZTextFieldMeta.optional(),
+    }),
+    z.object({
+      type: z.literal(FieldType.NUMBER),
+      fieldMeta: ZNumberFieldMeta.optional(),
+    }),
+    z.object({
+      type: z.literal(FieldType.RADIO),
+      fieldMeta: ZRadioFieldMeta.optional(),
+    }),
+    z.object({
+      type: z.literal(FieldType.CHECKBOX),
+      fieldMeta: ZCheckboxFieldMeta.optional(),
+    }),
+    z.object({
+      type: z.literal(FieldType.DROPDOWN),
+      fieldMeta: ZDropdownFieldMeta.optional(),
+    }),
+    z.object({
+      type: z.literal(FieldType.SHAPE),
+      fieldMeta: ZShapeFieldMeta.optional(),
+    }),
+  ]),
+);
 
 export type TFieldAndMeta = z.infer<typeof ZFieldAndMetaSchema>;
 
@@ -394,6 +518,17 @@ export const FIELD_SIGNATURE_META_DEFAULT_VALUES: TSignatureFieldMeta = {
   overflow: DEFAULT_SIGNATURE_OVERFLOW_MODE,
 };
 
+export const FIELD_SHAPE_META_DEFAULT_VALUES: TShapeFieldMeta = {
+  type: 'shape',
+  shape: 'rectangle',
+  fillColor: null,
+  fillOpacity: 1,
+  borderColor: DEFAULT_SHAPE_BORDER_COLOR,
+  borderWidth: DEFAULT_SHAPE_BORDER_WIDTH,
+  borderStyle: 'solid',
+  cornerRadius: 0,
+};
+
 export const FIELD_META_DEFAULT_VALUES: Record<FieldType, TFieldMetaSchema> = {
   [FieldType.SIGNATURE]: FIELD_SIGNATURE_META_DEFAULT_VALUES,
   [FieldType.FREE_SIGNATURE]: undefined,
@@ -406,53 +541,61 @@ export const FIELD_META_DEFAULT_VALUES: Record<FieldType, TFieldMetaSchema> = {
   [FieldType.RADIO]: FIELD_RADIO_META_DEFAULT_VALUES,
   [FieldType.CHECKBOX]: FIELD_CHECKBOX_META_DEFAULT_VALUES,
   [FieldType.DROPDOWN]: FIELD_DROPDOWN_META_DEFAULT_VALUES,
+  [FieldType.SHAPE]: FIELD_SHAPE_META_DEFAULT_VALUES,
 } as const;
 
-export const ZEnvelopeFieldAndMetaSchema = z.discriminatedUnion('type', [
-  z.object({
-    type: z.literal(FieldType.SIGNATURE),
-    fieldMeta: ZSignatureFieldMeta.optional().default(FIELD_SIGNATURE_META_DEFAULT_VALUES),
-  }),
-  z.object({
-    type: z.literal(FieldType.FREE_SIGNATURE),
-    fieldMeta: z.undefined(),
-  }),
-  z.object({
-    type: z.literal(FieldType.INITIALS),
-    fieldMeta: ZInitialsFieldMeta.optional().default(FIELD_INITIALS_META_DEFAULT_VALUES),
-  }),
-  z.object({
-    type: z.literal(FieldType.NAME),
-    fieldMeta: ZNameFieldMeta.optional().default(FIELD_NAME_META_DEFAULT_VALUES),
-  }),
-  z.object({
-    type: z.literal(FieldType.EMAIL),
-    fieldMeta: ZEmailFieldMeta.optional().default(FIELD_EMAIL_META_DEFAULT_VALUES),
-  }),
-  z.object({
-    type: z.literal(FieldType.DATE),
-    fieldMeta: ZDateFieldMeta.optional().default(FIELD_DATE_META_DEFAULT_VALUES),
-  }),
-  z.object({
-    type: z.literal(FieldType.TEXT),
-    fieldMeta: ZTextFieldMeta.optional().default(FIELD_TEXT_META_DEFAULT_VALUES),
-  }),
-  z.object({
-    type: z.literal(FieldType.NUMBER),
-    fieldMeta: ZNumberFieldMeta.optional().default(FIELD_NUMBER_META_DEFAULT_VALUES),
-  }),
-  z.object({
-    type: z.literal(FieldType.RADIO),
-    fieldMeta: ZRadioFieldMeta.optional().default(FIELD_RADIO_META_DEFAULT_VALUES),
-  }),
-  z.object({
-    type: z.literal(FieldType.CHECKBOX),
-    fieldMeta: ZCheckboxFieldMeta.optional().default(FIELD_CHECKBOX_META_DEFAULT_VALUES),
-  }),
-  z.object({
-    type: z.literal(FieldType.DROPDOWN),
-    fieldMeta: ZDropdownFieldMeta.optional().default(FIELD_DROPDOWN_META_DEFAULT_VALUES),
-  }),
-]);
+export const ZEnvelopeFieldAndMetaSchema = z.preprocess(
+  normalizeLegacyShapeFieldWrapper,
+  z.discriminatedUnion('type', [
+    z.object({
+      type: z.literal(FieldType.SIGNATURE),
+      fieldMeta: ZSignatureFieldMeta.optional().default(FIELD_SIGNATURE_META_DEFAULT_VALUES),
+    }),
+    z.object({
+      type: z.literal(FieldType.FREE_SIGNATURE),
+      fieldMeta: z.undefined(),
+    }),
+    z.object({
+      type: z.literal(FieldType.INITIALS),
+      fieldMeta: ZInitialsFieldMeta.optional().default(FIELD_INITIALS_META_DEFAULT_VALUES),
+    }),
+    z.object({
+      type: z.literal(FieldType.NAME),
+      fieldMeta: ZNameFieldMeta.optional().default(FIELD_NAME_META_DEFAULT_VALUES),
+    }),
+    z.object({
+      type: z.literal(FieldType.EMAIL),
+      fieldMeta: ZEmailFieldMeta.optional().default(FIELD_EMAIL_META_DEFAULT_VALUES),
+    }),
+    z.object({
+      type: z.literal(FieldType.DATE),
+      fieldMeta: ZDateFieldMeta.optional().default(FIELD_DATE_META_DEFAULT_VALUES),
+    }),
+    z.object({
+      type: z.literal(FieldType.TEXT),
+      fieldMeta: ZTextFieldMeta.optional().default(FIELD_TEXT_META_DEFAULT_VALUES),
+    }),
+    z.object({
+      type: z.literal(FieldType.NUMBER),
+      fieldMeta: ZNumberFieldMeta.optional().default(FIELD_NUMBER_META_DEFAULT_VALUES),
+    }),
+    z.object({
+      type: z.literal(FieldType.RADIO),
+      fieldMeta: ZRadioFieldMeta.optional().default(FIELD_RADIO_META_DEFAULT_VALUES),
+    }),
+    z.object({
+      type: z.literal(FieldType.CHECKBOX),
+      fieldMeta: ZCheckboxFieldMeta.optional().default(FIELD_CHECKBOX_META_DEFAULT_VALUES),
+    }),
+    z.object({
+      type: z.literal(FieldType.DROPDOWN),
+      fieldMeta: ZDropdownFieldMeta.optional().default(FIELD_DROPDOWN_META_DEFAULT_VALUES),
+    }),
+    z.object({
+      type: z.literal(FieldType.SHAPE),
+      fieldMeta: ZShapeFieldMeta.optional().default(FIELD_SHAPE_META_DEFAULT_VALUES),
+    }),
+  ]),
+);
 
 export type TEnvelopeFieldAndMeta = z.infer<typeof ZEnvelopeFieldAndMetaSchema>;

@@ -58,6 +58,7 @@ export const run = async ({ payload, io }: { payload: TSealDocumentJobDefinition
           include: {
             signature: true,
           },
+          orderBy: [{ order: 'asc' }, { id: 'asc' }],
         },
         envelopeItems: {
           include: {
@@ -66,6 +67,7 @@ export const run = async ({ payload, io }: { payload: TSealDocumentJobDefinition
               include: {
                 signature: true,
               },
+              orderBy: [{ order: 'asc' }, { id: 'asc' }],
             },
           },
         },
@@ -211,7 +213,10 @@ export const run = async ({ payload, io }: { payload: TSealDocumentJobDefinition
     const newDocumentData: Array<{ oldDocumentDataId: string; newDocumentDataId: string }> = [];
 
     for (const { envelopeItem, pdfData } of prefetchedItems) {
-      const envelopeItemFields = envelope.envelopeItems.find((item) => item.id === envelopeItem.id)?.field;
+      const envelopeItemFields = envelope.envelopeItems
+        .find((item) => item.id === envelopeItem.id)
+        ?.field.slice()
+        .sort((a, b) => a.order - b.order || a.id - b.id);
 
       if (!envelopeItemFields) {
         throw new Error(`Envelope item fields not found for envelope item ${envelopeItem.id}`);

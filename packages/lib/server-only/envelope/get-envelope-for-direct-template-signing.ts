@@ -9,7 +9,7 @@ import { getRecipientsWithMissingFields } from '../../utils/recipients';
 import { extractFieldAutoInsertValues } from '../document/send-document';
 import { getTeamSettings } from '../team/get-team-settings';
 import type { EnvelopeForSigningResponse } from './get-envelope-for-recipient-signing';
-import { ZEnvelopeForSigningResponse } from './get-envelope-for-recipient-signing';
+import { withEnvelopeShapes, ZEnvelopeForSigningResponse } from './get-envelope-for-recipient-signing';
 
 export type GetRecipientEnvelopeByTokenOptions = {
   token: string;
@@ -151,23 +151,26 @@ export const getEnvelopeForDirectTemplateSigning = async ({
 
   return ZEnvelopeForSigningResponse.parse({
     envelope,
-    recipient: {
-      ...recipient,
-      directToken: envelope.directLink?.token || '',
-      fields: recipient.fields.map((field) => {
-        const autoInsertValue = extractFieldAutoInsertValues(field, recipient, envelope.documentMeta);
+    recipient: withEnvelopeShapes(
+      {
+        ...recipient,
+        directToken: envelope.directLink?.token || '',
+        fields: recipient.fields.map((field) => {
+          const autoInsertValue = extractFieldAutoInsertValues(field, recipient, envelope.documentMeta);
 
-        if (!autoInsertValue) {
-          return field;
-        }
+          if (!autoInsertValue) {
+            return field;
+          }
 
-        return {
-          ...field,
-          inserted: true,
-          customText: autoInsertValue.customText,
-        };
-      }),
-    },
+          return {
+            ...field,
+            inserted: true,
+            customText: autoInsertValue.customText,
+          };
+        }),
+      },
+      envelope.recipients,
+    ),
     recipientSignature: null,
     isRecipientsTurn: true,
     isCompleted: false,

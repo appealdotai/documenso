@@ -26,6 +26,7 @@ export interface UpdateEnvelopeFieldsOptions {
     pageY?: number;
     width?: number;
     height?: number;
+    order?: number;
     fieldMeta?: TFieldMetaSchema;
   }[];
   requestMetadata: ApiRequestMetadata;
@@ -133,6 +134,7 @@ export const updateEnvelopeFields = async ({
             positionY: updateData.pageY,
             width: updateData.width,
             height: updateData.height,
+            order: updateData.order ?? originalField.order,
             fieldMeta: updateData.fieldMeta,
             envelopeItemId: updateData.envelopeItemId,
           },

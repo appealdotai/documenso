@@ -674,6 +674,7 @@ export const createDocumentFromTemplate = async ({
             positionY: field.positionY,
             width: field.width,
             height: field.height,
+            order: field.order,
             customText: '',
             inserted: false,
             fieldMeta: field.fieldMeta,

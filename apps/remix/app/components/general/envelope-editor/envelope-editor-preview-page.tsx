@@ -200,6 +200,11 @@ export const EnvelopeEditorPreviewPage = () => {
               customText: '',
             };
           })
+          .with({ type: FieldType.SHAPE }, () => {
+            return {
+              customText: '',
+            };
+          })
           .exhaustive(),
       };
     });

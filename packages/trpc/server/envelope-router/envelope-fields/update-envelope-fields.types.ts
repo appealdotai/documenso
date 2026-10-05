@@ -24,6 +24,7 @@ const ZUpdateFieldBaseSchema = ZEnvelopeFieldAndMetaSchema.and(
       .describe(
         'The ID of the envelope item to put the field on. If not provided, field will be placed on the first item.',
       ),
+    order: z.number().int().min(0).optional().describe('The stacking order of the field. Higher values paint on top.'),
   }),
 );
 

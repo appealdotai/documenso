@@ -11,6 +11,7 @@ import { canRecipientBeModified, isRecipientEmailValidForSending } from '../../u
 import { buildTeamWhereQuery } from '../../utils/teams';
 import { assertEnvelopeMutable } from '../envelope/assert-envelope-mutable';
 import { getEnvelopeWhereInput } from '../envelope/get-envelope-by-id';
+import { reassignEnvelopeShapeFields } from '../field/reassign-shape-fields';
 
 export interface DeleteEnvelopeRecipientOptions {
   userId: number;
@@ -121,6 +122,14 @@ export const deleteEnvelopeRecipient = async ({
         }),
       });
     }
+
+    // Decorative shapes belong to no recipient: move them to a remaining
+    // recipient before the cascade delete instead of losing them.
+    await reassignEnvelopeShapeFields({
+      envelopeId: envelope.id,
+      fromRecipientIds: [recipientId],
+      tx,
+    });
 
     return await tx.recipient.delete({
       where: {

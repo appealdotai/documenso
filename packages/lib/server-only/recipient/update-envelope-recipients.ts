@@ -5,7 +5,7 @@ import type { ApiRequestMetadata } from '@documenso/lib/universal/extract-reques
 import { createDocumentAuditLogData, diffRecipientChanges } from '@documenso/lib/utils/document-audit-logs';
 import { createRecipientAuthOptions } from '@documenso/lib/utils/document-auth';
 import { prisma } from '@documenso/prisma';
-import { EnvelopeType, RecipientRole, SendStatus, SigningStatus } from '@prisma/client';
+import { EnvelopeType, FieldType, RecipientRole, SendStatus, SigningStatus } from '@prisma/client';
 
 import { AppError, AppErrorCode } from '../../errors/app-error';
 import { extractLegacyIds } from '../../universal/id';
@@ -160,6 +160,7 @@ export const updateEnvelopeRecipients = async ({
         });
 
         // Clear all fields if the recipient role is changed to a type that cannot have fields.
+        // Decorative shapes belong to no workflow and are kept as-is.
         if (
           originalRecipient.role !== updatedRecipient.role &&
           (updatedRecipient.role === RecipientRole.CC || updatedRecipient.role === RecipientRole.VIEWER)
@@ -167,6 +168,9 @@ export const updateEnvelopeRecipients = async ({
           await tx.field.deleteMany({
             where: {
               recipientId: updatedRecipient.id,
+              type: {
+                not: FieldType.SHAPE,
+              },
             },
           });
         }

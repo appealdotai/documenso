@@ -11,6 +11,7 @@ import {
   ZFieldMetaSchema,
   ZNumberFieldMeta,
   ZRadioFieldMeta,
+  ZShapeFieldMetaLenientSchema,
   ZTextFieldMeta,
 } from '@documenso/lib/types/field-meta';
 import { prisma } from '@documenso/prisma';
@@ -36,6 +37,7 @@ export type SetFieldsForTemplateOptions = {
     pageY: number;
     pageWidth: number;
     pageHeight: number;
+    order?: number;
     fieldMeta?: FieldMeta;
   }[];
 };
@@ -105,10 +107,28 @@ export const setFieldsForTemplate = async ({ userId, teamId, id, fields }: SetFi
     };
   });
 
+  // Fields created without an explicit stacking order land on top.
+  const maxExistingOrder = existingFields.reduce((max, existingField) => Math.max(max, existingField.order), -1);
+  let nextOrder = maxExistingOrder + 1;
+
+  const fieldsWithOrder = linkedFields.map((field) => {
+    if (field.order !== undefined || field._persisted) {
+      return field;
+    }
+
+    const order = nextOrder;
+    nextOrder += 1;
+
+    return {
+      ...field,
+      order,
+    };
+  });
+
   const persistedFields = await Promise.all(
     // Disabling as wrapping promises here causes type issues
     // eslint-disable-next-line @typescript-eslint/promise-function-async
-    linkedFields.map(async (field) => {
+    fieldsWithOrder.map(async (field) => {
       const parsedFieldMeta = field.fieldMeta
         ? ZFieldMetaSchema.parse(field.fieldMeta)
         : FIELD_META_DEFAULT_VALUES[field.type];
@@ -166,6 +186,11 @@ export const setFieldsForTemplate = async ({ userId, teamId, id, fields }: SetFi
         }
       }
 
+      if (field.type === FieldType.SHAPE && field.fieldMeta) {
+        // Validates shape type and fill/border styling; throws on invalid meta.
+        ZShapeFieldMetaLenientSchema.parse(field.fieldMeta);
+      }
+
       // Proceed with upsert operation
       const upsertedField = await prisma.field.upsert({
         where: {
@@ -179,6 +204,7 @@ export const setFieldsForTemplate = async ({ userId, teamId, id, fields }: SetFi
           positionY: field.pageY,
           width: field.pageWidth,
           height: field.pageHeight,
+          order: field.order ?? field._persisted?.order ?? 0,
           fieldMeta: parsedFieldMeta,
         },
         create: {
@@ -188,8 +214,10 @@ export const setFieldsForTemplate = async ({ userId, teamId, id, fields }: SetFi
           positionY: field.pageY,
           width: field.pageWidth,
           height: field.pageHeight,
+          order: field.order ?? 0,
           customText: '',
-          inserted: false,
+          // Decorative shapes require no recipient interaction.
+          inserted: field.type === FieldType.SHAPE,
           fieldMeta: parsedFieldMeta,
           envelope: {
             connect: {

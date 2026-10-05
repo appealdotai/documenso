@@ -7,7 +7,7 @@ import { createDocumentAuditLogData, diffRecipientChanges } from '@documenso/lib
 import { createRecipientAuthOptions } from '@documenso/lib/utils/document-auth';
 import { prisma } from '@documenso/prisma';
 import type { Recipient } from '@prisma/client';
-import { EnvelopeType, RecipientRole, SendStatus, SigningStatus } from '@prisma/client';
+import { EnvelopeType, FieldType, RecipientRole, SendStatus, SigningStatus } from '@prisma/client';
 import { isDeepEqual } from 'remeda';
 
 import { AppError, AppErrorCode } from '../../errors/app-error';
@@ -17,6 +17,7 @@ import { type EnvelopeIdOptions, mapSecondaryIdToDocumentId } from '../../utils/
 import { canRecipientBeModified, isRecipientEmailValidForSending } from '../../utils/recipients';
 import { assertEnvelopeMutable } from '../envelope/assert-envelope-mutable';
 import { getEnvelopeWhereInput } from '../envelope/get-envelope-by-id';
+import { reassignEnvelopeShapeFields } from '../field/reassign-shape-fields';
 import { assertCompatibleRecipientRole } from '../signature-level/assert-compatible-recipient-role';
 
 export interface SetDocumentRecipientsOptions {
@@ -183,6 +184,7 @@ export const setDocumentRecipients = async ({
         const recipientId = upsertedRecipient.id;
 
         // Clear all fields if the recipient role is changed to a type that cannot have fields.
+        // Decorative shapes belong to no workflow and are kept as-is.
         if (
           recipient._persisted &&
           recipient._persisted.role !== recipient.role &&
@@ -191,6 +193,9 @@ export const setDocumentRecipients = async ({
           await tx.field.deleteMany({
             where: {
               recipientId,
+              type: {
+                not: FieldType.SHAPE,
+              },
             },
           });
         }
@@ -245,6 +250,14 @@ export const setDocumentRecipients = async ({
 
   if (removedRecipients.length > 0) {
     await prisma.$transaction(async (tx) => {
+      // Decorative shapes belong to no recipient: move them to a remaining
+      // recipient before the cascade delete instead of losing them.
+      await reassignEnvelopeShapeFields({
+        envelopeId: envelope.id,
+        fromRecipientIds: removedRecipients.map((recipient) => recipient.id),
+        tx,
+      });
+
       await tx.recipient.deleteMany({
         where: {
           id: {

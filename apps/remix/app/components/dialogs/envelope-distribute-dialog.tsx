@@ -151,6 +151,7 @@ export const EnvelopeDistributeDialog = ({
       hasOverlappingFields(
         envelope.fields.map((field) => ({
           id: field.id,
+          type: field.type,
           envelopeItemId: field.envelopeItemId,
           page: field.page,
           positionX: Number(field.positionX),

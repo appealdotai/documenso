@@ -11,6 +11,7 @@ import { renderCheckboxFieldElement } from './render-checkbox-field';
 import { renderDropdownFieldElement } from './render-dropdown-field';
 import { renderGenericTextFieldElement } from './render-generic-text-field';
 import { renderRadioFieldElement } from './render-radio-field';
+import { renderShapeFieldElement } from './render-shape-field';
 import { renderSignatureFieldElement } from './render-signature-field';
 
 export const MIN_FIELD_HEIGHT_PX = 12;
@@ -74,6 +75,7 @@ export const renderField = ({
     .with(FieldType.CHECKBOX, () => renderCheckboxFieldElement(field, options))
     .with(FieldType.RADIO, () => renderRadioFieldElement(field, options))
     .with(FieldType.DROPDOWN, () => renderDropdownFieldElement(field, options))
+    .with(FieldType.SHAPE, () => renderShapeFieldElement(field, options))
     .with(FieldType.SIGNATURE, () => renderSignatureFieldElement(field, options))
     .with(FieldType.FREE_SIGNATURE, () => {
       throw new Error('Free signature fields are not supported');

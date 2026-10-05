@@ -1,6 +1,6 @@
 import { isSignatureFieldType } from '@documenso/prisma/guards/is-signature-field';
 import type { Envelope, Field, Recipient } from '@prisma/client';
-import { RecipientRole, SigningStatus } from '@prisma/client';
+import { FieldType, RecipientRole, SigningStatus } from '@prisma/client';
 
 import { NEXT_PUBLIC_WEBAPP_URL } from '../constants/app';
 import { AppError, AppErrorCode } from '../errors/app-error';
@@ -96,7 +96,7 @@ export const formatSigningLink = (token: string) => `${NEXT_PUBLIC_WEBAPP_URL()}
  */
 export const canRecipientBeModified = (
   recipient: TRecipientLite,
-  fields: Pick<Field, 'recipientId' | 'inserted'>[],
+  fields: Pick<Field, 'recipientId' | 'inserted' | 'type'>[],
 ) => {
   if (!recipient) {
     return false;
@@ -112,8 +112,9 @@ export const canRecipientBeModified = (
     return false;
   }
 
-  // Deny if the recipient has inserted any fields.
-  if (fields.some((field) => field.recipientId === recipient.id && field.inserted)) {
+  // Deny if the recipient has inserted any fields. Decorative shapes belong
+  // to no workflow and never lock the recipient.
+  if (fields.some((field) => field.type !== FieldType.SHAPE && field.recipientId === recipient.id && field.inserted)) {
     return false;
   }
 
@@ -129,7 +130,7 @@ export const canRecipientBeModified = (
  */
 export const canRecipientFieldsBeModified = (
   recipient: TRecipientLite,
-  fields: Pick<Field, 'recipientId' | 'inserted'>[],
+  fields: Pick<Field, 'recipientId' | 'inserted' | 'type'>[],
 ) => {
   if (!canRecipientBeModified(recipient, fields)) {
     return false;

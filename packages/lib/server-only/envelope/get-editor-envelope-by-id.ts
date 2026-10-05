@@ -59,7 +59,9 @@ export const getEditorEnvelopeById = async ({ id, userId, teamId, type }: GetEdi
           id: 'asc',
         },
       },
-      fields: true,
+      fields: {
+        orderBy: [{ order: 'asc' }, { id: 'asc' }],
+      },
       team: {
         select: {
           id: true,
