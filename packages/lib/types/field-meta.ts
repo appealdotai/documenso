@@ -72,6 +72,10 @@ export const ZBaseFieldMeta = z.object({
   placeholder: z.string().optional(),
   required: z.boolean().optional(),
   readOnly: z.boolean().optional(),
+  backgroundVisible: z
+    .boolean()
+    .optional()
+    .describe('Whether the field background box is painted. Defaults to visible.'),
   fontSize: z.number().min(8).max(96).default(DEFAULT_FIELD_FONT_SIZE).optional(),
   overflow: ZFieldOverflowMode.optional(),
 });
@@ -261,6 +265,18 @@ export type TShapeFieldMeta = z.infer<typeof ZShapeFieldMeta>;
  * validating so already-saved shapes keep loading with sensible values.
  */
 export const ZShapeFieldMetaLenientSchema = z.preprocess(normalizeLegacyShapeMeta, ZShapeFieldMeta);
+
+/**
+ * Whether the field background box should be painted. Defaults to visible
+ * when the flag is absent so existing fields keep their appearance.
+ */
+export const isFieldBackgroundVisible = (meta: unknown): boolean => {
+  if (!meta || typeof meta !== 'object' || !('backgroundVisible' in meta)) {
+    return true;
+  }
+
+  return meta.backgroundVisible !== false;
+};
 
 /**
  * Read the optional `readOnly` flag from any field meta. Shape meta does not

@@ -12,6 +12,7 @@ import { useForm, useWatch } from 'react-hook-form';
 import type { z } from 'zod';
 
 import {
+  EditorGenericBackgroundField,
   EditorGenericFontSizeField,
   EditorGenericLabelField,
   EditorGenericRequiredField,
@@ -22,6 +23,7 @@ const ZSignatureFieldFormSchema = ZSignatureFieldMeta.pick({
   overflow: true,
   label: true,
   required: true,
+  backgroundVisible: true,
 });
 
 type TSignatureFieldFormSchema = z.infer<typeof ZSignatureFieldFormSchema>;
@@ -45,6 +47,7 @@ export const EditorFieldSignatureForm = ({
       fontSize: value.fontSize || DEFAULT_SIGNATURE_TEXT_FONT_SIZE,
       label: value.label || '',
       required: value.required !== false,
+      backgroundVisible: value.backgroundVisible ?? true,
     },
   });
 
@@ -82,6 +85,8 @@ export const EditorFieldSignatureForm = ({
           <div className="mt-1">
             <EditorGenericRequiredField formControl={form.control} />
           </div>
+
+          <EditorGenericBackgroundField formControl={form.control} />
         </fieldset>
       </form>
     </Form>

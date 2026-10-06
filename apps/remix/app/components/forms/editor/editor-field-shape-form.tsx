@@ -26,6 +26,7 @@ const ZShapeFieldFormSchema = ZShapeFieldMeta.pick({
   borderWidth: true,
   borderStyle: true,
   cornerRadius: true,
+  backgroundVisible: true,
 });
 
 type TShapeFieldFormSchema = z.infer<typeof ZShapeFieldFormSchema>;
@@ -183,6 +184,7 @@ export const EditorFieldShapeForm = ({ value, onValueChange }: EditorFieldShapeF
       borderWidth: value?.borderWidth ?? 2,
       borderStyle: value?.borderStyle ?? 'solid',
       cornerRadius: value?.cornerRadius ?? 0,
+      backgroundVisible: value?.backgroundVisible ?? true,
     },
   });
 

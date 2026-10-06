@@ -303,6 +303,40 @@ export const EditorGenericReadOnlyField = ({
   );
 };
 
+export const EditorGenericBackgroundField = ({
+  formControl,
+  className,
+}: {
+  formControl: FormControlType;
+  className?: string;
+}) => {
+  return (
+    <FormField
+      control={formControl}
+      name="backgroundVisible"
+      render={({ field }) => (
+        <FormItem className={cn('flex items-center space-x-2', className)}>
+          <FormControl>
+            <div className="flex items-center">
+              <Checkbox
+                data-testid="field-form-background-visible"
+                id="field-background-visible"
+                checked={field.value ?? true}
+                onCheckedChange={field.onChange}
+              />
+
+              <label className="ml-2 text-muted-foreground text-sm" htmlFor="field-background-visible">
+                <Trans>Show background</Trans>
+              </label>
+            </div>
+          </FormControl>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+  );
+};
+
 export const EditorGenericOverflowField = ({
   formControl,
   className,

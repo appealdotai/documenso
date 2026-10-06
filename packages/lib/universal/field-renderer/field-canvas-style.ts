@@ -1,5 +1,5 @@
 import type { TCssVarsSchema } from '@documenso/lib/types/css-vars';
-import { getFieldMetaReadOnly } from '@documenso/lib/types/field-meta';
+import { getFieldMetaReadOnly, isFieldBackgroundVisible } from '@documenso/lib/types/field-meta';
 import { isRequiredField } from '@documenso/lib/utils/advanced-fields-helpers';
 import {
   getSigningFieldHighlightCacheKey,
@@ -36,7 +36,7 @@ export const getFieldCanvasStyleCacheKey = (field: FieldToRender) => {
     ? `:${shapeMeta.shape ?? ''}:${shapeMeta.fillColor ?? ''}:${shapeMeta.fillOpacity ?? ''}:${shapeMeta.borderColor ?? ''}:${shapeMeta.borderWidth ?? ''}:${shapeMeta.borderStyle ?? ''}:${shapeMeta.cornerRadius ?? ''}`
     : '';
 
-  return `${field.type}:${field.inserted}:${field.fieldMeta?.readOnly ?? false}:${field.isValidating ?? false}:${field.isEditing ?? false}:${isRequired ? 'required' : 'optional'}${shapeKey}`;
+  return `${field.type}:${field.inserted}:${field.fieldMeta?.readOnly ?? false}:${field.isValidating ?? false}:${field.isEditing ?? false}:${isRequired ? 'required' : 'optional'}:${isFieldBackgroundVisible(field.fieldMeta) ? 'bg' : 'nobg'}${shapeKey}`;
 };
 
 export const getPixelValue = (value: string) => {
@@ -456,7 +456,14 @@ export const resolveFieldCanvasStyle = (
   const brandingStyle = resolveFieldCanvasStyleFromBrandingColors(field, brandingColors);
   const probeStyle = computeFieldCanvasStyleFromProbe(field);
   const cssVarStyle = resolveFieldCanvasStyleFromCssVars(field);
-  const style = mergeFieldCanvasStyles(brandingStyle, mergeFieldCanvasStyles(probeStyle, cssVarStyle));
+  const mergedStyle = mergeFieldCanvasStyles(brandingStyle, mergeFieldCanvasStyles(probeStyle, cssVarStyle));
+
+  // An author-hidden background stays hidden in signing too; borders and
+  // hover behavior are unaffected.
+  const style =
+    mergedStyle && !isFieldBackgroundVisible(field.fieldMeta)
+      ? { ...mergedStyle, backgroundColor: TRANSPARENT_COLOR }
+      : mergedStyle;
 
   cache?.set(cacheKey, style);
 

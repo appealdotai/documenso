@@ -19,6 +19,7 @@ import { useForm, useWatch } from 'react-hook-form';
 import type { z } from 'zod';
 
 import {
+  EditorGenericBackgroundField,
   EditorGenericFontSizeField,
   EditorGenericLabelField,
   EditorGenericLetterSpacingField,
@@ -41,6 +42,7 @@ const ZNumberFieldFormSchema = ZNumberFieldMeta.pick({
   verticalAlign: true,
   required: true,
   readOnly: true,
+  backgroundVisible: true,
   minValue: true,
   maxValue: true,
 })
@@ -102,6 +104,7 @@ export const EditorFieldNumberForm = ({
       verticalAlign: value.verticalAlign ?? FIELD_DEFAULT_GENERIC_VERTICAL_ALIGN,
       required: value.required || false,
       readOnly: value.readOnly || false,
+      backgroundVisible: value.backgroundVisible ?? true,
       minValue: value.minValue,
       maxValue: value.maxValue,
     },
@@ -167,15 +170,28 @@ export const EditorFieldNumberForm = ({
           <FormField
             control={form.control}
             name="value"
-            render={({ field }) => (
+            render={({ field, fieldState }) => (
               <FormItem>
                 <FormLabel>
                   <Trans>Value</Trans>
                 </FormLabel>
                 <FormControl>
-                  <Input data-testid="field-form-value" className="bg-background" placeholder={t`Value`} {...field} />
+                  <Input
+                    data-testid="field-form-value"
+                    className={
+                      fieldState.error ? 'border-destructive bg-background ring-1 ring-destructive' : 'bg-background'
+                    }
+                    placeholder={t`Value`}
+                    aria-invalid={Boolean(fieldState.error)}
+                    {...field}
+                  />
                 </FormControl>
                 <FormMessage />
+                {!fieldState.error && (
+                  <p className="text-[11px] text-muted-foreground">
+                    <Trans>Numbers, commas, and periods only.</Trans>
+                  </p>
+                )}
               </FormItem>
             )}
           />
@@ -228,6 +244,8 @@ export const EditorFieldNumberForm = ({
           </div>
 
           <EditorGenericReadOnlyField formControl={form.control} />
+
+          <EditorGenericBackgroundField formControl={form.control} />
 
           {/* Validation section */}
           <section className="space-y-2">

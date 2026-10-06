@@ -18,6 +18,7 @@ import { useForm, useWatch } from 'react-hook-form';
 import type { z } from 'zod';
 
 import {
+  EditorGenericBackgroundField,
   EditorGenericFontSizeField,
   EditorGenericLetterSpacingField,
   EditorGenericLineHeightField,
@@ -41,6 +42,7 @@ const ZTextFieldFormSchema = ZTextFieldMeta.pick({
   overflow: true,
   required: true,
   readOnly: true,
+  backgroundVisible: true,
 }).refine(
   (data) => {
     // A read-only field must have text
@@ -83,6 +85,7 @@ export const EditorFieldTextForm = ({
       overflow: value.overflow ?? DEFAULT_TEXT_OVERFLOW_MODE,
       required: value.required || false,
       readOnly: value.readOnly || false,
+      backgroundVisible: value.backgroundVisible ?? true,
     },
   });
 
@@ -233,6 +236,8 @@ export const EditorFieldTextForm = ({
           </div>
 
           <EditorGenericReadOnlyField formControl={form.control} />
+
+          <EditorGenericBackgroundField formControl={form.control} />
         </fieldset>
       </form>
     </Form>

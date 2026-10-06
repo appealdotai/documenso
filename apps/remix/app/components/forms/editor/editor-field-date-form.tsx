@@ -19,6 +19,7 @@ import { useForm, useWatch } from 'react-hook-form';
 import type { z } from 'zod';
 
 import {
+  EditorGenericBackgroundField,
   EditorGenericFontSizeField,
   EditorGenericLabelField,
   EditorGenericReadOnlyField,
@@ -34,6 +35,7 @@ const ZDateFieldFormSchema = ZDateFieldMeta.pick({
   value: true,
   required: true,
   readOnly: true,
+  backgroundVisible: true,
 }).refine(
   (data) => {
     return !data.readOnly || (data.value && data.value.length > 0);
@@ -70,6 +72,7 @@ export const EditorFieldDateForm = ({
       value: value.value || '',
       required: value.required || false,
       readOnly: value.readOnly || false,
+      backgroundVisible: value.backgroundVisible ?? true,
     },
   });
 
@@ -153,6 +156,8 @@ export const EditorFieldDateForm = ({
           </div>
 
           <EditorGenericReadOnlyField formControl={form.control} />
+
+          <EditorGenericBackgroundField formControl={form.control} />
         </fieldset>
       </form>
     </Form>

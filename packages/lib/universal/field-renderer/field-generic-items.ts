@@ -1,6 +1,8 @@
 import { DEFAULT_RECT_BACKGROUND, getRecipientColorStyles } from '@documenso/ui/lib/recipient-colors';
 import Konva from 'konva';
 
+import { isFieldBackgroundVisible } from '../../types/field-meta';
+import { TRANSPARENT_COLOR } from './field-canvas-style';
 import type { FieldCanvasStyle, FieldToRender, RenderFieldElementOptions } from './field-renderer';
 import { calculateFieldPosition } from './field-renderer';
 
@@ -239,7 +241,9 @@ export const upsertFieldRect = (
   fieldRect.setAttrs({
     width: fieldWidth,
     height: fieldHeight,
-    fill: fieldCanvasStyle?.backgroundColor ?? DEFAULT_RECT_BACKGROUND,
+    fill: !isFieldBackgroundVisible(field.fieldMeta)
+      ? TRANSPARENT_COLOR
+      : (fieldCanvasStyle?.backgroundColor ?? DEFAULT_RECT_BACKGROUND),
     stroke: borderColor,
     strokeWidth: sideWidths.isUniform ? sideWidths.top : 0,
     cornerRadius: borderRadius,
