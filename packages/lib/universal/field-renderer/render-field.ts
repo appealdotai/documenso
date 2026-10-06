@@ -38,6 +38,7 @@ type RenderFieldOptions = {
   scale: number;
   editable?: boolean;
   fieldCanvasStyleCache?: FieldCanvasStyleCache;
+  dateFormat?: string | null;
 };
 
 export const renderField = ({
@@ -53,6 +54,7 @@ export const renderField = ({
   color,
   fieldCanvasStyleCache,
   brandingColors,
+  dateFormat,
 }: RenderFieldOptions) => {
   const options = {
     pageLayer,
@@ -64,6 +66,7 @@ export const renderField = ({
     color,
     editable,
     scale,
+    dateFormat,
     fieldCanvasStyle: resolveFieldCanvasStyle(field, mode, fieldCanvasStyleCache, brandingColors),
   };
 

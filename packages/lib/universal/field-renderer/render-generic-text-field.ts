@@ -10,6 +10,7 @@ import {
   FIELD_DEFAULT_LINE_HEIGHT,
   resolveFieldOverflowMode,
 } from '../../types/field-meta';
+import { formatIsoDateForDisplay } from '../../utils/date-input-format';
 import { calculateOverflowLayout } from './calculate-overflow-layout';
 import {
   createFieldHoverInteraction,
@@ -105,7 +106,9 @@ const upsertFieldText = (field: FieldToRender, options: RenderFieldElementOption
 
   if (mode === 'edit' && fieldMeta?.type === 'date' && fieldMeta.value) {
     isLabel = false;
-    textToRender = fieldMeta.value;
+    // Show the value in the document's date format so authors see dates
+    // exactly as recipients will. Storage stays ISO.
+    textToRender = options.dateFormat ? formatIsoDateForDisplay(fieldMeta.value, options.dateFormat) : fieldMeta.value;
     textAlign = fieldMeta.textAlign || FIELD_DEFAULT_GENERIC_ALIGN;
   }
 

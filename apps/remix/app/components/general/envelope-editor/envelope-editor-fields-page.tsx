@@ -498,6 +498,7 @@ export const EnvelopeEditorFieldsPage = () => {
                       <EditorFieldDateForm
                         value={selectedField?.fieldMeta as TDateFieldMeta | undefined}
                         onValueChange={(value) => updateSelectedFieldMeta(value)}
+                        dateFormat={envelope.documentMeta.dateFormat ?? undefined}
                       />
                     ))
                     .with(FieldType.DROPDOWN, () => (

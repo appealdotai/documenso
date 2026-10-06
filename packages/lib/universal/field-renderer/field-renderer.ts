@@ -54,6 +54,12 @@ export type RenderFieldElementOptions = {
    * `mode === 'sign'`.
    */
   signPlaceholders?: Partial<Record<FieldType, string>> | null;
+  /**
+   * The document's date format setting. When set, DATE values render formatted
+   * in `edit` mode so authors see dates exactly as recipients will.
+   * Signing and export keep their existing behavior.
+   */
+  dateFormat?: string | null;
 };
 
 export type FieldCanvasStyle = {
