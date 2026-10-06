@@ -64,12 +64,42 @@ const ZNumberFieldFormSchema = ZNumberFieldMeta.pick({
       // A read-only field must have a value greater than 0
       if (data.readOnly && data.value !== undefined && data.value !== '') {
         const numberValue = parseFloat(data.value);
-        return !isNaN(numberValue) && numberValue > 0;
+        return !Number.isNaN(numberValue) && numberValue > 0;
       }
       return !data.readOnly || (data.value !== undefined && data.value !== '');
     },
     {
       message: 'A read-only field must have a value greater than 0',
+      path: ['value'],
+    },
+  )
+  .refine(
+    (data) => {
+      // Value must only contain valid numeric characters
+      if (!data.value || data.value.trim() === '') {
+        return true;
+      }
+      return /^[0-9,.]+$/.test(data.value.trim());
+    },
+    {
+      message: 'Value must be a valid number (digits, commas, and periods only)',
+      path: ['value'],
+    },
+  )
+  .refine(
+    (data) => {
+      // Value must match the selected number format pattern
+      if (!data.numberFormat || !data.value || data.value.trim() === '') {
+        return true;
+      }
+      const foundFormat = numberFormatValues.find((item) => item.value === data.numberFormat);
+      if (!foundFormat?.regex) {
+        return true;
+      }
+      return foundFormat.regex.test(data.value);
+    },
+    {
+      message: 'Value does not match the selected number format',
       path: ['value'],
     },
   );

@@ -31,7 +31,16 @@ import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
 import { DocumentStatus, FieldType, RecipientRole } from '@prisma/client';
-import { AlertTriangleIcon, FileTextIcon, PencilIcon, SparklesIcon } from 'lucide-react';
+import {
+  AlertTriangleIcon,
+  ArrowDownIcon,
+  ArrowUpIcon,
+  BringToFrontIcon,
+  FileTextIcon,
+  PencilIcon,
+  SendToBackIcon,
+  SparklesIcon,
+} from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRevalidator, useSearchParams } from 'react-router';
 import { isDeepEqual } from 'remeda';
@@ -553,6 +562,104 @@ export const EnvelopeEditorFieldsPage = () => {
                 </div>
               </section>
             )}
+          </AnimateGenericFadeInOut>
+
+          {/* Arrange section — visible whenever a field is selected */}
+          <AnimateGenericFadeInOut key={`arrange-${editorFields.selectedField?.formId ?? 'none'}`}>
+            {selectedField &&
+              (() => {
+                const currentPageFields = editorFields.localFields
+                  .filter((f) => f.page === selectedField.page && f.envelopeItemId === selectedField.envelopeItemId)
+                  .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+                const layerIndex = currentPageFields.findIndex((f) => f.formId === selectedField.formId);
+                const layerN = layerIndex + 1;
+                const layerM = currentPageFields.length;
+                const isAtTop = layerIndex === layerM - 1;
+                const isAtBottom = layerIndex === 0;
+
+                const moveSelected = (direction: 'front' | 'back' | 'forward' | 'backward') => {
+                  editorFields.moveFieldsByFormId([selectedField.formId], direction);
+                };
+
+                return (
+                  <section>
+                    <Separator className="my-4" />
+
+                    <div className="px-4">
+                      <div className="mb-3 flex items-center justify-between">
+                        <h3 className="font-semibold text-sm">
+                          <Trans>Arrange</Trans>
+                        </h3>
+
+                        <span className="text-muted-foreground text-xs" aria-live="polite">
+                          <Trans>
+                            Layer {layerN} of {layerM}
+                          </Trans>
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="w-full gap-1.5"
+                          disabled={isAtTop}
+                          title={_(msg`Bring to front`)}
+                          onClick={() => moveSelected('front')}
+                        >
+                          <BringToFrontIcon className="h-3.5 w-3.5" />
+                          <Trans>To front</Trans>
+                        </Button>
+
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="w-full gap-1.5"
+                          disabled={isAtBottom}
+                          title={_(msg`Send to back`)}
+                          onClick={() => moveSelected('back')}
+                        >
+                          <SendToBackIcon className="h-3.5 w-3.5" />
+                          <Trans>To back</Trans>
+                        </Button>
+
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="w-full gap-1.5"
+                          disabled={isAtTop}
+                          title={_(msg`Bring forward`)}
+                          onClick={() => moveSelected('forward')}
+                        >
+                          <ArrowUpIcon className="h-3.5 w-3.5" />
+                          <Trans>Forward</Trans>
+                        </Button>
+
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="w-full gap-1.5"
+                          disabled={isAtBottom}
+                          title={_(msg`Send backward`)}
+                          onClick={() => moveSelected('backward')}
+                        >
+                          <ArrowDownIcon className="h-3.5 w-3.5" />
+                          <Trans>Backward</Trans>
+                        </Button>
+                      </div>
+
+                      <p className="mt-2 text-muted-foreground text-xs">
+                        <Trans>Shortcuts: ⌥] forward, ⌥[ backward. Add ⇧ for front or back.</Trans>
+                      </p>
+                    </div>
+                  </section>
+                );
+              })()}
           </AnimateGenericFadeInOut>
         </div>
       )}

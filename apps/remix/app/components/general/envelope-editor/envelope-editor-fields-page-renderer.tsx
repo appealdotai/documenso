@@ -1,6 +1,6 @@
 import { useAnalytics } from '@documenso/lib/client-only/hooks/use-analytics';
 import { useDebouncedValue } from '@documenso/lib/client-only/hooks/use-debounced-value';
-import type { FieldLayerDirection, TLocalField } from '@documenso/lib/client-only/hooks/use-editor-fields';
+import type { TLocalField } from '@documenso/lib/client-only/hooks/use-editor-fields';
 import { usePageRenderer } from '@documenso/lib/client-only/hooks/use-page-renderer';
 import { useCurrentEnvelopeEditor } from '@documenso/lib/client-only/providers/envelope-editor-provider';
 import {
@@ -35,32 +35,14 @@ import {
   CommandItem,
   CommandList,
 } from '@documenso/ui/primitives/command';
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuShortcut,
-  ContextMenuTrigger,
-} from '@documenso/ui/primitives/context-menu';
 import { FRIENDLY_FIELD_TYPE } from '@documenso/ui/primitives/document-flow/types';
-import { Trans, useLingui } from '@lingui/react/macro';
+import { useLingui } from '@lingui/react/macro';
 import { FieldType } from '@prisma/client';
 import Konva from 'konva';
 import type { KonvaEventObject } from 'konva/lib/Node';
 import type { Transformer } from 'konva/lib/shapes/Transformer';
-import {
-  BringToFrontIcon,
-  ChevronDownIcon,
-  ChevronUpIcon,
-  CopyPlusIcon,
-  SendToBackIcon,
-  ShapesIcon,
-  SquareStackIcon,
-  TrashIcon,
-  UserCircleIcon,
-} from 'lucide-react';
+import { CopyPlusIcon, ShapesIcon, SquareStackIcon, TrashIcon, UserCircleIcon } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-
 import { fieldButtonList } from './envelope-editor-fields-drag-drop';
 import { EnvelopeRecipientSelectorCommand } from './envelope-recipient-selector';
 
@@ -461,7 +443,9 @@ export const EnvelopeEditorFieldsPageRenderer = ({ pageData }: { pageData: PageR
 
     currentStage.on('dragstart', onDragStartOrEnd);
     currentStage.on('dragend', onDragStartOrEnd);
-    currentStage.on('transformstart', () => setIsFieldChanging(true));
+    currentStage.on('transformstart', () => {
+      setIsFieldChanging(true);
+    });
     currentStage.on('transformend', () => setIsFieldChanging(false));
 
     currentPageLayer.batchDraw();
@@ -873,12 +857,6 @@ export const EnvelopeEditorFieldsPageRenderer = ({ pageData }: { pageData: PageR
     setSelectedFields([]);
   };
 
-  const moveSelectedFields = (direction: FieldLayerDirection) => {
-    const fieldFormids = selectedKonvaFieldGroups.map((field) => field.id()).filter((field) => field !== undefined);
-
-    editorFields.moveFieldsByFormId(fieldFormids, direction);
-  };
-
   const changeSelectedFieldsRecipients = (recipientId: number) => {
     const fields = selectedKonvaFieldGroups
       .map((field) => editorFields.getFieldByFormId(field.id()))
@@ -995,14 +973,11 @@ export const EnvelopeEditorFieldsPageRenderer = ({ pageData }: { pageData: PageR
             handleDeleteSelectedFields={deletedSelectedFields}
             handleChangeRecipient={changeSelectedFieldsRecipients}
             handleChangeFieldType={changeSelectedFieldsType}
-            handleMoveSelectedFields={moveSelectedFields}
             selectedFieldFormId={selectedKonvaFieldGroups.map((field) => field.id())}
             style={{
               position: 'absolute',
-              top:
-                interactiveTransformer.current.y() + interactiveTransformer.current.getClientRect().height + 5 + 'px',
-              left:
-                interactiveTransformer.current.x() + interactiveTransformer.current.getClientRect().width / 2 + 'px',
+              top: `${interactiveTransformer.current.y() + interactiveTransformer.current.getClientRect().height + 5}px`,
+              left: `${interactiveTransformer.current.x() + interactiveTransformer.current.getClientRect().width / 2}px`,
               transform: 'translateX(-50%)',
               gap: '8px',
               pointerEvents: 'auto',
@@ -1015,8 +990,8 @@ export const EnvelopeEditorFieldsPageRenderer = ({ pageData }: { pageData: PageR
         <div
           style={{
             position: 'absolute',
-            top: pendingFieldCreation.y() * scale + pendingFieldCreation.getClientRect().height + 5 + 'px',
-            left: pendingFieldCreation.x() * scale + pendingFieldCreation.getClientRect().width / 2 + 'px',
+            top: `${pendingFieldCreation.y() * scale + pendingFieldCreation.getClientRect().height + 5}px`,
+            left: `${pendingFieldCreation.x() * scale + pendingFieldCreation.getClientRect().width / 2}px`,
             transform: 'translateX(-50%)',
             zIndex: 50,
           }}
@@ -1025,6 +1000,7 @@ export const EnvelopeEditorFieldsPageRenderer = ({ pageData }: { pageData: PageR
         >
           {fieldButtonList.map((field) => (
             <button
+              type="button"
               key={field.type}
               onClick={() => createFieldFromPendingTemplate(pendingFieldCreation, field.type)}
               className="col-span-1 w-full flex-shrink-0 rounded-sm px-2 py-1 text-xs hover:bg-gray-100 hover:text-gray-600"
@@ -1035,39 +1011,8 @@ export const EnvelopeEditorFieldsPageRenderer = ({ pageData }: { pageData: PageR
         </div>
       )}
 
-      {/* The element Konva will inject it's canvas into. */}
-      <ContextMenu>
-        <ContextMenuTrigger asChild>
-          <div className="konva-container absolute inset-0 z-10 w-full" ref={konvaContainer}></div>
-        </ContextMenuTrigger>
-        <ContextMenuContent>
-          <ContextMenuItem
-            disabled={selectedKonvaFieldGroups.length === 0}
-            onSelect={() => moveSelectedFields('front')}
-          >
-            <Trans>Bring to front</Trans>
-            <ContextMenuShortcut>⌥⇧]</ContextMenuShortcut>
-          </ContextMenuItem>
-          <ContextMenuItem
-            disabled={selectedKonvaFieldGroups.length === 0}
-            onSelect={() => moveSelectedFields('forward')}
-          >
-            <Trans>Bring forward</Trans>
-            <ContextMenuShortcut>⌥]</ContextMenuShortcut>
-          </ContextMenuItem>
-          <ContextMenuItem
-            disabled={selectedKonvaFieldGroups.length === 0}
-            onSelect={() => moveSelectedFields('backward')}
-          >
-            <Trans>Send backward</Trans>
-            <ContextMenuShortcut>⌥[</ContextMenuShortcut>
-          </ContextMenuItem>
-          <ContextMenuItem disabled={selectedKonvaFieldGroups.length === 0} onSelect={() => moveSelectedFields('back')}>
-            <Trans>Send to back</Trans>
-            <ContextMenuShortcut>⌥⇧[</ContextMenuShortcut>
-          </ContextMenuItem>
-        </ContextMenuContent>
-      </ContextMenu>
+      {/* The element Konva will inject its canvas into. */}
+      <div className="konva-container absolute inset-0 z-10 w-full" ref={konvaContainer} />
     </>
   );
 };
@@ -1078,7 +1023,6 @@ type FieldActionButtonsProps = React.HTMLAttributes<HTMLDivElement> & {
   handleDeleteSelectedFields: () => void;
   handleChangeRecipient: (recipientId: number) => void;
   handleChangeFieldType: (type: FieldType) => void;
-  handleMoveSelectedFields: (direction: FieldLayerDirection) => void;
   selectedFieldFormId: string[];
 };
 
@@ -1088,7 +1032,6 @@ const FieldActionButtons = ({
   handleDeleteSelectedFields,
   handleChangeRecipient,
   handleChangeFieldType,
-  handleMoveSelectedFields,
   selectedFieldFormId,
   ...props
 }: FieldActionButtonsProps) => {
@@ -1196,46 +1139,6 @@ const FieldActionButtons = ({
           onTouchEnd={handleDuplicateSelectedFieldsOnAllPages}
         >
           <SquareStackIcon className="h-3 w-3" />
-        </button>
-
-        <button
-          type="button"
-          title={t`Bring Forward`}
-          className="rounded-sm p-1.5 text-gray-400 transition-colors hover:bg-white/10 hover:text-gray-100"
-          onClick={() => handleMoveSelectedFields('forward')}
-          onTouchEnd={() => handleMoveSelectedFields('forward')}
-        >
-          <ChevronUpIcon className="h-3 w-3" />
-        </button>
-
-        <button
-          type="button"
-          title={t`Bring to Front`}
-          className="rounded-sm p-1.5 text-gray-400 transition-colors hover:bg-white/10 hover:text-gray-100"
-          onClick={() => handleMoveSelectedFields('front')}
-          onTouchEnd={() => handleMoveSelectedFields('front')}
-        >
-          <BringToFrontIcon className="h-3 w-3" />
-        </button>
-
-        <button
-          type="button"
-          title={t`Send Backward`}
-          className="rounded-sm p-1.5 text-gray-400 transition-colors hover:bg-white/10 hover:text-gray-100"
-          onClick={() => handleMoveSelectedFields('backward')}
-          onTouchEnd={() => handleMoveSelectedFields('backward')}
-        >
-          <ChevronDownIcon className="h-3 w-3" />
-        </button>
-
-        <button
-          type="button"
-          title={t`Send to Back`}
-          className="rounded-sm p-1.5 text-gray-400 transition-colors hover:bg-white/10 hover:text-gray-100"
-          onClick={() => handleMoveSelectedFields('back')}
-          onTouchEnd={() => handleMoveSelectedFields('back')}
-        >
-          <SendToBackIcon className="h-3 w-3" />
         </button>
 
         <button

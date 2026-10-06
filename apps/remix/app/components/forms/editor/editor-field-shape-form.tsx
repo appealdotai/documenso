@@ -235,14 +235,8 @@ export const EditorFieldShapeForm = ({ value, onValueChange }: EditorFieldShapeF
                       <SelectItem value="ellipse">
                         <Trans>Ellipse</Trans>
                       </SelectItem>
-                      <SelectItem value="triangle">
-                        <Trans>Triangle</Trans>
-                      </SelectItem>
                       <SelectItem value="line">
                         <Trans>Line</Trans>
-                      </SelectItem>
-                      <SelectItem value="arrow">
-                        <Trans>Arrow</Trans>
                       </SelectItem>
                     </SelectContent>
                   </Select>

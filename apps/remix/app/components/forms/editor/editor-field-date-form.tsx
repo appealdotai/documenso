@@ -171,7 +171,7 @@ export const EditorFieldDateForm = ({
           <FormField
             control={form.control}
             name="value"
-            render={({ field }) => (
+            render={() => (
               <FormItem>
                 <FormLabel>
                   <Trans>Date Value</Trans>
