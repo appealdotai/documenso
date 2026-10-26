@@ -614,6 +614,14 @@ export const formatDocumentAuditLogAction = (i18n: I18n, auditLog: TDocumentAudi
       you: msg`You replaced the PDF for envelope item ${data.envelopeItemTitle}`,
       user: msg`${user} replaced the PDF for envelope item ${data.envelopeItemTitle}`,
     }))
+    .with({ type: DOCUMENT_AUDIT_LOG_TYPE.ENVELOPE_ITEM_PAGES_UPDATED }, ({ data }) => ({
+      anonymous: msg({
+        message: `Envelope item pages updated`,
+        context: `Audit log format`,
+      }),
+      you: msg`You updated the pages for envelope item ${data.envelopeItemTitle} (page count: ${data.fromPageCount} → ${data.toPageCount})`,
+      user: msg`${user} updated the pages for envelope item ${data.envelopeItemTitle} (page count: ${data.fromPageCount} → ${data.toPageCount})`,
+    }))
     .with({ type: DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_RECIPIENT_EXPIRED }, ({ data }) => ({
       anonymous: msg({
         message: `Recipient signing window expired`,

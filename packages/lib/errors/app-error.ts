@@ -44,6 +44,11 @@ export enum AppErrorCode {
   ENVELOPE_TSP_LOCKED = 'ENVELOPE_TSP_LOCKED',
 
   /**
+   * A page containing fields cannot be removed from an envelope item.
+   */
+  ENVELOPE_ITEM_PAGE_HAS_FIELDS = 'ENVELOPE_ITEM_PAGE_HAS_FIELDS',
+
+  /**
    * Recipient action on an envelope whose sender's account is disabled.
    * Distinct from `ACCOUNT_DISABLED` so the UI can show a "sender disabled"
    * page rather than treating the recipient's own account as disabled.
@@ -126,6 +131,7 @@ export const genericErrorCodeToTrpcErrorCodeMap: Record<string, { code: string; 
   [AppErrorCode.ENVELOPE_CANCELLED]: { code: 'BAD_REQUEST', status: 400 },
   [AppErrorCode.ENVELOPE_LEGACY]: { code: 'BAD_REQUEST', status: 400 },
   [AppErrorCode.ENVELOPE_TSP_LOCKED]: { code: 'BAD_REQUEST', status: 400 },
+  [AppErrorCode.ENVELOPE_ITEM_PAGE_HAS_FIELDS]: { code: 'BAD_REQUEST', status: 400 },
   [AppErrorCode.SENDER_DISABLED]: { code: 'FORBIDDEN', status: 403 },
   [AppErrorCode.MISSING_SIGNATURE_FIELD]: { code: 'BAD_REQUEST', status: 400 },
   [AppErrorCode.RECIPIENT_HAS_UNSIGNED_FIELDS]: { code: 'BAD_REQUEST', status: 400 },

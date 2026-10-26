@@ -30,7 +30,7 @@ import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
 import { DocumentStatus, FieldType, RecipientRole } from '@prisma/client';
-import { AlertTriangleIcon, FileTextIcon, PencilIcon, SparklesIcon } from 'lucide-react';
+import { AlertTriangleIcon, FileStackIcon, FileTextIcon, PencilIcon, SparklesIcon } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRevalidator, useSearchParams } from 'react-router';
 import { isDeepEqual } from 'remeda';
@@ -39,6 +39,7 @@ import { match } from 'ts-pattern';
 import { AiFeaturesEnableDialog } from '~/components/dialogs/ai-features-enable-dialog';
 import { AiFieldDetectionDialog } from '~/components/dialogs/ai-field-detection-dialog';
 import { EnvelopeItemEditDialog } from '~/components/dialogs/envelope-item-edit-dialog';
+import { EnvelopeItemPageManagerDialog } from '~/components/dialogs/envelope-item-page-manager-dialog';
 import { EditorFieldCheckboxForm } from '~/components/forms/editor/editor-field-checkbox-form';
 import { EditorFieldDateForm } from '~/components/forms/editor/editor-field-date-form';
 import { EditorFieldDropdownForm } from '~/components/forms/editor/editor-field-dropdown-form';
@@ -79,7 +80,7 @@ export const EnvelopeEditorFieldsPage = () => {
 
   const scrollableContainerRef = useRef<HTMLDivElement>(null);
 
-  const { envelope, editorFields, navigateToStep, editorConfig } = useCurrentEnvelopeEditor();
+  const { envelope, editorFields, navigateToStep, editorConfig, isEmbedded } = useCurrentEnvelopeEditor();
 
   const { currentEnvelopeItem, setCurrentEnvelopeItem } = useCurrentEnvelopeRender();
 
@@ -230,28 +231,57 @@ export const EnvelopeEditorFieldsPage = () => {
             editorConfig.envelopeItems !== null &&
             editorConfig.envelopeItems.allowReplace &&
             envelopeItemPermissions.canFileBeChanged
-              ? (item) => (
-                  <div className="relative flex h-5 w-5 flex-shrink-0 items-center justify-center">
+              ? (item) => {
+                  const envelopeItem = envelope.envelopeItems.find((currentItem) => currentItem.id === item.id);
+
+                  if (!envelopeItem) {
+                    return null;
+                  }
+
+                  return (
                     <div
-                      className={cn('h-2 w-2 rounded-full transition-opacity duration-150 group-hover:opacity-0', {
-                        'bg-green-500': currentEnvelopeItem?.id === item.id,
+                      className={cn('relative flex h-5 flex-shrink-0 items-center justify-center', {
+                        'w-5': isEmbedded,
+                        'w-10': !isEmbedded,
                       })}
-                    />
-                    <EnvelopeItemEditDialog
-                      envelopeItem={item}
-                      allowConfigureTitle={editorConfig.envelopeItems?.allowConfigureTitle ?? false}
-                      trigger={
-                        <span
-                          className="absolute inset-0 flex cursor-pointer items-center justify-center opacity-0 transition-opacity duration-150 group-hover:opacity-100"
-                          onClick={(e) => e.stopPropagation()}
-                          data-testid={`envelope-item-edit-button-${item.id}`}
-                        >
-                          <PencilIcon className="h-3.5 w-3.5" />
-                        </span>
-                      }
-                    />
-                  </div>
-                )
+                    >
+                      <div
+                        className={cn('h-2 w-2 rounded-full transition-opacity duration-150 group-hover:opacity-0', {
+                          'bg-green-500': currentEnvelopeItem?.id === item.id,
+                        })}
+                      />
+
+                      <EnvelopeItemEditDialog
+                        envelopeItem={envelopeItem}
+                        allowConfigureTitle={editorConfig.envelopeItems?.allowConfigureTitle ?? false}
+                        trigger={
+                          <span
+                            className="absolute left-0 flex h-5 w-5 cursor-pointer items-center justify-center opacity-0 transition-opacity duration-150 group-hover:opacity-100"
+                            onClick={(e) => e.stopPropagation()}
+                            data-testid={`envelope-item-edit-button-${item.id}`}
+                          >
+                            <PencilIcon className="h-3.5 w-3.5" />
+                          </span>
+                        }
+                      />
+
+                      {!isEmbedded && envelopeItem.documentDataId && (
+                        <EnvelopeItemPageManagerDialog
+                          envelopeItem={envelopeItem}
+                          trigger={
+                            <span
+                              className="absolute right-0 flex h-5 w-5 cursor-pointer items-center justify-center opacity-0 transition-opacity duration-150 group-hover:opacity-100"
+                              onClick={(e) => e.stopPropagation()}
+                              data-testid={`envelope-item-page-manager-button-${item.id}`}
+                            >
+                              <FileStackIcon className="h-3.5 w-3.5" />
+                            </span>
+                          }
+                        />
+                      )}
+                    </div>
+                  );
+                }
               : undefined
           }
         />
