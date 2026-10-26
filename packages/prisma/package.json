@@ -9,7 +9,7 @@
     "prebuild": "prisma generate",
     "format": "prisma format",
     "clean": "rimraf node_modules",
-    "postinstall": "prisma generate",
+    "post-install": "prisma generate",
     "prisma:generate": "prisma generate",
     "prisma:migrate-dev": "prisma migrate dev --skip-seed",
     "prisma:migrate-deploy": "prisma migrate deploy",
