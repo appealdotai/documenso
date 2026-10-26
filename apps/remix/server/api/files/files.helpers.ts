@@ -225,9 +225,7 @@ const handlePendingFileRequest = async ({
     include: {
       signature: true,
     },
-    orderBy: {
-      id: 'asc',
-    },
+    orderBy: [{ order: 'asc' }, { id: 'asc' }],
   });
 
   const etag = Buffer.from(

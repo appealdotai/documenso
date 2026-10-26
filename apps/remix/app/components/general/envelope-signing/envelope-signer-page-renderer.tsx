@@ -151,8 +151,11 @@ export const EnvelopeSignerPageRenderer = ({ pageData }: { pageData: PageRenderD
       fieldsToRender = selectedAssistantRecipientFields;
     }
 
-    return fieldsToRender.filter(
-      (field) => field.page === pageNumber && field.envelopeItemId === currentEnvelopeItem?.id,
+    return (
+      fieldsToRender
+        .filter((field) => field.page === pageNumber && field.envelopeItemId === currentEnvelopeItem?.id)
+        // Paint order follows the persisted stacking order (higher = on top).
+        .sort((a, b) => a.order - b.order || a.id - b.id)
     );
   }, [recipientFields, selectedAssistantRecipientFields, pageNumber, currentEnvelopeItem?.id]);
 
@@ -439,6 +442,12 @@ export const EnvelopeSignerPageRenderer = ({ pageData }: { pageData: PageRenderD
             .finally(() => {
               loadingSpinnerGroup.destroy();
             });
+        })
+        /**
+         * SHAPE FIELD — decorative, no interaction.
+         */
+        .with({ type: FieldType.SHAPE }, () => {
+          loadingSpinnerGroup.destroy();
         })
         .exhaustive();
     };

@@ -1,7 +1,8 @@
 import { DEFAULT_RECT_BACKGROUND, getRecipientColorStyles } from '@documenso/ui/lib/recipient-colors';
 import Konva from 'konva';
 
-import type { TFieldFontFamily } from '../../types/field-meta';
+import { isFieldBackgroundVisible, type TFieldFontFamily } from '../../types/field-meta';
+import { TRANSPARENT_COLOR } from './field-canvas-style';
 import type { FieldCanvasStyle, FieldToRender, RenderFieldElementOptions } from './field-renderer';
 import { calculateFieldPosition } from './field-renderer';
 
@@ -49,6 +50,20 @@ export const upsertFieldGroup = (field: FieldToRender, options: RenderFieldEleme
       return { x: newX, y: newY };
     },
   } satisfies Partial<Konva.GroupConfig>);
+
+  // Override the group's getClientRect to only consider the `.field-rect` child.
+  // This ensures that the interactive transformer (and marquee selection) wraps tightly
+  // around the actual field boundaries, completely ignoring any overflowing text nodes
+  // which might extend to the page edges.
+  fieldGroup.getClientRect = function (config) {
+    const fieldRect = this.findOne('.field-rect');
+
+    if (fieldRect) {
+      return fieldRect.getClientRect(config);
+    }
+
+    return Konva.Group.prototype.getClientRect.call(this, config);
+  };
 
   return fieldGroup;
 };
@@ -237,7 +252,9 @@ export const upsertFieldRect = (
   fieldRect.setAttrs({
     width: fieldWidth,
     height: fieldHeight,
-    fill: fieldCanvasStyle?.backgroundColor ?? DEFAULT_RECT_BACKGROUND,
+    fill: !isFieldBackgroundVisible(field.fieldMeta)
+      ? TRANSPARENT_COLOR
+      : (fieldCanvasStyle?.backgroundColor ?? DEFAULT_RECT_BACKGROUND),
     stroke: borderColor,
     strokeWidth: sideWidths.isUniform ? sideWidths.top : 0,
     cornerRadius: borderRadius,

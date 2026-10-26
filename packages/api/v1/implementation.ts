@@ -34,6 +34,7 @@ import {
   ZFieldMetaSchema,
   ZNumberFieldMeta,
   ZRadioFieldMeta,
+  ZShapeFieldMetaLenientSchema,
   ZTextFieldMeta,
 } from '@documenso/lib/types/field-meta';
 import { getFileServerSide } from '@documenso/lib/universal/upload/get-file.server';
@@ -1402,6 +1403,7 @@ export const ApiContractV1Implementation = tsr.router(ApiContractV1, {
               .with('DROPDOWN', () => ZDropdownFieldMeta.safeParse(fieldMeta))
               .with('NUMBER', () => ZNumberFieldMeta.safeParse(fieldMeta))
               .with('TEXT', () => ZTextFieldMeta.safeParse(fieldMeta))
+              .with('SHAPE', () => ZShapeFieldMetaLenientSchema.safeParse(fieldMeta))
               .with('SIGNATURE', 'INITIALS', 'DATE', 'EMAIL', 'NAME', () => ({
                 success: true,
                 data: undefined,

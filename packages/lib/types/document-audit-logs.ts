@@ -371,6 +371,10 @@ export const ZDocumentAuditLogEventDocumentFieldInsertedSchema = z.object({
         type: z.literal(FieldType.NUMBER),
         data: z.string(),
       }),
+      z.object({
+        type: z.literal(FieldType.SHAPE),
+        data: z.string(),
+      }),
     ]),
     fieldSecurity: z.preprocess(
       (input) => {
@@ -469,6 +473,10 @@ export const ZDocumentAuditLogEventDocumentFieldPrefilledSchema = z.object({
       }),
       z.object({
         type: z.literal(FieldType.NUMBER),
+        data: z.string(),
+      }),
+      z.object({
+        type: z.literal(FieldType.SHAPE),
         data: z.string(),
       }),
     ]),

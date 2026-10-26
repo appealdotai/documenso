@@ -2,6 +2,7 @@ import type { Field } from '@prisma/client';
 import { colord } from 'colord';
 import { DEFAULT_BRAND_COLORS, DEFAULT_BRAND_LENGTHS } from '../constants/theme';
 import type { TCssVarsSchema } from '../types/css-vars';
+import { getFieldMetaReadOnly } from '../types/field-meta';
 import type { FieldCanvasStyle } from '../universal/field-renderer/field-renderer';
 import { isRequiredField } from './advanced-fields-helpers';
 
@@ -269,7 +270,7 @@ export const resolveFieldCanvasStyleFromBrandingColors = (
     optionalBorderHoverColor,
   });
 
-  if (field.fieldMeta?.readOnly) {
+  if (getFieldMetaReadOnly(field.fieldMeta)) {
     return {
       backgroundColor: READ_ONLY_FIELD_BACKGROUND,
       borderColor: 'rgb(176, 176, 176)',

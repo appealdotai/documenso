@@ -12,6 +12,7 @@ import {
   ZFieldMetaSchema,
   ZNumberFieldMeta,
   ZRadioFieldMeta,
+  ZShapeFieldMetaLenientSchema,
   ZTextFieldMeta,
 } from '@documenso/lib/types/field-meta';
 import type { ApiRequestMetadata } from '@documenso/lib/universal/extract-request-metadata';
@@ -126,8 +127,26 @@ export const setFieldsForDocument = async ({
   });
 
   const persistedFields = await prisma.$transaction(async (tx) => {
+    // Fields created without an explicit stacking order land on top.
+    const maxExistingOrder = existingFields.reduce((max, existingField) => Math.max(max, existingField.order), -1);
+    let nextOrder = maxExistingOrder + 1;
+
+    const fieldsWithOrder = linkedFields.map((field) => {
+      if (field.order !== undefined || field._persisted) {
+        return field;
+      }
+
+      const order = nextOrder;
+      nextOrder += 1;
+
+      return {
+        ...field,
+        order,
+      };
+    });
+
     return await Promise.all(
-      linkedFields.map(async (field) => {
+      fieldsWithOrder.map(async (field) => {
         const fieldSignerEmail = field._recipient.email.toLowerCase();
 
         const parsedFieldMeta = field.fieldMeta
@@ -197,6 +216,11 @@ export const setFieldsForDocument = async ({
           }
         }
 
+        if (field.type === FieldType.SHAPE && field.fieldMeta) {
+          // Validates shape type and fill/border styling; throws on invalid meta.
+          ZShapeFieldMetaLenientSchema.parse(field.fieldMeta);
+        }
+
         const upsertedField = await tx.field.upsert({
           where: {
             id: field._persisted?.id ?? -1,
@@ -209,6 +233,7 @@ export const setFieldsForDocument = async ({
             positionY: field.pageY,
             width: field.pageWidth,
             height: field.pageHeight,
+            order: field.order ?? field._persisted?.order ?? 0,
             fieldMeta: parsedFieldMeta,
           },
           create: {
@@ -218,8 +243,10 @@ export const setFieldsForDocument = async ({
             positionY: field.pageY,
             width: field.pageWidth,
             height: field.pageHeight,
+            order: field.order ?? 0,
             customText: '',
-            inserted: false,
+            // Decorative shapes require no recipient interaction.
+            inserted: field.type === FieldType.SHAPE,
             fieldMeta: parsedFieldMeta,
             envelope: {
               connect: {
@@ -356,6 +383,7 @@ type FieldData = {
   pageY: number;
   pageWidth: number;
   pageHeight: number;
+  order?: number;
   fieldMeta?: FieldMeta;
 };
 
@@ -371,6 +399,7 @@ const hasFieldBeenChanged = (field: Field, newFieldData: FieldData) => {
     field.positionY.toNumber() !== newFieldData.pageY ||
     field.width.toNumber() !== newFieldData.pageWidth ||
     field.height.toNumber() !== newFieldData.pageHeight ||
+    (newFieldData.order ?? field.order) !== field.order ||
     !isDeepEqual(currentFieldMeta, newFieldMeta)
   );
 };

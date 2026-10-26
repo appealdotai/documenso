@@ -97,9 +97,10 @@ export const InlineDateOverlay = ({ field, dateFormat, onCommit, onCancel }: Inl
       }
     };
 
+    // 300 ms covers a normal double-click (< 500 ms) without being perceptible.
     const timeoutId = window.setTimeout(() => {
       document.addEventListener('pointerdown', handlePointerDown);
-    }, 0);
+    }, 300);
 
     document.addEventListener('keydown', handleKeyDown);
 

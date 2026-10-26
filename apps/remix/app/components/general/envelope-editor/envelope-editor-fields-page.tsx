@@ -14,6 +14,7 @@ import {
   type TNameFieldMeta,
   type TNumberFieldMeta,
   type TRadioFieldMeta,
+  type TShapeFieldMeta,
   type TSignatureFieldMeta,
   type TTextFieldMeta,
 } from '@documenso/lib/types/field-meta';
@@ -30,7 +31,17 @@ import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
 import { DocumentStatus, FieldType, RecipientRole } from '@prisma/client';
-import { AlertTriangleIcon, FileStackIcon, FileTextIcon, PencilIcon, SparklesIcon } from 'lucide-react';
+import {
+  AlertTriangleIcon,
+  ArrowDownIcon,
+  ArrowUpIcon,
+  BringToFrontIcon,
+  FileStackIcon,
+  FileTextIcon,
+  PencilIcon,
+  SendToBackIcon,
+  SparklesIcon,
+} from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRevalidator, useSearchParams } from 'react-router';
 import { isDeepEqual } from 'remeda';
@@ -48,6 +59,7 @@ import { EditorFieldInitialsForm } from '~/components/forms/editor/editor-field-
 import { EditorFieldNameForm } from '~/components/forms/editor/editor-field-name-form';
 import { EditorFieldNumberForm } from '~/components/forms/editor/editor-field-number-form';
 import { EditorFieldRadioForm } from '~/components/forms/editor/editor-field-radio-form';
+import { EditorFieldShapeForm } from '~/components/forms/editor/editor-field-shape-form';
 import { EditorFieldSignatureForm } from '~/components/forms/editor/editor-field-signature-form';
 import { EditorFieldTextForm } from '~/components/forms/editor/editor-field-text-form';
 import { EnvelopePdfViewer } from '~/components/general/pdf-viewer/envelope-pdf-viewer';
@@ -71,6 +83,7 @@ const FieldSettingsTypeTranslations: Record<FieldType, MessageDescriptor> = {
   [FieldType.RADIO]: msg`Radio Settings`,
   [FieldType.CHECKBOX]: msg`Checkbox Settings`,
   [FieldType.DROPDOWN]: msg`Dropdown Settings`,
+  [FieldType.SHAPE]: msg`Shape Settings`,
 };
 
 export const EnvelopeEditorFieldsPage = () => {
@@ -113,6 +126,7 @@ export const EnvelopeEditorFieldsPage = () => {
       getOverlappingFieldPairs(
         debouncedLocalFields.map((field) => ({
           id: field.formId,
+          type: field.type,
           envelopeItemId: field.envelopeItemId,
           page: field.page,
           positionX: field.positionX,
@@ -357,32 +371,44 @@ export const EnvelopeEditorFieldsPage = () => {
       {/* Right Section - Form Fields Panel */}
       {currentEnvelopeItem && envelope.recipients.length > 0 && (
         <div className="sticky top-0 h-full w-80 flex-shrink-0 overflow-y-auto border-border border-l bg-background py-4">
-          {/* Recipient selector section. */}
-          <section className="px-4">
-            <h3 className="mb-2 font-semibold text-foreground text-sm">
-              <Trans>Selected Recipient</Trans>
-            </h3>
+          {/* Recipient selector section. Hidden for shapes: decorative shapes
+              belong to no recipient and are sealed into the PDF as-is. */}
+          {selectedField?.type === FieldType.SHAPE ? (
+            <section className="px-4">
+              <h3 className="mb-2 font-semibold text-foreground text-sm">
+                <Trans>Selected Recipient</Trans>
+              </h3>
+              <p className="text-muted-foreground text-xs">
+                <Trans>Shapes are decorative and belong to no recipient.</Trans>
+              </p>
+            </section>
+          ) : (
+            <section className="px-4">
+              <h3 className="mb-2 font-semibold text-foreground text-sm">
+                <Trans>Selected Recipient</Trans>
+              </h3>
 
-            <EnvelopeRecipientSelector
-              selectedRecipient={editorFields.selectedRecipient}
-              onSelectedRecipientChange={(recipient) => editorFields.setSelectedRecipient(recipient.id)}
-              recipients={envelope.recipients}
-              fields={envelope.fields}
-              className="w-full"
-              align="end"
-            />
+              <EnvelopeRecipientSelector
+                selectedRecipient={editorFields.selectedRecipient}
+                onSelectedRecipientChange={(recipient) => editorFields.setSelectedRecipient(recipient.id)}
+                recipients={envelope.recipients}
+                fields={envelope.fields}
+                className="w-full"
+                align="end"
+              />
 
-            {editorFields.selectedRecipient &&
-              !canRecipientFieldsBeModified(editorFields.selectedRecipient, envelope.fields) && (
-                <Alert className="mt-4" variant="warning">
-                  <AlertDescription>
-                    <Trans>
-                      This recipient can no longer be modified as they have signed a field, or completed the document.
-                    </Trans>
-                  </AlertDescription>
-                </Alert>
-              )}
-          </section>
+              {editorFields.selectedRecipient &&
+                !canRecipientFieldsBeModified(editorFields.selectedRecipient, envelope.fields) && (
+                  <Alert className="mt-4" variant="warning">
+                    <AlertDescription>
+                      <Trans>
+                        This recipient can no longer be modified as they have signed a field, or completed the document.
+                      </Trans>
+                    </AlertDescription>
+                  </Alert>
+                )}
+            </section>
+          )}
 
           <Separator className="my-4" />
 
@@ -512,6 +538,7 @@ export const EnvelopeEditorFieldsPage = () => {
                       <EditorFieldDateForm
                         value={selectedField?.fieldMeta as TDateFieldMeta | undefined}
                         onValueChange={(value) => updateSelectedFieldMeta(value)}
+                        dateFormat={envelope.documentMeta.dateFormat ?? undefined}
                       />
                     ))
                     .with(FieldType.DROPDOWN, () => (
@@ -556,10 +583,114 @@ export const EnvelopeEditorFieldsPage = () => {
                         onValueChange={(value) => updateSelectedFieldMeta(value)}
                       />
                     ))
+                    .with(FieldType.SHAPE, () => (
+                      <EditorFieldShapeForm
+                        value={selectedField?.fieldMeta as TShapeFieldMeta | undefined}
+                        onValueChange={(value) => updateSelectedFieldMeta(value)}
+                      />
+                    ))
                     .otherwise(() => null)}
                 </div>
               </section>
             )}
+          </AnimateGenericFadeInOut>
+
+          {/* Arrange section — visible whenever a field is selected */}
+          <AnimateGenericFadeInOut key={`arrange-${editorFields.selectedField?.formId ?? 'none'}`}>
+            {selectedField &&
+              (() => {
+                const currentPageFields = editorFields.localFields
+                  .filter((f) => f.page === selectedField.page && f.envelopeItemId === selectedField.envelopeItemId)
+                  .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+                const layerIndex = currentPageFields.findIndex((f) => f.formId === selectedField.formId);
+                const layerN = layerIndex + 1;
+                const layerM = currentPageFields.length;
+                const isAtTop = layerIndex === layerM - 1;
+                const isAtBottom = layerIndex === 0;
+
+                const moveSelected = (direction: 'front' | 'back' | 'forward' | 'backward') => {
+                  editorFields.moveFieldsByFormId([selectedField.formId], direction);
+                };
+
+                return (
+                  <section>
+                    <Separator className="my-4" />
+
+                    <div className="px-4">
+                      <div className="mb-3 flex items-center justify-between">
+                        <h3 className="font-semibold text-sm">
+                          <Trans>Arrange</Trans>
+                        </h3>
+
+                        <span className="text-muted-foreground text-xs" aria-live="polite">
+                          <Trans>
+                            Layer {layerN} of {layerM}
+                          </Trans>
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="w-full gap-1.5"
+                          disabled={isAtTop}
+                          title={_(msg`Bring to front`)}
+                          onClick={() => moveSelected('front')}
+                        >
+                          <BringToFrontIcon className="h-3.5 w-3.5" />
+                          <Trans>To front</Trans>
+                        </Button>
+
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="w-full gap-1.5"
+                          disabled={isAtBottom}
+                          title={_(msg`Send to back`)}
+                          onClick={() => moveSelected('back')}
+                        >
+                          <SendToBackIcon className="h-3.5 w-3.5" />
+                          <Trans>To back</Trans>
+                        </Button>
+
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="w-full gap-1.5"
+                          disabled={isAtTop}
+                          title={_(msg`Bring forward`)}
+                          onClick={() => moveSelected('forward')}
+                        >
+                          <ArrowUpIcon className="h-3.5 w-3.5" />
+                          <Trans>Forward</Trans>
+                        </Button>
+
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="w-full gap-1.5"
+                          disabled={isAtBottom}
+                          title={_(msg`Send backward`)}
+                          onClick={() => moveSelected('backward')}
+                        >
+                          <ArrowDownIcon className="h-3.5 w-3.5" />
+                          <Trans>Backward</Trans>
+                        </Button>
+                      </div>
+
+                      <p className="mt-2 text-muted-foreground text-xs">
+                        <Trans>Shortcuts: ⌥] forward, ⌥[ backward. Add ⇧ for front or back.</Trans>
+                      </p>
+                    </div>
+                  </section>
+                );
+              })()}
           </AnimateGenericFadeInOut>
         </div>
       )}
