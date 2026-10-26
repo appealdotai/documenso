@@ -2,6 +2,7 @@ import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { verifyEmbeddingPresignToken } from '@documenso/lib/server-only/embedding-presign/verify-embedding-presign-token';
 import { createEnvelope } from '@documenso/lib/server-only/envelope/create-envelope';
 import { mapSecondaryIdToTemplateId } from '@documenso/lib/utils/envelope';
+import { getFieldInsertedStatus } from '@documenso/lib/utils/fields';
 import { prisma } from '@documenso/prisma';
 import { EnvelopeType } from '@prisma/client';
 
@@ -78,7 +79,7 @@ export const createEmbeddingTemplateRoute = procedure
               width: field.width,
               height: field.height,
               customText: '',
-              inserted: false,
+              inserted: getFieldInsertedStatus(field.type),
             })),
           });
 

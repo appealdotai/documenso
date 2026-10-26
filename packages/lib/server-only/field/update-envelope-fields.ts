@@ -8,7 +8,7 @@ import { EnvelopeType, type FieldType } from '@prisma/client';
 
 import { AppError, AppErrorCode } from '../../errors/app-error';
 import type { EnvelopeIdOptions } from '../../utils/envelope';
-import { mapFieldToLegacyField } from '../../utils/fields';
+import { isShapeField, mapFieldToLegacyField } from '../../utils/fields';
 import { canRecipientFieldsBeModified } from '../../utils/recipients';
 import { assertEnvelopeMutable } from '../envelope/assert-envelope-mutable';
 import { getEnvelopeWhereInput } from '../envelope/get-envelope-by-id';
@@ -119,6 +119,7 @@ export const updateEnvelopeFields = async ({
 
     return {
       originalField,
+      resolvedType: fieldType,
       updateData: {
         ...field,
         fieldMeta,
@@ -131,19 +132,24 @@ export const updateEnvelopeFields = async ({
     await assertEnvelopeMutable(envelope, tx);
 
     return await Promise.all(
-      fieldsToUpdate.map(async ({ originalField, updateData, recipientEmail }) => {
+      fieldsToUpdate.map(async ({ originalField, resolvedType, updateData, recipientEmail }) => {
+        const isShape = isShapeField({ type: resolvedType });
+        const wasShape = isShapeField(originalField);
+
         const updatedField = await tx.field.update({
           where: {
             id: updateData.id,
           },
           data: {
-            type: updateData.type,
+            type: resolvedType,
             page: updateData.pageNumber,
             positionX: updateData.pageX,
             positionY: updateData.pageY,
             width: updateData.width,
             height: updateData.height,
             order: updateData.order ?? originalField.order,
+            customText: isShape || wasShape ? '' : undefined,
+            inserted: isShape ? true : wasShape ? false : originalField.inserted,
             fieldMeta: updateData.fieldMeta,
             envelopeItemId: updateData.envelopeItemId,
           },

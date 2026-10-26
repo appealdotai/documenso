@@ -22,6 +22,7 @@ import {
   EditorGenericBackgroundField,
   EditorGenericFontFamilyField,
   EditorGenericFontSizeField,
+  EditorGenericFontStyleField,
   EditorGenericLetterSpacingField,
   EditorGenericLineHeightField,
   EditorGenericOverflowField,
@@ -38,6 +39,9 @@ const ZTextFieldFormSchema = ZTextFieldMeta.pick({
   characterLimit: true,
   fontSize: true,
   fontFamily: true,
+  bold: true,
+  italic: true,
+  underline: true,
   textAlign: true,
   lineHeight: true,
   letterSpacing: true,
@@ -82,6 +86,9 @@ export const EditorFieldTextForm = ({
       characterLimit: value.characterLimit || 0,
       fontSize: value.fontSize || DEFAULT_FIELD_FONT_SIZE,
       fontFamily: value.fontFamily ?? FIELD_DEFAULT_FONT_FAMILY,
+      bold: value.bold ?? false,
+      italic: value.italic ?? false,
+      underline: value.underline ?? false,
       textAlign: value.textAlign ?? FIELD_DEFAULT_GENERIC_ALIGN,
       lineHeight: value.lineHeight ?? FIELD_DEFAULT_LINE_HEIGHT,
       letterSpacing: value.letterSpacing ?? FIELD_DEFAULT_LETTER_SPACING,
@@ -122,6 +129,8 @@ export const EditorFieldTextForm = ({
           <EditorGenericFontSizeField className="w-full" formControl={form.control} />
 
           <EditorGenericFontFamilyField className="w-full" formControl={form.control} />
+
+          <EditorGenericFontStyleField className="w-full" formControl={form.control} />
 
           <div className="flex w-full flex-row gap-x-4">
             <EditorGenericTextAlignField className="w-full" formControl={form.control} />

@@ -1,7 +1,7 @@
 import { getServerLimits } from '@documenso/ee/server-only/limits/server';
 import { NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
 import { DATE_FORMATS, DEFAULT_DOCUMENT_DATE_FORMAT } from '@documenso/lib/constants/date-formats';
-import { DocumentDataType, DocumentStatus, EnvelopeType, SigningStatus } from '@prisma/client';
+import { DocumentDataType, DocumentStatus, EnvelopeType, type FieldType, SigningStatus } from '@prisma/client';
 import { tsr } from '@ts-rest/serverless/fetch';
 import { match } from 'ts-pattern';
 import '@documenso/lib/constants/time-zones';
@@ -43,6 +43,7 @@ import { getPresignGetUrl, getPresignPostUrl } from '@documenso/lib/universal/up
 import { isDocumentCompleted } from '@documenso/lib/utils/document';
 import { createDocumentAuditLogData } from '@documenso/lib/utils/document-audit-logs';
 import { mapSecondaryIdToDocumentId, mapSecondaryIdToTemplateId } from '@documenso/lib/utils/envelope';
+import { getFieldInsertedStatus } from '@documenso/lib/utils/fields';
 import { prisma } from '@documenso/prisma';
 
 import { ApiContractV1 } from './contract';
@@ -1431,7 +1432,7 @@ export const ApiContractV1Implementation = tsr.router(ApiContractV1, {
                 width: pageWidth,
                 height: pageHeight,
                 customText: '',
-                inserted: false,
+                inserted: getFieldInsertedStatus(type as FieldType),
                 fieldMeta: result.data,
               },
               include: {

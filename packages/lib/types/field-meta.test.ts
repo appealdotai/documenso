@@ -25,4 +25,25 @@ describe('ZTextFieldMeta font family', () => {
     expect(FIELD_DEFAULT_FONT_FAMILY).toBe('noto-sans');
     expect(FIELD_TEXT_META_DEFAULT_VALUES.fontFamily).toBe(FIELD_DEFAULT_FONT_FAMILY);
   });
+
+  it('accepts Montserrat and font style flags', () => {
+    const result = ZTextFieldMeta.parse({
+      type: 'text',
+      fontFamily: 'montserrat',
+      bold: true,
+      italic: true,
+      underline: true,
+    });
+
+    expect(result.fontFamily).toBe('montserrat');
+    expect(result.bold).toBe(true);
+    expect(result.italic).toBe(true);
+    expect(result.underline).toBe(true);
+  });
+
+  it('defaults font style flags to disabled', () => {
+    expect(FIELD_TEXT_META_DEFAULT_VALUES.bold).toBe(false);
+    expect(FIELD_TEXT_META_DEFAULT_VALUES.italic).toBe(false);
+    expect(FIELD_TEXT_META_DEFAULT_VALUES.underline).toBe(false);
+  });
 });

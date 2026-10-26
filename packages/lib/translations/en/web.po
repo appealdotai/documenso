@@ -2632,6 +2632,10 @@ msgstr "Blocked Domains"
 msgid "Blue"
 msgstr "Blue"
 
+#: apps/remix/app/components/forms/editor/editor-field-generic-field-forms.tsx
+msgid "Bold"
+msgstr "Bold"
+
 #: apps/remix/app/components/forms/branding-preferences-form.tsx
 #: apps/remix/app/components/forms/branding-preferences-form.tsx
 #: apps/remix/app/components/forms/branding-preferences-form.tsx
@@ -6614,6 +6618,10 @@ msgstr "Font Family"
 msgid "Font Size"
 msgstr "Font Size"
 
+#: apps/remix/app/components/forms/editor/editor-field-generic-field-forms.tsx
+msgid "Font Style"
+msgstr "Font Style"
+
 #: apps/remix/app/routes/_unauthenticated+/articles.signature-disclosure.tsx
 msgid "For any questions regarding this disclosure, electronic signatures, or any related process, please contact us at: <0>{SUPPORT_EMAIL}</0>"
 msgstr "For any questions regarding this disclosure, electronic signatures, or any related process, please contact us at: <0>{SUPPORT_EMAIL}</0>"
@@ -7454,6 +7462,10 @@ msgstr "It's not your turn to sign yet"
 msgid "Italian"
 msgstr "Italian"
 
+#: apps/remix/app/components/forms/editor/editor-field-generic-field-forms.tsx
+msgid "Italic"
+msgstr "Italic"
+
 #: packages/lib/constants/i18n.ts
 msgid "Japanese"
 msgstr "Japanese"
@@ -8146,6 +8158,10 @@ msgstr "Monthly quota"
 #: apps/remix/app/components/general/organisation-usage-panel.tsx
 msgid "Monthly usage"
 msgstr "Monthly usage"
+
+#: apps/remix/app/components/forms/editor/editor-field-generic-field-forms.tsx
+msgid "Montserrat"
+msgstr "Montserrat"
 
 #: apps/remix/app/components/dialogs/envelopes-bulk-move-dialog.tsx
 #: apps/remix/app/components/dialogs/folder-move-dialog.tsx
@@ -14087,6 +14103,10 @@ msgstr "Unavailable template"
 #: apps/remix/app/components/general/stack-avatars-with-tooltip.tsx
 msgid "Uncompleted"
 msgstr "Uncompleted"
+
+#: apps/remix/app/components/forms/editor/editor-field-generic-field-forms.tsx
+msgid "Underline"
+msgstr "Underline"
 
 #: apps/remix/app/components/forms/form-sticky-save-bar.tsx
 #: apps/remix/app/components/general/envelope-editor/envelope-editor.tsx

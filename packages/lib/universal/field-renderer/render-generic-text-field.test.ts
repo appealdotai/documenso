@@ -66,4 +66,23 @@ describe('renderGenericTextFieldElement', () => {
 
     expect(textNode.fontFamily()).toBe(konvaTextFontFamily);
   });
+
+  it('renders bold, italic, and underline styles', () => {
+    const textNode = renderTextField(
+      createTestField({
+        fieldMeta: {
+          type: 'text',
+          text: 'Hello',
+          fontFamily: 'montserrat',
+          bold: true,
+          italic: true,
+          underline: true,
+        },
+      }),
+    );
+
+    expect(textNode.fontFamily()).toBe(resolveFieldFontFamily('montserrat'));
+    expect(textNode.fontStyle()).toBe('bold italic');
+    expect(textNode.textDecoration()).toBe('underline');
+  });
 });

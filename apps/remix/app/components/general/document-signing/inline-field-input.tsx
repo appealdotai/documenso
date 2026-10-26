@@ -29,6 +29,9 @@ export type InlineFieldInputProps = {
   overflow?: TFieldOverflowMode;
   fontSize?: number;
   fontFamily?: TFieldFontFamily | null;
+  bold?: boolean;
+  italic?: boolean;
+  underline?: boolean;
   lineHeight?: number | null;
   letterSpacing?: number | null;
   /**
@@ -83,6 +86,9 @@ export const InlineFieldInput = ({
   overflow,
   fontSize = DEFAULT_STANDARD_FONT_SIZE,
   fontFamily,
+  bold = false,
+  italic = false,
+  underline = false,
   lineHeight,
   letterSpacing,
   scale = 1,
@@ -221,6 +227,9 @@ export const InlineFieldInput = ({
   const sharedStyle: CSSProperties = {
     fontFamily: resolveFieldFontFamily(fontFamily),
     fontSize: `${renderFontSize}px`,
+    fontWeight: bold ? 700 : undefined,
+    fontStyle: italic ? 'italic' : undefined,
+    textDecoration: underline ? 'underline' : undefined,
     lineHeight: lineHeight ?? FIELD_DEFAULT_LINE_HEIGHT,
     letterSpacing: `${(letterSpacing ?? FIELD_DEFAULT_LETTER_SPACING) * scale}px`,
     paddingTop: 0,

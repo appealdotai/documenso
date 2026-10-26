@@ -17,6 +17,7 @@ import {
   konvaTextFill,
   konvaTextFontFamily,
   resolveFieldFontFamily,
+  resolveFieldFontStyle,
   upsertFieldGroup,
   upsertFieldRect,
 } from './field-generic-items';
@@ -48,6 +49,8 @@ const upsertFieldText = (field: FieldToRender, options: RenderFieldElementOption
   const textFontSize = fieldMeta?.fontSize || DEFAULT_STANDARD_FONT_SIZE;
   const textFontFamily =
     fieldMeta?.type === 'text' ? resolveFieldFontFamily(fieldMeta.fontFamily) : konvaTextFontFamily;
+  const textFontStyle = fieldMeta?.type === 'text' ? resolveFieldFontStyle(fieldMeta) : 'normal';
+  const textDecoration = fieldMeta?.type === 'text' && fieldMeta.underline ? 'underline' : '';
 
   // By default, render the field name or label centered.
   // isLabel tracks whether we're rendering the field type name (like "Text", "Date", "Email")
@@ -161,6 +164,7 @@ const upsertFieldText = (field: FieldToRender, options: RenderFieldElementOption
     textToRender,
     fontSize: textFontSize,
     fontFamily: textFontFamily,
+    fontStyle: textFontStyle,
     lineHeight: textLineHeight,
     letterSpacing: textLetterSpacing,
     textAlign,
@@ -188,6 +192,8 @@ const upsertFieldText = (field: FieldToRender, options: RenderFieldElementOption
     lineHeight: textLineHeight,
     letterSpacing: textLetterSpacing,
     fontFamily: textFontFamily,
+    fontStyle: textFontStyle,
+    textDecoration,
     fill: konvaTextFill,
     width: overflowLayout.width,
     height: overflowLayout.height,
@@ -203,6 +209,7 @@ const upsertFieldText = (field: FieldToRender, options: RenderFieldElementOption
     textLineHeight,
     textLetterSpacing,
     textFontFamily,
+    textFontStyle,
   };
 };
 
@@ -235,6 +242,7 @@ export const renderGenericTextFieldElement = (field: FieldToRender, options: Ren
     textLineHeight,
     textLetterSpacing,
     textFontFamily,
+    textFontStyle,
   } = upsertFieldText(field, options);
 
   fieldGroup.add(fieldRect);
@@ -275,6 +283,7 @@ export const renderGenericTextFieldElement = (field: FieldToRender, options: Ren
       textToRender,
       fontSize: textFontSize,
       fontFamily: textFontFamily,
+      fontStyle: textFontStyle,
       lineHeight: textLineHeight,
       letterSpacing: textLetterSpacing,
       textAlign,

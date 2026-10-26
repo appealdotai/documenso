@@ -365,7 +365,11 @@ const runAllFieldTypesFlow = async (surface: TEnvelopeEditorSurface): Promise<TA
   // 6. Text: place and configure label, placeholder, text, characterLimit, required.
   await placeFieldOnPdf(root, 'Text', { x: 120, y: 300 });
   await root.locator('[data-testid="field-form-fontFamily"]').click();
-  await root.getByRole('option', { name: 'Caveat' }).click();
+  await root.getByRole('option', { name: 'Montserrat' }).click();
+  await expect.poll(() => root.evaluate(() => document.fonts.check('12px "Montserrat"'))).toBe(true);
+  await root.locator('[data-testid="field-form-bold"]').click();
+  await root.locator('[data-testid="field-form-italic"]').click();
+  await root.locator('[data-testid="field-form-underline"]').click();
   await root.locator('[data-testid="field-form-lineHeight"]').fill('1.5');
   await root.locator('[data-testid="field-form-letterSpacing"]').fill('2');
   await root.locator('[data-testid="field-form-label"]').fill('Test Label');
@@ -507,7 +511,10 @@ const assertAllFieldTypesPersistedInDatabase = async ({
 
   // TEXT
   expect(meta(FieldType.TEXT).type).toBe('text');
-  expect(meta(FieldType.TEXT).fontFamily).toBe('caveat');
+  expect(meta(FieldType.TEXT).fontFamily).toBe('montserrat');
+  expect(meta(FieldType.TEXT).bold).toBe(true);
+  expect(meta(FieldType.TEXT).italic).toBe(true);
+  expect(meta(FieldType.TEXT).underline).toBe(true);
   expect(meta(FieldType.TEXT).lineHeight).toBe(1.5);
   expect(meta(FieldType.TEXT).letterSpacing).toBe(2);
   expect(meta(FieldType.TEXT).label).toBe('Test Label');

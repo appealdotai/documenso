@@ -10,7 +10,7 @@ import { EnvelopeType } from '@prisma/client';
 
 import { AppError, AppErrorCode } from '../../errors/app-error';
 import type { EnvelopeIdOptions } from '../../utils/envelope';
-import { mapFieldToLegacyField } from '../../utils/fields';
+import { getFieldInsertedStatus, mapFieldToLegacyField } from '../../utils/fields';
 import { canRecipientFieldsBeModified } from '../../utils/recipients';
 import { assertEnvelopeMutable } from '../envelope/assert-envelope-mutable';
 import { getEnvelopeWhereInput } from '../envelope/get-envelope-by-id';
@@ -272,7 +272,7 @@ export const createEnvelopeFields = async ({
         height: field.height,
         order: baseOrder + index,
         customText: '',
-        inserted: false,
+        inserted: getFieldInsertedStatus(field.type),
         fieldMeta: field.fieldMeta,
         envelopeId: envelope.id,
         envelopeItemId: field.envelopeItemId,

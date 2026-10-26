@@ -1,5 +1,5 @@
 import { prisma } from '@documenso/prisma';
-import { EnvelopeType, SigningStatus } from '@prisma/client';
+import { EnvelopeType, FieldType, SigningStatus } from '@prisma/client';
 
 export type GetCompletedFieldsForTokenOptions = {
   token: string;
@@ -20,7 +20,7 @@ export const getCompletedFieldsForToken = async ({ token }: GetCompletedFieldsFo
       recipient: {
         signingStatus: SigningStatus.SIGNED,
       },
-      inserted: true,
+      OR: [{ inserted: true }, { type: FieldType.SHAPE }],
     },
     include: {
       signature: true,

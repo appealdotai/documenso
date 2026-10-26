@@ -312,6 +312,9 @@ export const DocumentSigningTextField = ({ field, onSignField, onUnsignField }: 
             overflow={parsedFieldMeta?.overflow}
             fontSize={parsedFieldMeta?.fontSize}
             fontFamily={parsedFieldMeta?.fontFamily}
+            bold={parsedFieldMeta?.bold}
+            italic={parsedFieldMeta?.italic}
+            underline={parsedFieldMeta?.underline}
             lineHeight={parsedFieldMeta?.lineHeight}
             letterSpacing={parsedFieldMeta?.letterSpacing}
             characterLimit={parsedFieldMeta?.characterLimit}
@@ -337,7 +340,14 @@ export const DocumentSigningTextField = ({ field, onSignField, onUnsignField }: 
       )}
 
       {!isEditing && field.inserted && (
-        <DocumentSigningFieldsInserted textAlign={parsedFieldMeta?.textAlign} overflow={parsedFieldMeta?.overflow}>
+        <DocumentSigningFieldsInserted
+          textAlign={parsedFieldMeta?.textAlign}
+          overflow={parsedFieldMeta?.overflow}
+          fontFamily={parsedFieldMeta?.fontFamily}
+          bold={parsedFieldMeta?.bold}
+          italic={parsedFieldMeta?.italic}
+          underline={parsedFieldMeta?.underline}
+        >
           {field.customText}
         </DocumentSigningFieldsInserted>
       )}

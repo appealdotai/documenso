@@ -205,6 +205,7 @@ export const setFieldsForTemplate = async ({ userId, teamId, id, fields }: SetFi
           width: field.pageWidth,
           height: field.pageHeight,
           order: field.order ?? field._persisted?.order ?? 0,
+          inserted: field.type === FieldType.SHAPE ? true : undefined,
           fieldMeta: parsedFieldMeta,
         },
         create: {

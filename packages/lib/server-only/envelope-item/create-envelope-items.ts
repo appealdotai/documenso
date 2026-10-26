@@ -10,6 +10,7 @@ import type { ApiRequestMetadata } from '@documenso/lib/universal/extract-reques
 import { prefixedId } from '@documenso/lib/universal/id';
 import { putPdfFileServerSide } from '@documenso/lib/universal/upload/put-file.server';
 import { createDocumentAuditLogData } from '@documenso/lib/utils/document-audit-logs';
+import { getFieldInsertedStatus } from '@documenso/lib/utils/fields';
 import { prisma } from '@documenso/prisma';
 import type { Envelope, EnvelopeItem, Recipient } from '@prisma/client';
 
@@ -152,7 +153,7 @@ export const UNSAFE_createEnvelopeItems = async ({
               width: field.width,
               height: field.height,
               customText: '',
-              inserted: false,
+              inserted: getFieldInsertedStatus(field.type),
               fieldMeta: field.fieldMeta || undefined,
             })),
           });

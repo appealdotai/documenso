@@ -1,5 +1,6 @@
-import type { TFieldOverflowMode } from '@documenso/lib/types/field-meta';
+import type { TFieldFontFamily, TFieldOverflowMode } from '@documenso/lib/types/field-meta';
 import { resolveFieldOverflowMode } from '@documenso/lib/types/field-meta';
+import { resolveFieldFontFamily } from '@documenso/lib/universal/field-renderer/field-generic-items';
 import { cn } from '@documenso/ui/lib/utils';
 import { Loader } from 'lucide-react';
 
@@ -35,12 +36,36 @@ type DocumentSigningFieldsInsertedProps = {
    * Defaults to crop when not specified.
    */
   overflow?: TFieldOverflowMode;
+
+  /**
+   * The font family of the field.
+   */
+  fontFamily?: TFieldFontFamily | null;
+
+  /**
+   * Whether the field text is bold.
+   */
+  bold?: boolean;
+
+  /**
+   * Whether the field text is italicized.
+   */
+  italic?: boolean;
+
+  /**
+   * Whether the field text is underlined.
+   */
+  underline?: boolean;
 };
 
 export const DocumentSigningFieldsInserted = ({
   children,
   textAlign = 'left',
   overflow,
+  fontFamily,
+  bold = false,
+  italic = false,
+  underline = false,
 }: DocumentSigningFieldsInsertedProps) => {
   const overflowMode = resolveFieldOverflowMode({ overflow });
   const isCropMode = overflowMode === 'crop';
@@ -60,6 +85,12 @@ export const DocumentSigningFieldsInserted = ({
           'whitespace-pre-wrap break-words': !isHorizontalOverflow,
           'whitespace-nowrap': isHorizontalOverflow,
         })}
+        style={{
+          fontFamily: resolveFieldFontFamily(fontFamily),
+          fontWeight: bold ? 700 : undefined,
+          fontStyle: italic ? 'italic' : undefined,
+          textDecoration: underline ? 'underline' : undefined,
+        }}
       >
         {children}
       </p>

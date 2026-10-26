@@ -275,6 +275,8 @@ export const renderShapeFieldElement = (field: FieldToRender, options: RenderFie
 
   const fieldGroup = upsertFieldGroup(field, options);
 
+  fieldGroup.listening(Boolean(options.editable));
+
   if (isFirstRender) {
     pageLayer.add(fieldGroup);
   }

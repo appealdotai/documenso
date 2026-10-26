@@ -2637,6 +2637,10 @@ msgstr "Dominios bloqueados"
 msgid "Blue"
 msgstr "Azul"
 
+#: apps/remix/app/components/forms/editor/editor-field-generic-field-forms.tsx
+msgid "Bold"
+msgstr ""
+
 #: apps/remix/app/components/forms/branding-preferences-form.tsx
 #: apps/remix/app/components/forms/branding-preferences-form.tsx
 #: apps/remix/app/components/forms/branding-preferences-form.tsx
@@ -6619,6 +6623,10 @@ msgstr ""
 msgid "Font Size"
 msgstr "Tamaño de fuente"
 
+#: apps/remix/app/components/forms/editor/editor-field-generic-field-forms.tsx
+msgid "Font Style"
+msgstr ""
+
 #: apps/remix/app/routes/_unauthenticated+/articles.signature-disclosure.tsx
 msgid "For any questions regarding this disclosure, electronic signatures, or any related process, please contact us at: <0>{SUPPORT_EMAIL}</0>"
 msgstr "Si tiene alguna pregunta sobre esta divulgación, firmas electrónicas o cualquier proceso relacionado, comuníquese con nosotros en: <0>{SUPPORT_EMAIL}</0>"
@@ -7459,6 +7467,10 @@ msgstr ""
 msgid "Italian"
 msgstr "Italiano"
 
+#: apps/remix/app/components/forms/editor/editor-field-generic-field-forms.tsx
+msgid "Italic"
+msgstr ""
+
 #: packages/lib/constants/i18n.ts
 msgid "Japanese"
 msgstr "Japonés"
@@ -8150,6 +8162,10 @@ msgstr ""
 
 #: apps/remix/app/components/general/organisation-usage-panel.tsx
 msgid "Monthly usage"
+msgstr ""
+
+#: apps/remix/app/components/forms/editor/editor-field-generic-field-forms.tsx
+msgid "Montserrat"
 msgstr ""
 
 #: apps/remix/app/components/dialogs/envelopes-bulk-move-dialog.tsx
@@ -14092,6 +14108,10 @@ msgstr ""
 #: apps/remix/app/components/general/stack-avatars-with-tooltip.tsx
 msgid "Uncompleted"
 msgstr "Incompleto"
+
+#: apps/remix/app/components/forms/editor/editor-field-generic-field-forms.tsx
+msgid "Underline"
+msgstr ""
 
 #: apps/remix/app/components/forms/form-sticky-save-bar.tsx
 #: apps/remix/app/components/general/envelope-editor/envelope-editor.tsx

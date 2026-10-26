@@ -6,6 +6,7 @@ import type { Canvas } from '@documenso/skia-canvas';
 import Konva from 'konva';
 
 import { renderField } from '../../universal/field-renderer/render-field';
+import { compareFieldsByStackOrder } from '../../utils/fields';
 import { ensureFontLibrary } from './helpers';
 
 type InsertFieldInPDFV2Options = {
@@ -22,7 +23,7 @@ export const insertFieldInPDFV2 = async ({ pageWidth, pageHeight, fields }: Inse
 
   // Render the fields onto the layer. Paint order follows the persisted
   // stacking order (higher = on top).
-  const orderedFields = [...fields].sort((a, b) => a.order - b.order || a.id - b.id);
+  const orderedFields = [...fields].sort(compareFieldsByStackOrder);
 
   for (const field of orderedFields) {
     renderField({

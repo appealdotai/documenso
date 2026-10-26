@@ -16,10 +16,25 @@ const FIELD_FONT_FAMILY_STACKS: Record<TFieldFontFamily, string> = {
   'noto-sans': NOTO_SANS_FALLBACK_FONT_FAMILY,
   inter: `"Inter", ${NOTO_SANS_FALLBACK_FONT_FAMILY}`,
   caveat: `"Caveat", ${NOTO_SANS_FALLBACK_FONT_FAMILY}`,
+  montserrat: `"Montserrat", ${NOTO_SANS_FALLBACK_FONT_FAMILY}`,
 };
 
 export const resolveFieldFontFamily = (fontFamily?: TFieldFontFamily | null): string =>
   fontFamily ? FIELD_FONT_FAMILY_STACKS[fontFamily] : konvaTextFontFamily;
+
+export const resolveFieldFontStyle = (style?: { bold?: boolean; italic?: boolean } | null): string => {
+  const fontStyles: string[] = [];
+
+  if (style?.bold) {
+    fontStyles.push('bold');
+  }
+
+  if (style?.italic) {
+    fontStyles.push('italic');
+  }
+
+  return fontStyles.join(' ') || 'normal';
+};
 
 export const upsertFieldGroup = (field: FieldToRender, options: RenderFieldElementOptions): Konva.Group => {
   const { pageWidth, pageHeight, pageLayer, editable, scale } = options;

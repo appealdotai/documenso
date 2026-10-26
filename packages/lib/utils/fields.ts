@@ -15,6 +15,38 @@ export const sortFieldsByPosition = (fields: Field[]): Field[] => {
   return clonedFields.sort((a, b) => a.page - b.page || Number(a.positionY) - Number(b.positionY));
 };
 
+export const isShapeField = (field: Pick<Field, 'type'>): boolean => field.type === FieldType.SHAPE;
+
+export const getFieldInsertedStatus = (type: FieldType, hasValue = false): boolean =>
+  type === FieldType.SHAPE || hasValue;
+
+export const isFieldInsertedForCompletion = (field: Pick<Field, 'type' | 'inserted'>): boolean =>
+  field.inserted || isShapeField(field);
+
+type StackOrderField = {
+  order: number;
+  id?: number | null;
+  formId?: string | null;
+};
+
+export const compareFieldsByStackOrder = <T extends StackOrderField>(fieldA: T, fieldB: T): number => {
+  const orderDifference = fieldA.order - fieldB.order;
+
+  if (orderDifference !== 0) {
+    return orderDifference;
+  }
+
+  if (fieldA.id != null && fieldB.id != null && fieldA.id !== fieldB.id) {
+    return fieldA.id - fieldB.id;
+  }
+
+  return (fieldA.formId ?? '').localeCompare(fieldB.formId ?? '');
+};
+
+export const sortFieldsByStackOrder = <T extends StackOrderField>(fields: T[]): T[] => {
+  return [...fields].sort(compareFieldsByStackOrder);
+};
+
 /**
  * Validate whether all the provided fields are inserted.
  *

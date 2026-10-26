@@ -9,7 +9,9 @@ import { Checkbox } from '@documenso/ui/primitives/checkbox';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@documenso/ui/primitives/form/form';
 import { Input } from '@documenso/ui/primitives/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@documenso/ui/primitives/select';
+import { Toggle } from '@documenso/ui/primitives/toggle';
 import { Trans, useLingui } from '@lingui/react/macro';
+import { BoldIcon, ItalicIcon, UnderlineIcon } from 'lucide-react';
 import { useEffect } from 'react';
 import { type Control, useFormContext } from 'react-hook-form';
 
@@ -90,6 +92,9 @@ export const EditorGenericFontFamilyField = ({
                 <SelectItem value="caveat">
                   <Trans>Caveat</Trans>
                 </SelectItem>
+                <SelectItem value="montserrat">
+                  <Trans>Montserrat</Trans>
+                </SelectItem>
               </SelectContent>
             </Select>
           </FormControl>
@@ -97,6 +102,89 @@ export const EditorGenericFontFamilyField = ({
         </FormItem>
       )}
     />
+  );
+};
+
+export const EditorGenericFontStyleField = ({
+  formControl,
+  className,
+}: {
+  formControl: FormControlType;
+  className?: string;
+}) => {
+  const { t } = useLingui();
+
+  return (
+    <div className={cn('flex flex-col gap-2', className)}>
+      <FormLabel>
+        <Trans>Font Style</Trans>
+      </FormLabel>
+
+      <div className="flex flex-row gap-2">
+        <FormField
+          control={formControl}
+          name="bold"
+          render={({ field }) => (
+            <FormItem>
+              <FormControl>
+                <Toggle
+                  type="button"
+                  size="sm"
+                  data-testid="field-form-bold"
+                  aria-label={t`Bold`}
+                  pressed={field.value === true}
+                  onPressedChange={field.onChange}
+                >
+                  <BoldIcon className="h-4 w-4" />
+                </Toggle>
+              </FormControl>
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={formControl}
+          name="italic"
+          render={({ field }) => (
+            <FormItem>
+              <FormControl>
+                <Toggle
+                  type="button"
+                  size="sm"
+                  data-testid="field-form-italic"
+                  aria-label={t`Italic`}
+                  pressed={field.value === true}
+                  onPressedChange={field.onChange}
+                >
+                  <ItalicIcon className="h-4 w-4" />
+                </Toggle>
+              </FormControl>
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={formControl}
+          name="underline"
+          render={({ field }) => (
+            <FormItem>
+              <FormControl>
+                <Toggle
+                  type="button"
+                  size="sm"
+                  data-testid="field-form-underline"
+                  aria-label={t`Underline`}
+                  pressed={field.value === true}
+                  onPressedChange={field.onChange}
+                >
+                  <UnderlineIcon className="h-4 w-4" />
+                </Toggle>
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+    </div>
   );
 };
 

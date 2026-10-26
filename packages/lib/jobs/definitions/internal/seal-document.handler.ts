@@ -32,6 +32,7 @@ import { fieldsContainUnsignedRequiredField } from '../../../utils/advanced-fiel
 import { isDocumentCompleted } from '../../../utils/document';
 import { createDocumentAuditLogData } from '../../../utils/document-audit-logs';
 import { mapDocumentIdToSecondaryId } from '../../../utils/envelope';
+import { isFieldInsertedForCompletion } from '../../../utils/fields';
 import { jobs } from '../../client';
 import type { JobRunIO } from '../../client/_internal/job';
 import type { TSealDocumentJobDefinition } from './seal-document';
@@ -435,10 +436,7 @@ const decorateAndSignPdf = async ({
 
   // Handle V2 envelope insertions.
   if (envelope.internalVersion === 2) {
-    const fieldsGroupedByPage = groupBy(
-      envelopeItemFields.filter((field) => field.inserted),
-      (field) => field.page,
-    );
+    const fieldsGroupedByPage = groupBy(envelopeItemFields.filter(isFieldInsertedForCompletion), (field) => field.page);
 
     for (const [pageNumber, fields] of Object.entries(fieldsGroupedByPage)) {
       const page = pdfDoc.getPage(Number(pageNumber) - 1);
