@@ -1,6 +1,7 @@
 import {
   DEFAULT_FIELD_FONT_SIZE,
   DEFAULT_TEXT_OVERFLOW_MODE,
+  FIELD_DEFAULT_FONT_FAMILY,
   FIELD_DEFAULT_GENERIC_ALIGN,
   FIELD_DEFAULT_GENERIC_VERTICAL_ALIGN,
   FIELD_DEFAULT_LETTER_SPACING,
@@ -18,6 +19,7 @@ import { useForm, useWatch } from 'react-hook-form';
 import type { z } from 'zod';
 
 import {
+  EditorGenericFontFamilyField,
   EditorGenericFontSizeField,
   EditorGenericLetterSpacingField,
   EditorGenericLineHeightField,
@@ -34,6 +36,7 @@ const ZTextFieldFormSchema = ZTextFieldMeta.pick({
   text: true,
   characterLimit: true,
   fontSize: true,
+  fontFamily: true,
   textAlign: true,
   lineHeight: true,
   letterSpacing: true,
@@ -76,6 +79,7 @@ export const EditorFieldTextForm = ({
       text: value.text || '',
       characterLimit: value.characterLimit || 0,
       fontSize: value.fontSize || DEFAULT_FIELD_FONT_SIZE,
+      fontFamily: value.fontFamily ?? FIELD_DEFAULT_FONT_FAMILY,
       textAlign: value.textAlign ?? FIELD_DEFAULT_GENERIC_ALIGN,
       lineHeight: value.lineHeight ?? FIELD_DEFAULT_LINE_HEIGHT,
       letterSpacing: value.letterSpacing ?? FIELD_DEFAULT_LETTER_SPACING,
@@ -113,6 +117,8 @@ export const EditorFieldTextForm = ({
       <form>
         <fieldset className="flex flex-col gap-2">
           <EditorGenericFontSizeField className="w-full" formControl={form.control} />
+
+          <EditorGenericFontFamilyField className="w-full" formControl={form.control} />
 
           <div className="flex w-full flex-row gap-x-4">
             <EditorGenericTextAlignField className="w-full" formControl={form.control} />

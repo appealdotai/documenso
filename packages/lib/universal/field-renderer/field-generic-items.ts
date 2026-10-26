@@ -1,12 +1,24 @@
 import { DEFAULT_RECT_BACKGROUND, getRecipientColorStyles } from '@documenso/ui/lib/recipient-colors';
 import Konva from 'konva';
 
+import type { TFieldFontFamily } from '../../types/field-meta';
 import type { FieldCanvasStyle, FieldToRender, RenderFieldElementOptions } from './field-renderer';
 import { calculateFieldPosition } from './field-renderer';
 
-export const konvaTextFontFamily =
+const NOTO_SANS_FALLBACK_FONT_FAMILY =
   '"Noto Sans", "Noto Sans Japanese", "Noto Sans Chinese", "Noto Sans Korean", sans-serif';
+
+export const konvaTextFontFamily = NOTO_SANS_FALLBACK_FONT_FAMILY;
 export const konvaTextFill = 'black';
+
+const FIELD_FONT_FAMILY_STACKS: Record<TFieldFontFamily, string> = {
+  'noto-sans': NOTO_SANS_FALLBACK_FONT_FAMILY,
+  inter: `"Inter", ${NOTO_SANS_FALLBACK_FONT_FAMILY}`,
+  caveat: `"Caveat", ${NOTO_SANS_FALLBACK_FONT_FAMILY}`,
+};
+
+export const resolveFieldFontFamily = (fontFamily?: TFieldFontFamily | null): string =>
+  fontFamily ? FIELD_FONT_FAMILY_STACKS[fontFamily] : konvaTextFontFamily;
 
 export const upsertFieldGroup = (field: FieldToRender, options: RenderFieldElementOptions): Konva.Group => {
   const { pageWidth, pageHeight, pageLayer, editable, scale } = options;

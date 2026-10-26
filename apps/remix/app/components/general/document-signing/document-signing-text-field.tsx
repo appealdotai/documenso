@@ -1,4 +1,3 @@
-import { validateTextField } from '@documenso/lib/advanced-fields-validation/validate-text';
 import { useAnalytics } from '@documenso/lib/client-only/hooks/use-analytics';
 import { DO_NOT_INVALIDATE_QUERY_ON_MUTATION } from '@documenso/lib/constants/trpc';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
@@ -312,6 +311,9 @@ export const DocumentSigningTextField = ({ field, onSignField, onUnsignField }: 
             textAlign={parsedFieldMeta?.textAlign}
             overflow={parsedFieldMeta?.overflow}
             fontSize={parsedFieldMeta?.fontSize}
+            fontFamily={parsedFieldMeta?.fontFamily}
+            lineHeight={parsedFieldMeta?.lineHeight}
+            letterSpacing={parsedFieldMeta?.letterSpacing}
             characterLimit={parsedFieldMeta?.characterLimit}
             hasError={hasErrors}
             disabled={isLoading}

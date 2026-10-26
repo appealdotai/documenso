@@ -16,6 +16,11 @@ export const FIELD_MAX_LETTER_SPACING = 100;
 
 export const DEFAULT_FIELD_FONT_SIZE = 12;
 
+export const FIELD_DEFAULT_FONT_FAMILY = 'noto-sans' as const;
+
+export const ZFieldFontFamily = z.enum(['noto-sans', 'inter', 'caveat']);
+export type TFieldFontFamily = z.infer<typeof ZFieldFontFamily>;
+
 export const DEFAULT_SIGNATURE_OVERFLOW_MODE = 'auto';
 export const DEFAULT_DATE_OVERFLOW_MODE = 'auto';
 export const DEFAULT_EMAIL_OVERFLOW_MODE = 'auto';
@@ -118,6 +123,7 @@ export const ZTextFieldMeta = ZBaseFieldMeta.extend({
   text: z.string().optional(),
   characterLimit: z.coerce.number({ invalid_type_error: 'Value must be a number' }).min(0).optional(),
   textAlign: ZFieldTextAlignSchema.optional(),
+  fontFamily: ZFieldFontFamily.optional(),
   lineHeight: ZFieldMetaLineHeight.nullish(),
   letterSpacing: ZFieldMetaLetterSpacing.nullish(),
   verticalAlign: ZFieldMetaVerticalAlign.nullish(),
@@ -320,6 +326,7 @@ export const FIELD_DATE_META_DEFAULT_VALUES: TDateFieldMeta = {
 export const FIELD_TEXT_META_DEFAULT_VALUES: TTextFieldMeta = {
   type: 'text',
   fontSize: DEFAULT_FIELD_FONT_SIZE,
+  fontFamily: FIELD_DEFAULT_FONT_FAMILY,
   textAlign: 'left',
   overflow: DEFAULT_TEXT_OVERFLOW_MODE,
   verticalAlign: DEFAULT_TEXT_VERTICAL_ALIGN,

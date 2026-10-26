@@ -15,6 +15,7 @@ import {
   createFieldHoverInteraction,
   konvaTextFill,
   konvaTextFontFamily,
+  resolveFieldFontFamily,
   upsertFieldGroup,
   upsertFieldRect,
 } from './field-generic-items';
@@ -44,6 +45,8 @@ const upsertFieldText = (field: FieldToRender, options: RenderFieldElementOption
   const textX = 0;
   const textY = 0;
   const textFontSize = fieldMeta?.fontSize || DEFAULT_STANDARD_FONT_SIZE;
+  const textFontFamily =
+    fieldMeta?.type === 'text' ? resolveFieldFontFamily(fieldMeta.fontFamily) : konvaTextFontFamily;
 
   // By default, render the field name or label centered.
   // isLabel tracks whether we're rendering the field type name (like "Text", "Date", "Email")
@@ -154,7 +157,7 @@ const upsertFieldText = (field: FieldToRender, options: RenderFieldElementOption
     isLabel,
     textToRender,
     fontSize: textFontSize,
-    fontFamily: konvaTextFontFamily,
+    fontFamily: textFontFamily,
     lineHeight: textLineHeight,
     letterSpacing: textLetterSpacing,
     textAlign,
@@ -181,7 +184,7 @@ const upsertFieldText = (field: FieldToRender, options: RenderFieldElementOption
     align: overflowLayout.textAlign,
     lineHeight: textLineHeight,
     letterSpacing: textLetterSpacing,
-    fontFamily: konvaTextFontFamily,
+    fontFamily: textFontFamily,
     fill: konvaTextFill,
     width: overflowLayout.width,
     height: overflowLayout.height,
@@ -196,6 +199,7 @@ const upsertFieldText = (field: FieldToRender, options: RenderFieldElementOption
     textVerticalAlign,
     textLineHeight,
     textLetterSpacing,
+    textFontFamily,
   };
 };
 
@@ -227,6 +231,7 @@ export const renderGenericTextFieldElement = (field: FieldToRender, options: Ren
     textVerticalAlign,
     textLineHeight,
     textLetterSpacing,
+    textFontFamily,
   } = upsertFieldText(field, options);
 
   fieldGroup.add(fieldRect);
@@ -266,7 +271,7 @@ export const renderGenericTextFieldElement = (field: FieldToRender, options: Ren
       isLabel,
       textToRender,
       fontSize: textFontSize,
-      fontFamily: konvaTextFontFamily,
+      fontFamily: textFontFamily,
       lineHeight: textLineHeight,
       letterSpacing: textLetterSpacing,
       textAlign,

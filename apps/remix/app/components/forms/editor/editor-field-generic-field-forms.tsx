@@ -57,6 +57,49 @@ export const EditorGenericFontSizeField = ({
   );
 };
 
+export const EditorGenericFontFamilyField = ({
+  formControl,
+  className,
+}: {
+  formControl: FormControlType;
+  className?: string;
+}) => {
+  const { t } = useLingui();
+
+  return (
+    <FormField
+      control={formControl}
+      name="fontFamily"
+      render={({ field }) => (
+        <FormItem className={className}>
+          <FormLabel>
+            <Trans>Font Family</Trans>
+          </FormLabel>
+          <FormControl>
+            <Select {...field} onValueChange={field.onChange}>
+              <SelectTrigger data-testid="field-form-fontFamily">
+                <SelectValue placeholder={t`Select font family`} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="noto-sans">
+                  <Trans>Noto Sans</Trans>
+                </SelectItem>
+                <SelectItem value="inter">
+                  <Trans>Inter</Trans>
+                </SelectItem>
+                <SelectItem value="caveat">
+                  <Trans>Caveat</Trans>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </FormControl>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+  );
+};
+
 export const EditorGenericTextAlignField = ({
   formControl,
   className,

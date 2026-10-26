@@ -81,7 +81,7 @@ type FieldButtonName =
 const placeFieldOnPdf = async (root: Page, fieldName: FieldButtonName, position: { x: number; y: number }) => {
   await root.getByRole('button', { name: fieldName, exact: true }).click();
 
-  const canvas = root.locator('.konva-container canvas').first();
+  const canvas = root.locator('.konva-container canvas').last();
   await expect(canvas).toBeVisible();
   await canvas.click({ position });
 };
@@ -92,7 +92,7 @@ const selectRecipientInFieldsStep = async (root: Page, recipientIdentifier: stri
 };
 
 const selectFieldOnCanvas = async (root: Page, position: { x: number; y: number }) => {
-  const canvas = root.locator('.konva-container canvas').first();
+  const canvas = root.locator('.konva-container canvas').last();
   await expect(canvas).toBeVisible();
   await root.waitForTimeout(300);
   // Use force:true to bypass any floating action toolbar buttons that may intercept clicks.
@@ -103,7 +103,7 @@ const selectFieldOnCanvas = async (root: Page, position: { x: number; y: number 
  * Shift+click a field on the canvas to toggle it in/out of the current multi-selection.
  */
 const shiftClickFieldOnCanvas = async (root: Page, position: { x: number; y: number }) => {
-  const canvas = root.locator('.konva-container canvas').first();
+  const canvas = root.locator('.konva-container canvas').last();
   await expect(canvas).toBeVisible();
   await root.waitForTimeout(300);
   // Use force:true to bypass any floating action toolbar buttons that may intercept clicks.
@@ -364,6 +364,10 @@ const runAllFieldTypesFlow = async (surface: TEnvelopeEditorSurface): Promise<TA
 
   // 6. Text: place and configure label, placeholder, text, characterLimit, required.
   await placeFieldOnPdf(root, 'Text', { x: 120, y: 300 });
+  await root.locator('[data-testid="field-form-fontFamily"]').click();
+  await root.getByRole('option', { name: 'Caveat' }).click();
+  await root.locator('[data-testid="field-form-lineHeight"]').fill('1.5');
+  await root.locator('[data-testid="field-form-letterSpacing"]').fill('2');
   await root.locator('[data-testid="field-form-label"]').fill('Test Label');
   await root.locator('[data-testid="field-form-placeholder"]').fill('Enter text here');
   await root.locator('[data-testid="field-form-text"]').fill('Default text value');
@@ -503,6 +507,9 @@ const assertAllFieldTypesPersistedInDatabase = async ({
 
   // TEXT
   expect(meta(FieldType.TEXT).type).toBe('text');
+  expect(meta(FieldType.TEXT).fontFamily).toBe('caveat');
+  expect(meta(FieldType.TEXT).lineHeight).toBe(1.5);
+  expect(meta(FieldType.TEXT).letterSpacing).toBe(2);
   expect(meta(FieldType.TEXT).label).toBe('Test Label');
   expect(meta(FieldType.TEXT).placeholder).toBe('Enter text here');
   expect(meta(FieldType.TEXT).text).toBe('Default text value');

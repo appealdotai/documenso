@@ -1,7 +1,13 @@
 import { DEFAULT_STANDARD_FONT_SIZE } from '@documenso/lib/constants/pdf';
-import type { TFieldOverflowMode, TFieldTextAlignSchema } from '@documenso/lib/types/field-meta';
-import { resolveFieldOverflowMode } from '@documenso/lib/types/field-meta';
-import { konvaTextFontFamily } from '@documenso/lib/universal/field-renderer/field-generic-items';
+import {
+  FIELD_DEFAULT_LETTER_SPACING,
+  FIELD_DEFAULT_LINE_HEIGHT,
+  resolveFieldOverflowMode,
+  type TFieldFontFamily,
+  type TFieldOverflowMode,
+  type TFieldTextAlignSchema,
+} from '@documenso/lib/types/field-meta';
+import { resolveFieldFontFamily } from '@documenso/lib/universal/field-renderer/field-generic-items';
 import { cn } from '@documenso/ui/lib/utils';
 import { type CSSProperties, type KeyboardEvent, type RefObject, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -22,6 +28,9 @@ export type InlineFieldInputProps = {
   textAlign?: TFieldTextAlignSchema;
   overflow?: TFieldOverflowMode;
   fontSize?: number;
+  fontFamily?: TFieldFontFamily | null;
+  lineHeight?: number | null;
+  letterSpacing?: number | null;
   /**
    * When set, scales `fontSize` for zoomed Konva pages (V2).
    * Defaults to 1 for V1 DOM overlays.
@@ -73,6 +82,9 @@ export const InlineFieldInput = ({
   textAlign = 'left',
   overflow,
   fontSize = DEFAULT_STANDARD_FONT_SIZE,
+  fontFamily,
+  lineHeight,
+  letterSpacing,
   scale = 1,
   characterLimit,
   hasError = false,
@@ -207,9 +219,10 @@ export const InlineFieldInput = ({
   );
 
   const sharedStyle: CSSProperties = {
-    fontFamily: konvaTextFontFamily,
+    fontFamily: resolveFieldFontFamily(fontFamily),
     fontSize: `${renderFontSize}px`,
-    lineHeight: 1.2,
+    lineHeight: lineHeight ?? FIELD_DEFAULT_LINE_HEIGHT,
+    letterSpacing: `${(letterSpacing ?? FIELD_DEFAULT_LETTER_SPACING) * scale}px`,
     paddingTop: 0,
     paddingBottom: 0,
     paddingLeft: `${renderPadding}px`,
