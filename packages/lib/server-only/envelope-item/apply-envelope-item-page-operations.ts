@@ -102,16 +102,7 @@ export const applyEnvelopeItemPageOperationsService = async ({
     },
   });
 
-  const preflight = remapFieldPages(existingFields, pageMap);
-
-  if (preflight.fieldsOnRemovedPages.length > 0) {
-    throw new AppError(AppErrorCode.ENVELOPE_ITEM_PAGE_HAS_FIELDS, {
-      message: `Cannot remove pages containing fields: ${preflight.fieldsOnRemovedPages
-        .map((field) => field.id)
-        .join(', ')}`,
-      userMessage: 'Pages containing fields cannot be deleted. Move or delete the fields first.',
-    });
-  }
+  remapFieldPages(existingFields, pageMap);
 
   const normalizedPdf = await normalizePdf(Buffer.from(transformedPdf), {
     flattenForm: envelope.type !== EnvelopeType.TEMPLATE,
@@ -141,13 +132,15 @@ export const applyEnvelopeItemPageOperationsService = async ({
       });
 
       const remappedFields = remapFieldPages(currentFields, pageMap);
+      const fieldsToDelete = remappedFields.fieldsOnRemovedPages.map((field) => field.id);
 
-      if (remappedFields.fieldsOnRemovedPages.length > 0) {
-        throw new AppError(AppErrorCode.ENVELOPE_ITEM_PAGE_HAS_FIELDS, {
-          message: `Cannot remove pages containing fields: ${remappedFields.fieldsOnRemovedPages
-            .map((field) => field.id)
-            .join(', ')}`,
-          userMessage: 'Pages containing fields cannot be deleted. Move or delete the fields first.',
+      if (fieldsToDelete.length > 0) {
+        await tx.field.deleteMany({
+          where: {
+            id: {
+              in: fieldsToDelete,
+            },
+          },
         });
       }
 
