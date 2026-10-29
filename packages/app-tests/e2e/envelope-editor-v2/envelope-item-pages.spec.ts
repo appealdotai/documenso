@@ -115,8 +115,38 @@ const openPageManager = async (root: Page, expectedPageCount: number) => {
 
 const applyPageChanges = async (root: Page) => {
   await root.getByTestId('page-manager-apply-button').click();
+  await expect(root.getByTestId('page-manager-dialog')).not.toBeVisible({ timeout: 15_000 });
   await expectToastTextToBeVisible(root, 'Pages updated');
-  await expect(root.getByTestId('page-manager-dialog')).not.toBeVisible();
+};
+
+const dragPageCard = async (root: Page, sourceIndex: number, targetIndex: number, side: 'before' | 'after') => {
+  const source = getPageCards(root).nth(sourceIndex);
+  const target = getPageCards(root).nth(targetIndex);
+
+  await source.scrollIntoViewIfNeeded();
+
+  const sourceBox = await source.boundingBox();
+  const targetBox = await target.boundingBox();
+
+  if (!sourceBox || !targetBox) {
+    throw new Error('Unable to resolve page card positions');
+  }
+
+  const startX = sourceBox.x + sourceBox.width / 2;
+  const startY = sourceBox.y + sourceBox.height / 2;
+  const targetX = side === 'before' ? targetBox.x + targetBox.width * 0.25 : targetBox.x + targetBox.width * 0.75;
+  const targetY = targetBox.y + targetBox.height / 2;
+
+  await root.mouse.move(startX, startY);
+  await root.mouse.down();
+  await root.mouse.move(startX + 12, startY + 4, { steps: 5 });
+  await root.mouse.move(targetX, targetY, { steps: 20 });
+
+  await expect(root.getByTestId('page-manager-drop-indicator')).toBeVisible({ timeout: 5_000 });
+  await expect(root.getByTestId('page-manager-drop-indicator')).toHaveAttribute('data-drop-side', side);
+
+  await root.mouse.up();
+  await expect(root.getByTestId('page-manager-drop-indicator')).not.toBeVisible();
 };
 
 const runPageOperationsFlow = async (surface: TEnvelopeEditorSurface) => {
@@ -144,7 +174,8 @@ const runPageOperationsFlow = async (surface: TEnvelopeEditorSurface) => {
   expect(await getPdfPageTexts(envelopeId)).toEqual(['PAGE 1', 'PAGE 2', 'PAGE 3']);
 
   await openPageManager(root, 3);
-  await root.getByTestId('page-manager-move-left-2').click();
+  await getPageCards(root).nth(2).focus();
+  await getPageCards(root).nth(2).press('Alt+ArrowLeft');
   await applyPageChanges(root);
 
   expect(await getPdfPageTexts(envelopeId)).toEqual(['PAGE 1', 'PAGE 3', 'PAGE 2']);
@@ -212,7 +243,7 @@ const runPageOperationsFlow = async (surface: TEnvelopeEditorSurface) => {
   expect(pageAuditLog).toMatchObject({ data: { toPageCount: 1 } });
 };
 
-const runFieldBlockedDeletionFlow = async (surface: TEnvelopeEditorSurface) => {
+const runFieldDeletionFlow = async (surface: TEnvelopeEditorSurface) => {
   const { root, envelopeId } = surface;
 
   if (!envelopeId) {
@@ -236,7 +267,7 @@ const runFieldBlockedDeletionFlow = async (surface: TEnvelopeEditorSurface) => {
     },
   });
 
-  await prisma.field.create({
+  const field = await prisma.field.create({
     data: {
       envelopeId,
       envelopeItemId: envelopeItem.id,
@@ -257,13 +288,32 @@ const runFieldBlockedDeletionFlow = async (surface: TEnvelopeEditorSurface) => {
   await openPageManager(root, 3);
 
   await expect(root.getByTestId('page-manager-field-count-1')).toBeVisible();
-  await expect(root.getByTestId('page-manager-delete-1')).toBeDisabled();
+  await expect(root.getByTestId('page-manager-delete-1')).toBeEnabled();
 
-  await root.getByTestId('page-manager-select-1').click();
-  await expect(root.getByTestId('page-manager-delete-selected')).toBeDisabled();
+  await root.getByTestId('page-manager-delete-1').click();
+  await expect(getPageCards(root)).toHaveCount(2);
+  await expect(root.getByTestId('page-manager-removed-page-1')).toBeVisible();
+  await expect(root.getByTestId('page-manager-summary')).toContainText('1 field will be deleted when you apply');
 
-  await root.getByTestId('btn-dialog-close').click();
-  await expect(root.getByTestId('page-manager-dialog')).not.toBeVisible();
+  await root.getByTestId('page-manager-restore-1').click();
+  await expect(getPageCards(root)).toHaveCount(3);
+  await expect(root.getByTestId('page-manager-field-count-1')).toBeVisible();
+  await expect(root.getByTestId('page-manager-summary')).toContainText('No changes yet');
+
+  await root.getByTestId('page-manager-delete-1').click();
+  await expect(root.getByTestId('page-manager-summary')).toContainText('1 field will be deleted when you apply');
+
+  await applyPageChanges(root);
+
+  expect(await getPdfPageTexts(envelopeId)).toEqual(['PAGE 1', 'PAGE 3']);
+
+  const deletedField = await prisma.field.findUnique({
+    where: {
+      id: field.id,
+    },
+  });
+
+  expect(deletedField).toBeNull();
 };
 
 test.describe('document editor', () => {
@@ -273,10 +323,38 @@ test.describe('document editor', () => {
     await runPageOperationsFlow(surface);
   });
 
-  test('blocks deleting a page containing fields', async ({ page }) => {
+  test('allows deleting a page containing fields with a warning', async ({ page }) => {
     const surface = await openDocumentEnvelopeEditor(page);
 
-    await runFieldBlockedDeletionFlow(surface);
+    await runFieldDeletionFlow(surface);
+  });
+
+  test('confirms before discarding page changes', async ({ page }) => {
+    const surface = await openDocumentEnvelopeEditor(page);
+    const { root, envelopeId } = surface;
+
+    if (!envelopeId) {
+      throw new Error('Expected an envelope ID for this editor surface');
+    }
+
+    await setEnvelopeItemPdf(envelopeId, await createPdfBuffer(['PAGE 1', 'PAGE 2']));
+    await reloadEditor(root);
+    await openPageManager(root, 2);
+
+    await root.getByTestId('page-manager-duplicate-0').click();
+    await expect(getPageCards(root)).toHaveCount(3);
+
+    await root.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await expect(root.getByRole('alertdialog')).toContainText('Discard page changes?');
+
+    await root.getByRole('button', { name: 'Keep editing' }).click();
+    await expect(root.getByTestId('page-manager-dialog')).toBeVisible();
+    await expect(getPageCards(root)).toHaveCount(3);
+
+    await root.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await root.getByRole('button', { name: 'Discard changes' }).click();
+
+    await expect(root.getByTestId('page-manager-dialog')).not.toBeVisible();
   });
 
   test('opens the page manager from the fields step', async ({ page }) => {
@@ -290,6 +368,7 @@ test.describe('document editor', () => {
     await setEnvelopeItemPdf(envelopeId, await createPdfBuffer(['PAGE 1', 'PAGE 2']));
     await reloadEditor(page);
     await clickEnvelopeEditorStep(page, 'addFields');
+    await expect(page.getByText('Page 2 of 2')).toBeVisible();
 
     const pageManagerButton = page.locator('[data-testid^="envelope-item-page-manager-button-"]');
 
@@ -298,6 +377,30 @@ test.describe('document editor', () => {
 
     await expect(page.getByRole('heading', { name: 'Manage pages' })).toBeVisible();
     await expect(getPageCards(page)).toHaveCount(2);
+  });
+
+  test('reorders pages by dragging', async ({ page }) => {
+    const surface = await openDocumentEnvelopeEditor(page);
+    const { root, envelopeId } = surface;
+
+    if (!envelopeId) {
+      throw new Error('Expected an envelope ID for this editor surface');
+    }
+
+    await setEnvelopeItemPdf(envelopeId, await createPdfBuffer(['PAGE 1', 'PAGE 2', 'PAGE 3']));
+    await reloadEditor(root);
+
+    await openPageManager(root, 3);
+    await dragPageCard(root, 2, 0, 'before');
+    await applyPageChanges(root);
+
+    expect(await getPdfPageTexts(envelopeId)).toEqual(['PAGE 3', 'PAGE 1', 'PAGE 2']);
+
+    await openPageManager(root, 3);
+    await dragPageCard(root, 2, 0, 'before');
+    await applyPageChanges(root);
+
+    expect(await getPdfPageTexts(envelopeId)).toEqual(['PAGE 2', 'PAGE 3', 'PAGE 1']);
   });
 });
 
