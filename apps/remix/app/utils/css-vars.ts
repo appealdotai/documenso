@@ -8,6 +8,7 @@ const CSS_LENGTH_KEYS = new Set<keyof TCssVarsSchema>([
   'fieldRequiredFilledCardBorderWidth',
   'fieldOptionalCardBorderWidth',
   'fieldOptionalFilledCardBorderWidth',
+  'fieldReadOnlyFilledCardBorderWidth',
 ]);
 
 export const toNativeCssVars = (vars: TCssVarsSchema) => {

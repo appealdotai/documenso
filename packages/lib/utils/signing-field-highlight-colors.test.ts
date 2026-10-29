@@ -45,6 +45,7 @@ describe('normalizeSigningFieldHighlightColor', () => {
   it('applies legacy 0.9 alpha to filled background colours', () => {
     expect(normalizeSigningFieldHighlightColor('fieldRequiredFilledCard', '#ffffff')).toBe('#ffffffe6');
     expect(normalizeSigningFieldHighlightColor('fieldOptionalFilledCard', '#aabbcc')).toBe('#aabbcce6');
+    expect(normalizeSigningFieldHighlightColor('fieldReadOnlyFilledCard', '#aabbcc')).toBe('#aabbcce6');
   });
 });
 
@@ -56,6 +57,8 @@ describe('resolveSigningFieldHighlightColors', () => {
     expect(resolved.fieldOptionalCard).toBe(DEFAULT_BRAND_COLORS.fieldOptionalCard);
     expect(resolved.fieldRequiredFilledCard).toBe(DEFAULT_BRAND_COLORS.fieldRequiredFilledCard);
     expect(resolved.fieldOptionalFilledCard).toBe(DEFAULT_BRAND_COLORS.fieldOptionalFilledCard);
+    expect(resolved.fieldReadOnlyFilledCard).toBe(DEFAULT_BRAND_COLORS.fieldReadOnlyFilledCard);
+    expect(resolved.fieldReadOnlyFilledCardBorder).toBe(DEFAULT_BRAND_COLORS.fieldReadOnlyFilledCardBorder);
   });
 
   it('normalises legacy opaque background overrides', () => {
@@ -117,6 +120,41 @@ describe('resolveFieldCanvasStyleFromBrandingColors', () => {
     expect(style?.backgroundColor).toBe('rgba(255, 0, 0, 0.5)');
     expect(style?.borderColor).toBe('rgb(0, 255, 0)');
     expect(style?.borderWidth).toBe(4);
+  });
+
+  it('uses the legacy read-only appearance by default', () => {
+    const style = resolveFieldCanvasStyleFromBrandingColors(
+      {
+        type: 'TEXT',
+        inserted: true,
+        fieldMeta: { readOnly: true },
+      },
+      null,
+    );
+
+    expect(style?.backgroundColor).toBe('rgba(255, 255, 255, 0.9)');
+    expect(style?.borderColor).toBe('rgb(176, 176, 176)');
+    expect(style?.borderWidth).toBe(2);
+  });
+
+  it('uses read-only filled tokens instead of optional filled tokens', () => {
+    const style = resolveFieldCanvasStyleFromBrandingColors(
+      {
+        type: 'TEXT',
+        inserted: true,
+        fieldMeta: { readOnly: true },
+      },
+      {
+        fieldReadOnlyFilledCard: '#12345680',
+        fieldReadOnlyFilledCardBorder: '#abcdef',
+        fieldReadOnlyFilledCardBorderWidth: '5px',
+        fieldOptionalFilledCard: '#ff0000',
+      },
+    );
+
+    expect(style?.backgroundColor).toBe('rgba(18, 52, 86, 0.5)');
+    expect(style?.borderColor).toBe('rgb(171, 205, 239)');
+    expect(style?.borderWidth).toBe(5);
   });
 
   it('uses optional filled tokens for inserted optional fields', () => {

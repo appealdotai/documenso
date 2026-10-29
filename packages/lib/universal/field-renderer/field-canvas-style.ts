@@ -173,6 +173,10 @@ const resolveFieldCanvasStyleFromCssVars = (field: FieldToRender): FieldCanvasSt
     getPixelValue(
       getComputedStyle($styleSource).getPropertyValue('--field-optional-filled-card-border-width').trim() || '2px',
     ) ?? 2;
+  const readOnlyFilledBorderWidth =
+    getPixelValue(
+      getComputedStyle($styleSource).getPropertyValue('--field-read-only-filled-card-border-width').trim() || '2px',
+    ) ?? 2;
   const requiredBorderColor = getRenderableColor(getCssVarHslColor($styleSource, '--field-required-card-border'));
   const requiredBorderHoverColor = getRenderableColor(
     getCssVarHslColor($styleSource, '--field-required-card-border-hover'),
@@ -193,13 +197,15 @@ const resolveFieldCanvasStyleFromCssVars = (field: FieldToRender): FieldCanvasSt
   const optionalFilledBorderHoverColor = getRenderableColor(
     getCssVarHslColor($styleSource, '--field-optional-filled-card-border-hover'),
   );
+  const readOnlyFilledBorderColor = getRenderableColor(
+    getCssVarHslColor($styleSource, '--field-read-only-filled-card-border'),
+  );
   const optionalSideHoverColor = getRenderableColor(
     getCssVarHslColor($styleSource, '--field-optional-card-border-hover', OPTIONAL_FIELD_SIDE_BORDER_OPACITY),
   );
   const optionalFilledSideHoverColor = getRenderableColor(
     getCssVarHslColor($styleSource, '--field-optional-filled-card-border-hover', OPTIONAL_FIELD_SIDE_BORDER_OPACITY),
   );
-  const readOnlyBackground = 'rgba(255, 255, 255, 0.9)';
   const optionalHoverSideStyle = {
     borderTopWidth: 1,
     borderRightWidth: 1,
@@ -215,9 +221,9 @@ const resolveFieldCanvasStyleFromCssVars = (field: FieldToRender): FieldCanvasSt
 
   if (getFieldMetaReadOnly(field.fieldMeta)) {
     return {
-      backgroundColor: readOnlyBackground,
-      borderColor: 'rgb(176, 176, 176)',
-      borderWidth: 2,
+      backgroundColor: getRenderableColor(getCssVarHslColor($styleSource, '--field-read-only-filled-card')),
+      borderColor: readOnlyFilledBorderColor,
+      borderWidth: readOnlyFilledBorderWidth,
       borderRadius: 2,
     };
   }
