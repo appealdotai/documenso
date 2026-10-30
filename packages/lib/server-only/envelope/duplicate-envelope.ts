@@ -8,6 +8,7 @@ import { ZSignatureLevelSchema } from '../../types/signature-level';
 import { mapEnvelopeToWebhookDocumentPayload, ZWebhookDocumentSchema } from '../../types/webhook-payload';
 import { nanoid, prefixedId } from '../../universal/id';
 import type { EnvelopeIdOptions } from '../../utils/envelope';
+import { getFieldInsertedStatus } from '../../utils/fields';
 import { getEnvelopeWhereInput } from '../envelope/get-envelope-by-id';
 import { incrementDocumentId, incrementTemplateId } from '../envelope/increment-id';
 import { assertOrganisationRatesAndLimits } from '../rate-limit/assert-organisation-rates-and-limits';
@@ -205,7 +206,7 @@ export const duplicateEnvelope = async ({ id, userId, teamId, overrides }: Dupli
                       width: field.width,
                       height: field.height,
                       customText: '',
-                      inserted: false,
+                      inserted: getFieldInsertedStatus(field.type),
                       fieldMeta: field.fieldMeta as PrismaJson.FieldMeta,
                     })),
                   },

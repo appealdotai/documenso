@@ -893,6 +893,17 @@ export function BrandingPreferencesForm({
 
                     <div
                       className="field--FieldRootContainer field-card-container flex h-12 min-w-[8rem] items-center justify-center rounded-[2px] px-3 text-sm"
+                      data-inserted="true"
+                      data-readonly="true"
+                      data-field-required="false"
+                      data-editing="false"
+                      data-validate="false"
+                    >
+                      <Trans>Read-only filled</Trans>
+                    </div>
+
+                    <div
+                      className="field--FieldRootContainer field-card-container flex h-12 min-w-[8rem] items-center justify-center rounded-[2px] px-3 text-sm"
                       data-inserted="false"
                       data-readonly="false"
                       data-field-required="true"
@@ -1273,6 +1284,83 @@ export function BrandingPreferencesForm({
                             <Input
                               type="text"
                               placeholder={DEFAULT_BRAND_LENGTHS.fieldOptionalFilledCardBorderWidth}
+                              value={field.value ?? ''}
+                              onChange={(e) => field.onChange(e.target.value)}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            <Trans>Border width in px or rem (e.g. 2px).</Trans>
+                          </FormDescription>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div>
+                    <p className="mb-1 font-medium text-sm">
+                      <Trans>Read-only filled fields</Trans>
+                    </p>
+                    <p className="mb-3 text-muted-foreground text-sm">
+                      <Trans>Applied automatically to read-only fields with a default value.</Trans>
+                    </p>
+
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <p className="text-muted-foreground text-sm">
+                        <Trans>Background</Trans>
+                      </p>
+                      <p className="text-muted-foreground text-sm">
+                        <Trans>Border</Trans>
+                      </p>
+
+                      <FormField
+                        control={form.control}
+                        name="brandingColors.fieldReadOnlyFilledCard"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <ColorPicker
+                                nonce={nonce}
+                                value={field.value ?? ''}
+                                defaultValue={DEFAULT_BRAND_COLORS.fieldReadOnlyFilledCard}
+                                enableAlpha
+                                onChange={(color) => field.onChange(color)}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="brandingColors.fieldReadOnlyFilledCardBorder"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <ColorPicker
+                                nonce={nonce}
+                                value={field.value ?? ''}
+                                defaultValue={DEFAULT_BRAND_COLORS.fieldReadOnlyFilledCardBorder}
+                                enableAlpha
+                                onChange={(color) => field.onChange(color)}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <FormField
+                      control={form.control}
+                      name="brandingColors.fieldReadOnlyFilledCardBorderWidth"
+                      render={({ field }) => (
+                        <FormItem className="mt-4 max-w-xs">
+                          <FormLabel>
+                            <Trans>Border width</Trans>
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              type="text"
+                              placeholder={DEFAULT_BRAND_LENGTHS.fieldReadOnlyFilledCardBorderWidth}
                               value={field.value ?? ''}
                               onChange={(e) => field.onChange(e.target.value)}
                             />

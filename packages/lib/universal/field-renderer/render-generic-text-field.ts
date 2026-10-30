@@ -10,11 +10,14 @@ import {
   FIELD_DEFAULT_LINE_HEIGHT,
   resolveFieldOverflowMode,
 } from '../../types/field-meta';
+import { formatIsoDateForDisplay } from '../../utils/date-input-format';
 import { calculateOverflowLayout } from './calculate-overflow-layout';
 import {
   createFieldHoverInteraction,
   konvaTextFill,
   konvaTextFontFamily,
+  resolveFieldFontFamily,
+  resolveFieldFontStyle,
   upsertFieldGroup,
   upsertFieldRect,
 } from './field-generic-items';
@@ -44,6 +47,10 @@ const upsertFieldText = (field: FieldToRender, options: RenderFieldElementOption
   const textX = 0;
   const textY = 0;
   const textFontSize = fieldMeta?.fontSize || DEFAULT_STANDARD_FONT_SIZE;
+  const textFontFamily =
+    fieldMeta?.type === 'text' ? resolveFieldFontFamily(fieldMeta.fontFamily) : konvaTextFontFamily;
+  const textFontStyle = fieldMeta?.type === 'text' ? resolveFieldFontStyle(fieldMeta) : 'normal';
+  const textDecoration = fieldMeta?.type === 'text' && fieldMeta.underline ? 'underline' : '';
 
   // By default, render the field name or label centered.
   // isLabel tracks whether we're rendering the field type name (like "Text", "Date", "Email")
@@ -105,7 +112,9 @@ const upsertFieldText = (field: FieldToRender, options: RenderFieldElementOption
 
   if (mode === 'edit' && fieldMeta?.type === 'date' && fieldMeta.value) {
     isLabel = false;
-    textToRender = fieldMeta.value;
+    // Show the value in the document's date format so authors see dates
+    // exactly as recipients will. Storage stays ISO.
+    textToRender = options.dateFormat ? formatIsoDateForDisplay(fieldMeta.value, options.dateFormat) : fieldMeta.value;
     textAlign = fieldMeta.textAlign || FIELD_DEFAULT_GENERIC_ALIGN;
   }
 
@@ -154,7 +163,8 @@ const upsertFieldText = (field: FieldToRender, options: RenderFieldElementOption
     isLabel,
     textToRender,
     fontSize: textFontSize,
-    fontFamily: konvaTextFontFamily,
+    fontFamily: textFontFamily,
+    fontStyle: textFontStyle,
     lineHeight: textLineHeight,
     letterSpacing: textLetterSpacing,
     textAlign,
@@ -181,7 +191,9 @@ const upsertFieldText = (field: FieldToRender, options: RenderFieldElementOption
     align: overflowLayout.textAlign,
     lineHeight: textLineHeight,
     letterSpacing: textLetterSpacing,
-    fontFamily: konvaTextFontFamily,
+    fontFamily: textFontFamily,
+    fontStyle: textFontStyle,
+    textDecoration,
     fill: konvaTextFill,
     width: overflowLayout.width,
     height: overflowLayout.height,
@@ -196,6 +208,8 @@ const upsertFieldText = (field: FieldToRender, options: RenderFieldElementOption
     textVerticalAlign,
     textLineHeight,
     textLetterSpacing,
+    textFontFamily,
+    textFontStyle,
   };
 };
 
@@ -227,6 +241,8 @@ export const renderGenericTextFieldElement = (field: FieldToRender, options: Ren
     textVerticalAlign,
     textLineHeight,
     textLetterSpacing,
+    textFontFamily,
+    textFontStyle,
   } = upsertFieldText(field, options);
 
   fieldGroup.add(fieldRect);
@@ -266,7 +282,8 @@ export const renderGenericTextFieldElement = (field: FieldToRender, options: Ren
       isLabel,
       textToRender,
       fontSize: textFontSize,
-      fontFamily: konvaTextFontFamily,
+      fontFamily: textFontFamily,
+      fontStyle: textFontStyle,
       lineHeight: textLineHeight,
       letterSpacing: textLetterSpacing,
       textAlign,

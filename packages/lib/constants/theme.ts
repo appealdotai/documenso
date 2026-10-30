@@ -47,6 +47,8 @@ export const DEFAULT_BRAND_COLORS = {
   fieldOptionalFilledCard: '#ffffffe6', //  0 0% 100% / 0.9
   fieldOptionalFilledCardBorder: '#e2e8f0', // 214.3 31.8% 91.4%
   fieldOptionalFilledCardBorderHover: '#94a3b8', // slate-400
+  fieldReadOnlyFilledCard: '#ffffffe6', //  0 0% 100% / 0.9
+  fieldReadOnlyFilledCardBorder: '#b0b0b0', // 0 0% 69.02%
   fieldValidationCardBorder: '#fdba74', // orange-300
   widget: '#f7f7f7', //                  0 0% 97%
   widgetForeground: '#f2f2f2', //        0 0% 95%
@@ -78,6 +80,7 @@ export const DEFAULT_BRAND_COLORS = {
     | 'fieldRequiredFilledCardBorderWidth'
     | 'fieldOptionalCardBorderWidth'
     | 'fieldOptionalFilledCardBorderWidth'
+    | 'fieldReadOnlyFilledCardBorderWidth'
   >,
   string
 >;
@@ -89,6 +92,7 @@ export const DEFAULT_BRAND_LENGTHS = {
   fieldRequiredFilledCardBorderWidth: '2px',
   fieldOptionalCardBorderWidth: '2px',
   fieldOptionalFilledCardBorderWidth: '2px',
+  fieldReadOnlyFilledCardBorderWidth: '2px',
 } as const satisfies Partial<
   Pick<
     TCssVarsSchema,
@@ -96,5 +100,6 @@ export const DEFAULT_BRAND_LENGTHS = {
     | 'fieldRequiredFilledCardBorderWidth'
     | 'fieldOptionalCardBorderWidth'
     | 'fieldOptionalFilledCardBorderWidth'
+    | 'fieldReadOnlyFilledCardBorderWidth'
   >
 >;

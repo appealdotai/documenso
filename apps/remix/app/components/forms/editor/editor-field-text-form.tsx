@@ -1,6 +1,7 @@
 import {
   DEFAULT_FIELD_FONT_SIZE,
   DEFAULT_TEXT_OVERFLOW_MODE,
+  FIELD_DEFAULT_FONT_FAMILY,
   FIELD_DEFAULT_GENERIC_ALIGN,
   FIELD_DEFAULT_GENERIC_VERTICAL_ALIGN,
   FIELD_DEFAULT_LETTER_SPACING,
@@ -18,7 +19,10 @@ import { useForm, useWatch } from 'react-hook-form';
 import type { z } from 'zod';
 
 import {
+  EditorGenericBackgroundField,
+  EditorGenericFontFamilyField,
   EditorGenericFontSizeField,
+  EditorGenericFontStyleField,
   EditorGenericLetterSpacingField,
   EditorGenericLineHeightField,
   EditorGenericOverflowField,
@@ -34,6 +38,10 @@ const ZTextFieldFormSchema = ZTextFieldMeta.pick({
   text: true,
   characterLimit: true,
   fontSize: true,
+  fontFamily: true,
+  bold: true,
+  italic: true,
+  underline: true,
   textAlign: true,
   lineHeight: true,
   letterSpacing: true,
@@ -41,6 +49,7 @@ const ZTextFieldFormSchema = ZTextFieldMeta.pick({
   overflow: true,
   required: true,
   readOnly: true,
+  backgroundVisible: true,
 }).refine(
   (data) => {
     // A read-only field must have text
@@ -76,6 +85,10 @@ export const EditorFieldTextForm = ({
       text: value.text || '',
       characterLimit: value.characterLimit || 0,
       fontSize: value.fontSize || DEFAULT_FIELD_FONT_SIZE,
+      fontFamily: value.fontFamily ?? FIELD_DEFAULT_FONT_FAMILY,
+      bold: value.bold ?? false,
+      italic: value.italic ?? false,
+      underline: value.underline ?? false,
       textAlign: value.textAlign ?? FIELD_DEFAULT_GENERIC_ALIGN,
       lineHeight: value.lineHeight ?? FIELD_DEFAULT_LINE_HEIGHT,
       letterSpacing: value.letterSpacing ?? FIELD_DEFAULT_LETTER_SPACING,
@@ -83,6 +96,7 @@ export const EditorFieldTextForm = ({
       overflow: value.overflow ?? DEFAULT_TEXT_OVERFLOW_MODE,
       required: value.required || false,
       readOnly: value.readOnly || false,
+      backgroundVisible: value.backgroundVisible ?? true,
     },
   });
 
@@ -113,6 +127,10 @@ export const EditorFieldTextForm = ({
       <form>
         <fieldset className="flex flex-col gap-2">
           <EditorGenericFontSizeField className="w-full" formControl={form.control} />
+
+          <EditorGenericFontFamilyField className="w-full" formControl={form.control} />
+
+          <EditorGenericFontStyleField className="w-full" formControl={form.control} />
 
           <div className="flex w-full flex-row gap-x-4">
             <EditorGenericTextAlignField className="w-full" formControl={form.control} />
@@ -233,6 +251,8 @@ export const EditorFieldTextForm = ({
           </div>
 
           <EditorGenericReadOnlyField formControl={form.control} />
+
+          <EditorGenericBackgroundField formControl={form.control} />
         </fieldset>
       </form>
     </Form>

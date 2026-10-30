@@ -12,6 +12,7 @@ import { useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 
 import {
+  EditorGenericBackgroundField,
   EditorGenericFontSizeField,
   EditorGenericLabelField,
   EditorGenericReadOnlyField,
@@ -56,6 +57,7 @@ const ZDropdownFieldFormSchema = z.object({
     }),
   required: z.boolean().optional(),
   readOnly: z.boolean().optional(),
+  backgroundVisible: z.boolean().optional(),
   fontSize: z.number().optional(),
 });
 
@@ -83,6 +85,7 @@ export const EditorFieldDropdownForm = ({
       values: value.values || [{ value: t`Option 1` }],
       required: value.required || false,
       readOnly: value.readOnly || false,
+      backgroundVisible: value.backgroundVisible ?? true,
       fontSize: value.fontSize || DEFAULT_FIELD_FONT_SIZE,
     },
   });
@@ -194,6 +197,8 @@ export const EditorFieldDropdownForm = ({
           </div>
 
           <EditorGenericReadOnlyField formControl={form.control} />
+
+          <EditorGenericBackgroundField formControl={form.control} />
 
           <section className="space-y-2">
             <div className="-mx-4 mt-2 mb-4">

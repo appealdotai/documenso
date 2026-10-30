@@ -26,6 +26,7 @@ export const ZDocumentAuditLogTypeSchema = z.enum([
   'ENVELOPE_ITEM_DELETED',
   'ENVELOPE_ITEM_UPDATED',
   'ENVELOPE_ITEM_PDF_REPLACED',
+  'ENVELOPE_ITEM_PAGES_UPDATED',
 
   // Document events.
   'DOCUMENT_COMPLETED', // When the document is sealed and fully completed.
@@ -241,6 +242,19 @@ export const ZDocumentAuditLogEventEnvelopeItemPdfReplacedSchema = z.object({
 });
 
 /**
+ * Event: Envelope item pages updated.
+ */
+export const ZDocumentAuditLogEventEnvelopeItemPagesUpdatedSchema = z.object({
+  type: z.literal(DOCUMENT_AUDIT_LOG_TYPE.ENVELOPE_ITEM_PAGES_UPDATED),
+  data: z.object({
+    envelopeItemId: z.string(),
+    envelopeItemTitle: z.string(),
+    fromPageCount: z.number(),
+    toPageCount: z.number(),
+  }),
+});
+
+/**
  * Event: Email sent.
  */
 export const ZDocumentAuditLogEventEmailSentSchema = z.object({
@@ -357,6 +371,10 @@ export const ZDocumentAuditLogEventDocumentFieldInsertedSchema = z.object({
         type: z.literal(FieldType.NUMBER),
         data: z.string(),
       }),
+      z.object({
+        type: z.literal(FieldType.SHAPE),
+        data: z.string(),
+      }),
     ]),
     fieldSecurity: z.preprocess(
       (input) => {
@@ -455,6 +473,10 @@ export const ZDocumentAuditLogEventDocumentFieldPrefilledSchema = z.object({
       }),
       z.object({
         type: z.literal(FieldType.NUMBER),
+        data: z.string(),
+      }),
+      z.object({
+        type: z.literal(FieldType.SHAPE),
         data: z.string(),
       }),
     ]),
@@ -837,6 +859,7 @@ export const ZDocumentAuditLogSchema = ZDocumentAuditLogBaseSchema.and(
     ZDocumentAuditLogEventEnvelopeItemDeletedSchema,
     ZDocumentAuditLogEventEnvelopeItemUpdatedSchema,
     ZDocumentAuditLogEventEnvelopeItemPdfReplacedSchema,
+    ZDocumentAuditLogEventEnvelopeItemPagesUpdatedSchema,
     ZDocumentAuditLogEventEmailSentSchema,
     ZDocumentAuditLogEventDocumentCompletedSchema,
     ZDocumentAuditLogEventDocumentCreatedSchema,

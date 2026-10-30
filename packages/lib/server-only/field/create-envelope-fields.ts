@@ -10,7 +10,7 @@ import { EnvelopeType } from '@prisma/client';
 
 import { AppError, AppErrorCode } from '../../errors/app-error';
 import type { EnvelopeIdOptions } from '../../utils/envelope';
-import { mapFieldToLegacyField } from '../../utils/fields';
+import { getFieldInsertedStatus, mapFieldToLegacyField } from '../../utils/fields';
 import { canRecipientFieldsBeModified } from '../../utils/recipients';
 import { assertEnvelopeMutable } from '../envelope/assert-envelope-mutable';
 import { getEnvelopeWhereInput } from '../envelope/get-envelope-by-id';
@@ -247,16 +247,32 @@ export const createEnvelopeFields = async ({
   const createdFields = await prisma.$transaction(async (tx) => {
     await assertEnvelopeMutable(envelope, tx);
 
+    // New API fields land on top of the existing stacking order.
+    const maxOrderField = await tx.field.findFirst({
+      where: {
+        envelopeId: envelope.id,
+      },
+      orderBy: {
+        order: 'desc',
+      },
+      select: {
+        order: true,
+      },
+    });
+
+    const baseOrder = (maxOrderField?.order ?? -1) + 1;
+
     const newlyCreatedFields = await tx.field.createManyAndReturn({
-      data: validatedFields.map((field) => ({
+      data: validatedFields.map((field, index) => ({
         type: field.type,
         page: field.page,
         positionX: field.positionX,
         positionY: field.positionY,
         width: field.width,
         height: field.height,
+        order: baseOrder + index,
         customText: '',
-        inserted: false,
+        inserted: getFieldInsertedStatus(field.type),
         fieldMeta: field.fieldMeta,
         envelopeId: envelope.id,
         envelopeItemId: field.envelopeItemId,

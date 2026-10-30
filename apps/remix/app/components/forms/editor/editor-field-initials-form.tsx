@@ -10,11 +10,16 @@ import { useEffect } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import type { z } from 'zod';
 
-import { EditorGenericFontSizeField, EditorGenericTextAlignField } from './editor-field-generic-field-forms';
+import {
+  EditorGenericBackgroundField,
+  EditorGenericFontSizeField,
+  EditorGenericTextAlignField,
+} from './editor-field-generic-field-forms';
 
 const ZInitialsFieldFormSchema = ZInitialsFieldMeta.pick({
   fontSize: true,
   textAlign: true,
+  backgroundVisible: true,
 });
 
 type TInitialsFieldFormSchema = z.infer<typeof ZInitialsFieldFormSchema>;
@@ -36,6 +41,7 @@ export const EditorFieldInitialsForm = ({
     defaultValues: {
       fontSize: value.fontSize || DEFAULT_FIELD_FONT_SIZE,
       textAlign: value.textAlign ?? FIELD_DEFAULT_GENERIC_ALIGN,
+      backgroundVisible: value.backgroundVisible ?? true,
     },
   });
 
@@ -64,6 +70,8 @@ export const EditorFieldInitialsForm = ({
           <EditorGenericFontSizeField formControl={form.control} />
 
           <EditorGenericTextAlignField formControl={form.control} />
+
+          <EditorGenericBackgroundField formControl={form.control} />
         </fieldset>
       </form>
     </Form>
