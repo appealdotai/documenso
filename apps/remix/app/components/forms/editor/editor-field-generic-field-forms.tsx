@@ -9,7 +9,9 @@ import { Checkbox } from '@documenso/ui/primitives/checkbox';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@documenso/ui/primitives/form/form';
 import { Input } from '@documenso/ui/primitives/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@documenso/ui/primitives/select';
+import { Toggle } from '@documenso/ui/primitives/toggle';
 import { Trans, useLingui } from '@lingui/react/macro';
+import { BoldIcon, ItalicIcon, UnderlineIcon } from 'lucide-react';
 import { useEffect } from 'react';
 import { type Control, useFormContext } from 'react-hook-form';
 
@@ -54,6 +56,135 @@ export const EditorGenericFontSizeField = ({
         </FormItem>
       )}
     />
+  );
+};
+
+export const EditorGenericFontFamilyField = ({
+  formControl,
+  className,
+}: {
+  formControl: FormControlType;
+  className?: string;
+}) => {
+  const { t } = useLingui();
+
+  return (
+    <FormField
+      control={formControl}
+      name="fontFamily"
+      render={({ field }) => (
+        <FormItem className={className}>
+          <FormLabel>
+            <Trans>Font Family</Trans>
+          </FormLabel>
+          <FormControl>
+            <Select {...field} onValueChange={field.onChange}>
+              <SelectTrigger data-testid="field-form-fontFamily">
+                <SelectValue placeholder={t`Select font family`} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="noto-sans">
+                  <Trans>Noto Sans</Trans>
+                </SelectItem>
+                <SelectItem value="inter">
+                  <Trans>Inter</Trans>
+                </SelectItem>
+                <SelectItem value="caveat">
+                  <Trans>Caveat</Trans>
+                </SelectItem>
+                <SelectItem value="montserrat">
+                  <Trans>Montserrat</Trans>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </FormControl>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+  );
+};
+
+export const EditorGenericFontStyleField = ({
+  formControl,
+  className,
+}: {
+  formControl: FormControlType;
+  className?: string;
+}) => {
+  const { t } = useLingui();
+
+  return (
+    <div className={cn('flex flex-col gap-2', className)}>
+      <FormLabel>
+        <Trans>Font Style</Trans>
+      </FormLabel>
+
+      <div className="flex flex-row gap-2">
+        <FormField
+          control={formControl}
+          name="bold"
+          render={({ field }) => (
+            <FormItem>
+              <FormControl>
+                <Toggle
+                  type="button"
+                  size="sm"
+                  data-testid="field-form-bold"
+                  aria-label={t`Bold`}
+                  pressed={field.value === true}
+                  onPressedChange={field.onChange}
+                >
+                  <BoldIcon className="h-4 w-4" />
+                </Toggle>
+              </FormControl>
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={formControl}
+          name="italic"
+          render={({ field }) => (
+            <FormItem>
+              <FormControl>
+                <Toggle
+                  type="button"
+                  size="sm"
+                  data-testid="field-form-italic"
+                  aria-label={t`Italic`}
+                  pressed={field.value === true}
+                  onPressedChange={field.onChange}
+                >
+                  <ItalicIcon className="h-4 w-4" />
+                </Toggle>
+              </FormControl>
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={formControl}
+          name="underline"
+          render={({ field }) => (
+            <FormItem>
+              <FormControl>
+                <Toggle
+                  type="button"
+                  size="sm"
+                  data-testid="field-form-underline"
+                  aria-label={t`Underline`}
+                  pressed={field.value === true}
+                  onPressedChange={field.onChange}
+                >
+                  <UnderlineIcon className="h-4 w-4" />
+                </Toggle>
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+    </div>
   );
 };
 
@@ -293,6 +424,40 @@ export const EditorGenericReadOnlyField = ({
 
               <label className="ml-2 text-muted-foreground text-sm" htmlFor="field-read-only">
                 <Trans>Read Only</Trans>
+              </label>
+            </div>
+          </FormControl>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+  );
+};
+
+export const EditorGenericBackgroundField = ({
+  formControl,
+  className,
+}: {
+  formControl: FormControlType;
+  className?: string;
+}) => {
+  return (
+    <FormField
+      control={formControl}
+      name="backgroundVisible"
+      render={({ field }) => (
+        <FormItem className={cn('flex items-center space-x-2', className)}>
+          <FormControl>
+            <div className="flex items-center">
+              <Checkbox
+                data-testid="field-form-background-visible"
+                id="field-background-visible"
+                checked={field.value ?? true}
+                onCheckedChange={field.onChange}
+              />
+
+              <label className="ml-2 text-muted-foreground text-sm" htmlFor="field-background-visible">
+                <Trans>Show background</Trans>
               </label>
             </div>
           </FormControl>

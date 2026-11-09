@@ -55,6 +55,13 @@ export const ZCssVarsSchema = z
       .regex(CSS_LENGTH_REGEX, 'Must be a CSS length such as 2px, 0.125rem, or 0')
       .optional()
       .describe('Optional filled field border width'),
+    fieldReadOnlyFilledCard: z.string().optional().describe('Read-only filled field background color'),
+    fieldReadOnlyFilledCardBorder: z.string().optional().describe('Read-only filled field border color'),
+    fieldReadOnlyFilledCardBorderWidth: z
+      .string()
+      .regex(CSS_LENGTH_REGEX, 'Must be a CSS length such as 2px, 0.125rem, or 0')
+      .optional()
+      .describe('Read-only filled field border width'),
     fieldValidationCardBorder: z
       .string()
       .optional()

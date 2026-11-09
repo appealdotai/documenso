@@ -2,6 +2,7 @@ import type { Field } from '@prisma/client';
 import { colord } from 'colord';
 import { DEFAULT_BRAND_COLORS, DEFAULT_BRAND_LENGTHS } from '../constants/theme';
 import type { TCssVarsSchema } from '../types/css-vars';
+import { getFieldMetaReadOnly } from '../types/field-meta';
 import type { FieldCanvasStyle } from '../universal/field-renderer/field-renderer';
 import { isRequiredField } from './advanced-fields-helpers';
 
@@ -24,6 +25,9 @@ export const SIGNING_FIELD_HIGHLIGHT_COLOR_KEYS = [
   'fieldOptionalFilledCardBorder',
   'fieldOptionalFilledCardBorderHover',
   'fieldOptionalFilledCardBorderWidth',
+  'fieldReadOnlyFilledCard',
+  'fieldReadOnlyFilledCardBorder',
+  'fieldReadOnlyFilledCardBorderWidth',
   'fieldValidationCardBorder',
 ] as const satisfies readonly (keyof TCssVarsSchema)[];
 
@@ -35,6 +39,7 @@ export const SIGNING_FIELD_BACKGROUND_COLOR_KEYS = [
   'fieldRequiredFilledCard',
   'fieldOptionalCard',
   'fieldOptionalFilledCard',
+  'fieldReadOnlyFilledCard',
 ] as const satisfies readonly SigningFieldHighlightColorKey[];
 
 const DEFAULT_FIELD_BACKGROUND_ALPHA = 0.9;
@@ -56,6 +61,9 @@ const DEFAULT_SIGNING_FIELD_HIGHLIGHT_COLORS: Pick<TCssVarsSchema, SigningFieldH
   fieldOptionalFilledCardBorder: DEFAULT_BRAND_COLORS.fieldOptionalFilledCardBorder,
   fieldOptionalFilledCardBorderHover: DEFAULT_BRAND_COLORS.fieldOptionalFilledCardBorderHover,
   fieldOptionalFilledCardBorderWidth: DEFAULT_BRAND_LENGTHS.fieldOptionalFilledCardBorderWidth,
+  fieldReadOnlyFilledCard: DEFAULT_BRAND_COLORS.fieldReadOnlyFilledCard,
+  fieldReadOnlyFilledCardBorder: DEFAULT_BRAND_COLORS.fieldReadOnlyFilledCardBorder,
+  fieldReadOnlyFilledCardBorderWidth: DEFAULT_BRAND_LENGTHS.fieldReadOnlyFilledCardBorderWidth,
   fieldValidationCardBorder: DEFAULT_BRAND_COLORS.fieldValidationCardBorder,
 };
 
@@ -199,7 +207,6 @@ const colorToCanvasColor = (value: string | undefined, alpha?: number) => {
 };
 
 const OPTIONAL_FIELD_SIDE_BORDER_OPACITY = 0.4;
-const READ_ONLY_FIELD_BACKGROUND = 'rgba(255, 255, 255, 0.9)';
 
 type SigningFieldStateInput = {
   inserted: boolean;
@@ -256,6 +263,10 @@ export const resolveFieldCanvasStyleFromBrandingColors = (
     parsePixelValue(
       colors.fieldOptionalFilledCardBorderWidth ?? DEFAULT_BRAND_LENGTHS.fieldOptionalFilledCardBorderWidth,
     ) ?? 2;
+  const readOnlyFilledBorderWidth =
+    parsePixelValue(
+      colors.fieldReadOnlyFilledCardBorderWidth ?? DEFAULT_BRAND_LENGTHS.fieldReadOnlyFilledCardBorderWidth,
+    ) ?? 2;
   const requiredBorderColor = colorToCanvasColor(colors.fieldRequiredCardBorder);
   const requiredBorderHoverColor = colorToCanvasColor(colors.fieldRequiredCardBorderHover);
   const requiredFilledBorderColor = colorToCanvasColor(colors.fieldRequiredFilledCardBorder);
@@ -264,16 +275,17 @@ export const resolveFieldCanvasStyleFromBrandingColors = (
   const optionalBorderHoverColor = colorToCanvasColor(colors.fieldOptionalCardBorderHover);
   const optionalFilledBorderColor = colorToCanvasColor(colors.fieldOptionalFilledCardBorder);
   const optionalFilledBorderHoverColor = colorToCanvasColor(colors.fieldOptionalFilledCardBorderHover);
+  const readOnlyFilledBorderColor = colorToCanvasColor(colors.fieldReadOnlyFilledCardBorder);
   const optionalHoverSideStyle = getOptionalHoverSideStyle({
     optionalBorderWidth,
     optionalBorderHoverColor,
   });
 
-  if (field.fieldMeta?.readOnly) {
+  if (getFieldMetaReadOnly(field.fieldMeta)) {
     return {
-      backgroundColor: READ_ONLY_FIELD_BACKGROUND,
-      borderColor: 'rgb(176, 176, 176)',
-      borderWidth: 2,
+      backgroundColor: colorToCanvasColor(colors.fieldReadOnlyFilledCard),
+      borderColor: readOnlyFilledBorderColor,
+      borderWidth: readOnlyFilledBorderWidth,
       borderRadius: 2,
     };
   }

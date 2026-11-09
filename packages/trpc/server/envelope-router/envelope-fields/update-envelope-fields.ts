@@ -37,6 +37,7 @@ export const updateEnvelopeFieldsRoute = authenticatedProcedure
         pageY: field.positionY,
         width: field.width,
         height: field.height,
+        order: field.order,
         fieldMeta: field.fieldMeta,
         envelopeItemId: field.envelopeItemId,
       })),

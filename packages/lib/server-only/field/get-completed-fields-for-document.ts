@@ -1,5 +1,5 @@
 import { prisma } from '@documenso/prisma';
-import { SigningStatus } from '@prisma/client';
+import { FieldType, SigningStatus } from '@prisma/client';
 
 export type GetCompletedFieldsForDocumentOptions = {
   documentId: number;
@@ -12,7 +12,7 @@ export const getCompletedFieldsForDocument = async ({ documentId }: GetCompleted
       recipient: {
         signingStatus: SigningStatus.SIGNED,
       },
-      inserted: true,
+      OR: [{ inserted: true }, { type: FieldType.SHAPE }],
     },
     include: {
       signature: true,

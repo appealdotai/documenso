@@ -1,4 +1,3 @@
-import { validateNumberField } from '@documenso/lib/advanced-fields-validation/validate-number';
 import { useAnalytics } from '@documenso/lib/client-only/hooks/use-analytics';
 import { DO_NOT_INVALIDATE_QUERY_ON_MUTATION } from '@documenso/lib/constants/trpc';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
@@ -311,6 +310,8 @@ export const DocumentSigningNumberField = ({ field, onSignField, onUnsignField }
             textAlign={parsedFieldMeta?.textAlign}
             overflow={parsedFieldMeta?.overflow}
             fontSize={parsedFieldMeta?.fontSize}
+            lineHeight={parsedFieldMeta?.lineHeight}
+            letterSpacing={parsedFieldMeta?.letterSpacing}
             hasError={hasErrors}
             disabled={isLoading}
             aria-label={t`Number field`}

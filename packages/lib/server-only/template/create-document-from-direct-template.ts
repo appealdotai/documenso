@@ -40,6 +40,7 @@ import {
   extractDocumentAuthMethods,
 } from '../../utils/document-auth';
 import { mapSecondaryIdToTemplateId } from '../../utils/envelope';
+import { getFieldInsertedStatus } from '../../utils/fields';
 import { getRecipientsInActiveSigningStep } from '../../utils/recipient-groups';
 import {
   getRecipientsWithMissingFields,
@@ -472,8 +473,9 @@ export const createDocumentFromDirectTemplate = async ({
           positionY: field.positionY,
           width: field.width,
           height: field.height,
+          order: field.order,
           customText: '',
-          inserted: false,
+          inserted: getFieldInsertedStatus(field.type),
           fieldMeta: field.fieldMeta,
         })),
       );
@@ -505,12 +507,7 @@ export const createDocumentFromDirectTemplate = async ({
         fields: {
           createMany: {
             data: directTemplateNonSignatureFields.map(({ templateField, customText }) => {
-              let inserted = true;
-
-              // Custom logic for V2 to only insert if values exist.
-              if (directTemplateEnvelope.internalVersion === 2) {
-                inserted = customText !== '';
-              }
+              const hasValue = directTemplateEnvelope.internalVersion === 2 ? customText !== '' : true;
 
               return {
                 envelopeId: createdEnvelope.id,
@@ -522,7 +519,7 @@ export const createDocumentFromDirectTemplate = async ({
                 width: templateField.width,
                 height: templateField.height,
                 customText: customText ?? '',
-                inserted,
+                inserted: getFieldInsertedStatus(templateField.type, hasValue),
                 fieldMeta: templateField.fieldMeta || Prisma.JsonNull,
               };
             }),
@@ -662,6 +659,10 @@ export const createDocumentFromDirectTemplate = async ({
                   data: field.customText,
                 }),
               )
+              .with(FieldType.SHAPE, (type) => ({
+                type,
+                data: field.customText,
+              }))
               .exhaustive(),
             fieldSecurity: derivedRecipientActionAuth
               ? {

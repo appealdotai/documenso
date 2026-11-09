@@ -32,6 +32,7 @@ import { fieldsContainUnsignedRequiredField } from '../../../utils/advanced-fiel
 import { isDocumentCompleted } from '../../../utils/document';
 import { createDocumentAuditLogData } from '../../../utils/document-audit-logs';
 import { mapDocumentIdToSecondaryId } from '../../../utils/envelope';
+import { isFieldInsertedForCompletion } from '../../../utils/fields';
 import { jobs } from '../../client';
 import type { JobRunIO } from '../../client/_internal/job';
 import type { TSealDocumentJobDefinition } from './seal-document';
@@ -58,6 +59,7 @@ export const run = async ({ payload, io }: { payload: TSealDocumentJobDefinition
           include: {
             signature: true,
           },
+          orderBy: [{ order: 'asc' }, { id: 'asc' }],
         },
         envelopeItems: {
           include: {
@@ -66,6 +68,7 @@ export const run = async ({ payload, io }: { payload: TSealDocumentJobDefinition
               include: {
                 signature: true,
               },
+              orderBy: [{ order: 'asc' }, { id: 'asc' }],
             },
           },
         },
@@ -211,7 +214,10 @@ export const run = async ({ payload, io }: { payload: TSealDocumentJobDefinition
     const newDocumentData: Array<{ oldDocumentDataId: string; newDocumentDataId: string }> = [];
 
     for (const { envelopeItem, pdfData } of prefetchedItems) {
-      const envelopeItemFields = envelope.envelopeItems.find((item) => item.id === envelopeItem.id)?.field;
+      const envelopeItemFields = envelope.envelopeItems
+        .find((item) => item.id === envelopeItem.id)
+        ?.field.slice()
+        .sort((a, b) => a.order - b.order || a.id - b.id);
 
       if (!envelopeItemFields) {
         throw new Error(`Envelope item fields not found for envelope item ${envelopeItem.id}`);
@@ -430,10 +436,7 @@ const decorateAndSignPdf = async ({
 
   // Handle V2 envelope insertions.
   if (envelope.internalVersion === 2) {
-    const fieldsGroupedByPage = groupBy(
-      envelopeItemFields.filter((field) => field.inserted),
-      (field) => field.page,
-    );
+    const fieldsGroupedByPage = groupBy(envelopeItemFields.filter(isFieldInsertedForCompletion), (field) => field.page);
 
     for (const [pageNumber, fields] of Object.entries(fieldsGroupedByPage)) {
       const page = pdfDoc.getPage(Number(pageNumber) - 1);

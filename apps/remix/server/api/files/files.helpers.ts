@@ -13,6 +13,7 @@ import {
   DocumentStatus,
   type EnvelopeType,
   EnvelopeType as EnvelopeTypeEnum,
+  FieldType,
   type RecipientRole,
   type SigningStatus,
   type TemplateType,
@@ -220,14 +221,12 @@ const handlePendingFileRequest = async ({
   const fields = await prisma.field.findMany({
     where: {
       envelopeItemId,
-      inserted: true,
+      OR: [{ inserted: true }, { type: FieldType.SHAPE }],
     },
     include: {
       signature: true,
     },
-    orderBy: {
-      id: 'asc',
-    },
+    orderBy: [{ order: 'asc' }, { id: 'asc' }],
   });
 
   const etag = Buffer.from(
@@ -236,7 +235,10 @@ const handlePendingFileRequest = async ({
         envelopeStatus: envelope.status,
         fields: fields.map((field) => ({
           id: field.id,
+          type: field.type,
+          order: field.order,
           customText: field.customText,
+          fieldMeta: field.fieldMeta,
           signatureId: field.signature?.id ?? null,
           signatureCreated: field.signature?.created ?? null,
         })),

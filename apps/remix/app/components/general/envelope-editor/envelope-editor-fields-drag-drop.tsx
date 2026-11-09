@@ -11,7 +11,7 @@ import { cn } from '@documenso/ui/lib/utils';
 import { FRIENDLY_FIELD_TYPE } from '@documenso/ui/primitives/document-flow/types';
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react/macro';
-import { FieldType } from '@prisma/client';
+import { FieldType, RecipientRole } from '@prisma/client';
 import {
   CalendarIcon,
   CheckSquareIcon,
@@ -20,6 +20,7 @@ import {
   HashIcon,
   ListIcon,
   MailIcon,
+  ShapesIcon,
   TextIcon,
   UserIcon,
 } from 'lucide-react';
@@ -83,6 +84,11 @@ export const fieldButtonList = [
     icon: ListIcon,
     name: msg`Dropdown`,
   },
+  {
+    type: FieldType.SHAPE,
+    icon: ShapesIcon,
+    name: msg`Shape`,
+  },
 ];
 
 type EnvelopeEditorFieldDragDropProps = {
@@ -106,6 +112,14 @@ export const EnvelopeEditorFieldDragDrop = ({
     const selectedSigner = envelope.recipients.find((recipient) => recipient.id === selectedRecipientId);
     const fields = envelope.fields;
 
+    // Decorative shapes belong to no recipient: they can be placed as long as
+    // the envelope has a signer to technically own them.
+    if (selectedField === FieldType.SHAPE && !selectedSigner) {
+      return !envelope.recipients.some(
+        (recipient) => recipient.role === RecipientRole.SIGNER || recipient.role === RecipientRole.APPROVER,
+      );
+    }
+
     if (!selectedSigner) {
       return true;
     }
@@ -116,7 +130,7 @@ export const EnvelopeEditorFieldDragDrop = ({
     }
 
     return !canRecipientFieldsBeModified(selectedSigner, fields);
-  }, [selectedRecipientId, envelope.recipients, envelope.fields]);
+  }, [selectedField, selectedRecipientId, envelope.recipients, envelope.fields]);
 
   const [isFieldWithinBounds, setIsFieldWithinBounds] = useState(false);
   const [coords, setCoords] = useState({
@@ -145,7 +159,21 @@ export const EnvelopeEditorFieldDragDrop = ({
 
   const onMouseClick = useCallback(
     (event: MouseEvent) => {
-      if (!selectedField || !selectedRecipientId || !selectedEnvelopeItemId) {
+      if (!selectedField || !selectedEnvelopeItemId) {
+        return;
+      }
+
+      // Decorative shapes belong to no recipient: fall back to the first
+      // signer when none is selected. Other field types require a selection.
+      const owningRecipientId =
+        selectedRecipientId ??
+        (selectedField === FieldType.SHAPE
+          ? (envelope.recipients.find(
+              (recipient) => recipient.role === RecipientRole.SIGNER || recipient.role === RecipientRole.APPROVER,
+            )?.id ?? null)
+          : null);
+
+      if (!owningRecipientId) {
         return;
       }
 
@@ -184,7 +212,7 @@ export const EnvelopeEditorFieldDragDrop = ({
         positionY: pageY,
         width: fieldPageWidth,
         height: fieldPageHeight,
-        recipientId: selectedRecipientId,
+        recipientId: owningRecipientId,
         fieldMeta: structuredClone(FIELD_META_DEFAULT_VALUES[selectedField]),
       };
 
@@ -193,7 +221,15 @@ export const EnvelopeEditorFieldDragDrop = ({
       setIsFieldWithinBounds(false);
       setSelectedField(null);
     },
-    [isWithinPageBounds, selectedField, selectedRecipientId, selectedEnvelopeItemId, getPage, editorFields],
+    [
+      isWithinPageBounds,
+      selectedField,
+      selectedRecipientId,
+      selectedEnvelopeItemId,
+      getPage,
+      editorFields,
+      envelope.recipients,
+    ],
   );
 
   useEffect(() => {

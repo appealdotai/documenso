@@ -1,6 +1,6 @@
 import { type Field, FieldType } from '@prisma/client';
 
-import { ZFieldMetaSchema } from '../types/field-meta';
+import { getFieldMetaRequired, ZFieldMetaSchema } from '../types/field-meta';
 
 // Currently it seems that the majority of fields have advanced fields for font reasons.
 // This array should only contain fields that have an optional setting in the fieldMeta.
@@ -12,12 +12,22 @@ export const ADVANCED_FIELD_TYPES_WITH_OPTIONAL_SETTING: FieldType[] = [
   FieldType.DROPDOWN,
   FieldType.RADIO,
   FieldType.CHECKBOX,
+  // Decorative shapes are never required: they are sealed as-is and need no
+  // recipient interaction. Listing here makes `isRequiredField` resolve them
+  // as optional so progress bars and completion gates ignore them.
+  FieldType.SHAPE,
 ];
 
 /**
  * Whether a field is required to be inserted.
  */
 export const isRequiredField = (field: Field) => {
+  // Decorative shapes are never required: they are sealed as-is and need no
+  // recipient interaction.
+  if (field.type === FieldType.SHAPE) {
+    return false;
+  }
+
   // All fields without the optional metadata are assumed to be required.
   if (!ADVANCED_FIELD_TYPES_WITH_OPTIONAL_SETTING.includes(field.type)) {
     return true;
@@ -38,10 +48,10 @@ export const isRequiredField = (field: Field) => {
   }
 
   if (field.type === FieldType.SIGNATURE) {
-    return parsedData.data?.required !== false;
+    return getFieldMetaRequired(parsedData.data) !== false;
   }
 
-  return parsedData.data?.required === true;
+  return getFieldMetaRequired(parsedData.data) === true;
 };
 
 /**

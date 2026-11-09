@@ -1,4 +1,5 @@
 import { router } from '../trpc';
+import { applyEnvelopeItemPageOperationsRoute } from './apply-envelope-item-page-operations';
 import { createAttachmentRoute } from './attachment/create-attachment';
 import { deleteAttachmentRoute } from './attachment/delete-attachment';
 import { findAttachmentsRoute } from './attachment/find-attachments';
@@ -65,6 +66,7 @@ export const envelopeRouter = router({
     delete: deleteEnvelopeItemRoute,
     download: downloadEnvelopeItemRoute,
     replacePdf: replaceEnvelopeItemPdfRoute,
+    applyPageOperations: applyEnvelopeItemPageOperationsRoute,
   },
   recipient: {
     get: getEnvelopeRecipientRoute,

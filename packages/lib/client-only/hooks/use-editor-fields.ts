@@ -26,10 +26,62 @@ export const ZLocalFieldSchema = z.object({
   positionY: z.number().min(0),
   width: z.number().min(0),
   height: z.number().min(0),
+  order: z.number().int().min(0),
   fieldMeta: ZFieldMetaSchema,
 });
 
 export type TLocalField = z.infer<typeof ZLocalFieldSchema>;
+
+/**
+ * Layering direction for field stacking order. Higher `order` paints on top.
+ */
+export type FieldLayerDirection = 'front' | 'back' | 'forward' | 'backward';
+
+/**
+ * Renumber stacking order sequentially from the array position.
+ */
+export const renumberFieldOrder = (fields: TLocalField[]): TLocalField[] =>
+  fields.map((field, index) => ({ ...field, order: index }));
+
+/**
+ * Pure stacking-order move. The selected block keeps its relative order;
+ * single-step moves swap with the non-moving neighbour only.
+ */
+export const reorderFieldsByDirection = (
+  fields: TLocalField[],
+  formIds: string[],
+  direction: FieldLayerDirection,
+): TLocalField[] | null => {
+  const selected = new Set(formIds);
+  const moving = fields.filter((field) => selected.has(field.formId));
+
+  if (moving.length === 0) {
+    return null;
+  }
+
+  let next: TLocalField[];
+
+  if (direction === 'front' || direction === 'back') {
+    const rest = fields.filter((field) => !selected.has(field.formId));
+    next = direction === 'front' ? [...rest, ...moving] : [...moving, ...rest];
+  } else {
+    next = [...fields];
+    const indices = moving.map((field) => next.findIndex((item) => item.formId === field.formId));
+    const ordered = direction === 'forward' ? [...indices].sort((a, b) => b - a) : [...indices].sort((a, b) => a - b);
+
+    for (const index of ordered) {
+      const neighbour = direction === 'forward' ? index + 1 : index - 1;
+
+      if (neighbour < 0 || neighbour >= next.length || selected.has(next[neighbour].formId)) {
+        continue;
+      }
+
+      [next[index], next[neighbour]] = [next[neighbour], next[index]];
+    }
+  }
+
+  return renumberFieldOrder(next);
+};
 
 const ZEditorFieldsFormSchema = z.object({
   fields: z.array(ZLocalFieldSchema),
@@ -57,7 +109,7 @@ type UseEditorFieldsResponse = {
   setSelectedField: (formId: string | null) => void;
 
   // Field operations
-  addField: (field: Omit<TLocalField, 'formId'>) => TLocalField;
+  addField: (field: Omit<TLocalField, 'formId' | 'order'> & { order?: number }) => TLocalField;
   setFieldId: (formId: string, id: number) => void;
   removeFieldsByFormId: (formIds: string[]) => void;
   updateFieldByFormId: (formId: string, updates: Partial<TLocalField>, skipHistory?: boolean) => void;
@@ -67,6 +119,7 @@ type UseEditorFieldsResponse = {
   // Field utilities
   getFieldByFormId: (formId: string) => TLocalField | undefined;
   getFieldsByRecipient: (recipientId: number) => TLocalField[];
+  moveFieldsByFormId: (formIds: string[], direction: FieldLayerDirection) => void;
 
   // Selected recipient
   selectedRecipient: TEditorEnvelope['recipients'][number] | null;
@@ -116,6 +169,7 @@ export const useEditorFields = ({
         positionY: Number(field.positionY),
         width: Number(field.width),
         height: Number(field.height),
+        order: field.order,
         recipientId: field.recipientId,
         fieldMeta: field.fieldMeta ? ZFieldMetaSchema.parse(field.fieldMeta) : undefined,
       }),
@@ -187,11 +241,16 @@ export const useEditorFields = ({
     setSelectedFieldFormId(foundField?.formId ?? null);
   };
 
+  const getMaxFieldOrder = useCallback(() => {
+    return localFields.reduce((max, field) => Math.max(max, field.order ?? -1), -1);
+  }, [localFields]);
+
   const addField = useCallback(
-    (fieldData: Omit<TLocalField, 'formId'>): TLocalField => {
+    (fieldData: Omit<TLocalField, 'formId' | 'order'> & { order?: number }): TLocalField => {
       snapshotHistory();
 
       const field: TLocalField = {
+        order: getMaxFieldOrder() + 1,
         ...fieldData,
         formId: nanoid(12),
         ...restrictFieldPosValues(fieldData),
@@ -202,7 +261,7 @@ export const useEditorFields = ({
       setSelectedField(field.formId, true);
       return field;
     },
-    [append, triggerFieldsUpdate, setSelectedField, snapshotHistory],
+    [append, triggerFieldsUpdate, setSelectedField, snapshotHistory, getMaxFieldOrder],
   );
 
   const removeFieldsByFormId = useCallback(
@@ -268,13 +327,14 @@ export const useEditorFields = ({
         recipientId: field.recipientId,
         positionX: field.positionX + 3,
         positionY: field.positionY + 3,
+        order: getMaxFieldOrder() + 1,
       };
 
       append(newField);
       triggerFieldsUpdate();
       return newField;
     },
-    [append, triggerFieldsUpdate, snapshotHistory],
+    [append, triggerFieldsUpdate, snapshotHistory, getMaxFieldOrder],
   );
 
   const duplicateFieldToAllPages = useCallback(
@@ -315,6 +375,25 @@ export const useEditorFields = ({
       return localFields.find((field) => field.formId === formId) as TLocalField | undefined;
     },
     [localFields],
+  );
+
+  /**
+   * Move fields in the stacking order. The selected block keeps its relative
+   * order; single-step moves swap with the non-moving neighbour only.
+   */
+  const moveFieldsByFormId = useCallback(
+    (formIds: string[], direction: FieldLayerDirection) => {
+      const next = reorderFieldsByDirection(localFields, formIds, direction);
+
+      if (!next) {
+        return;
+      }
+
+      snapshotHistory();
+      form.reset({ fields: next });
+      triggerFieldsUpdate();
+    },
+    [localFields, form, snapshotHistory, triggerFieldsUpdate],
   );
 
   const getFieldsByRecipient = useCallback(
@@ -437,6 +516,7 @@ export const useEditorFields = ({
     // Field utilities
     getFieldByFormId,
     getFieldsByRecipient,
+    moveFieldsByFormId,
 
     // Selected field
     selectedField,

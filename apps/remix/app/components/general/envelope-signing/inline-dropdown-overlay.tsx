@@ -72,10 +72,11 @@ export const InlineDropdownOverlay = ({ field, onCommit, onCancel }: InlineDropd
       }
     };
 
-    // Defer so the opening click does not immediately dismiss.
+    // Defer so the opening click/double-click does not immediately dismiss.
+    // 300 ms covers a normal double-click (< 500 ms) without being perceptible.
     const timeoutId = window.setTimeout(() => {
       document.addEventListener('pointerdown', handlePointerDown);
-    }, 0);
+    }, 300);
 
     document.addEventListener('keydown', handleKeyDown);
 

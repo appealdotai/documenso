@@ -18,6 +18,9 @@ type OverflowLayoutParams = {
   /** CSS font family string. */
   fontFamily: string;
 
+  /** CSS font style string (normal, bold, italic, italic bold). */
+  fontStyle?: string;
+
   /** Line height multiplier. */
   lineHeight: number;
 
@@ -77,6 +80,7 @@ const calculateLayout = (params: {
   textToRender: string;
   fontSize: number;
   fontFamily: string;
+  fontStyle?: string;
   lineHeight: number;
   letterSpacing: number;
   baseWidth: number;
@@ -86,13 +90,14 @@ const calculateLayout = (params: {
   exceedsHeightWhenWrapped: boolean;
   hasRoomForMoreThanOneLine: boolean;
 } => {
-  const { textToRender, fontSize, fontFamily, lineHeight, letterSpacing, baseWidth, baseHeight } = params;
+  const { textToRender, fontSize, fontFamily, fontStyle, lineHeight, letterSpacing, baseWidth, baseHeight } = params;
 
   // Measure the text without width constraint to get natural width and single-line height.
   const unwrappedNode = new Konva.Text({
     text: textToRender,
     fontSize,
     fontFamily,
+    fontStyle,
     lineHeight,
     letterSpacing,
   });
@@ -109,6 +114,7 @@ const calculateLayout = (params: {
     text: textToRender,
     fontSize,
     fontFamily,
+    fontStyle,
     lineHeight,
     letterSpacing,
     width: baseWidth,
@@ -285,6 +291,7 @@ export const calculateOverflowLayout = (params: OverflowLayoutParams): OverflowL
     textToRender: params.textToRender,
     fontSize: params.fontSize,
     fontFamily: params.fontFamily,
+    fontStyle: params.fontStyle,
     lineHeight: params.lineHeight,
     letterSpacing: params.letterSpacing,
     baseWidth,

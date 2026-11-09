@@ -24,7 +24,20 @@ export const ensureFontLibrary = () => {
   if (!FontLibrary.has('Inter')) {
     // eslint-disable-next-line react-hooks/rules-of-hooks
     FontLibrary.use({
-      ['Inter']: [path.join(fontPath, 'inter-variablefont_opsz,wght.ttf')],
+      ['Inter']: [
+        path.join(fontPath, 'inter-variablefont_opsz,wght.ttf'),
+        path.join(fontPath, 'inter-italic-variablefont_opsz,wght.ttf'),
+      ],
+    });
+  }
+
+  if (!FontLibrary.has('Montserrat')) {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    FontLibrary.use({
+      ['Montserrat']: [
+        path.join(fontPath, 'montserrat-variablefont_wght.ttf'),
+        path.join(fontPath, 'montserrat-italic-variablefont_wght.ttf'),
+      ],
     });
   }
 

@@ -3,7 +3,9 @@ import { FieldType, Prisma } from '@prisma/client';
 import { z } from 'zod';
 
 import {
+  FIELD_SHAPE_META_DEFAULT_VALUES,
   FIELD_SIGNATURE_META_DEFAULT_VALUES,
+  normalizeLegacyShapeFieldWrapper,
   ZCheckboxFieldMeta,
   ZDateFieldMeta,
   ZDropdownFieldMeta,
@@ -12,6 +14,7 @@ import {
   ZNameFieldMeta,
   ZNumberFieldMeta,
   ZRadioFieldMeta,
+  ZShapeFieldMeta,
   ZSignatureFieldMeta,
   ZTextFieldMeta,
 } from './field-meta';
@@ -40,6 +43,7 @@ export const ZFieldSchema = FieldSchema.pick({
   positionY: true,
   width: true,
   height: true,
+  order: true,
   customText: true,
   inserted: true,
   fieldMeta: true,
@@ -176,20 +180,31 @@ export const ZFieldDropdownSchema = BaseFieldSchemaUsingNumbers.extend({
 
 export type TFieldDropdown = z.infer<typeof ZFieldDropdownSchema>;
 
+export const ZFieldShapeSchema = BaseFieldSchemaUsingNumbers.extend({
+  type: z.literal(FieldType.SHAPE),
+  fieldMeta: ZShapeFieldMeta.catch(FIELD_SHAPE_META_DEFAULT_VALUES),
+});
+
+export type TFieldShape = z.infer<typeof ZFieldShapeSchema>;
+
 /**
  * The full field schema which will enforce all types and meta fields.
  */
-export const ZFullFieldSchema = z.discriminatedUnion('type', [
-  ZFieldTextSchema,
-  ZFieldSignatureSchema,
-  ZFieldInitialsSchema,
-  ZFieldNameSchema,
-  ZFieldEmailSchema,
-  ZFieldDateSchema,
-  ZFieldNumberSchema,
-  ZFieldRadioSchema,
-  ZFieldCheckboxSchema,
-  ZFieldDropdownSchema,
-]);
+export const ZFullFieldSchema = z.preprocess(
+  normalizeLegacyShapeFieldWrapper,
+  z.discriminatedUnion('type', [
+    ZFieldTextSchema,
+    ZFieldSignatureSchema,
+    ZFieldInitialsSchema,
+    ZFieldNameSchema,
+    ZFieldEmailSchema,
+    ZFieldDateSchema,
+    ZFieldNumberSchema,
+    ZFieldRadioSchema,
+    ZFieldCheckboxSchema,
+    ZFieldDropdownSchema,
+    ZFieldShapeSchema,
+  ]),
+);
 
 export type TFullFieldSchema = z.infer<typeof ZFullFieldSchema>;

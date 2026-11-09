@@ -12,6 +12,7 @@ import { isSignatureFieldType } from '@documenso/prisma/guards/is-signature-fiel
 import type { FieldWithSignature } from '@documenso/prisma/types/field-with-signature';
 import fontkit from '@pdf-lib/fontkit';
 import { FieldType } from '@prisma/client';
+import { colord } from 'colord';
 import { match, P } from 'ts-pattern';
 
 import { NEXT_PRIVATE_INTERNAL_WEBAPP_URL } from '../../constants/app';
@@ -23,6 +24,7 @@ import {
   ZNameFieldMeta,
   ZNumberFieldMeta,
   ZRadioFieldMeta,
+  ZShapeFieldMetaLenientSchema,
   ZTextFieldMeta,
 } from '../../types/field-meta';
 import { getPageSize } from './get-page-size';
@@ -331,6 +333,153 @@ export const insertFieldInPDFV1 = async (pdf: PDFDocument, field: FieldWithSigna
         }
       }
     })
+    .with({ type: FieldType.SHAPE }, (field) => {
+      const meta = ZShapeFieldMetaLenientSchema.safeParse(field.fieldMeta);
+
+      if (!meta.success) {
+        console.error(meta.error);
+
+        throw new Error('Invalid shape field meta');
+      }
+
+      const {
+        shape = 'rectangle',
+        fillColor,
+        fillOpacity = 1,
+        borderColor,
+        borderWidth = 2,
+        borderStyle = 'solid',
+        cornerRadius = 0,
+      } = meta.data;
+
+      const fill = parseShapePdfColor(fillColor, fillOpacity);
+      const border = parseShapePdfColor(borderColor, 1);
+      const strokeWidth = borderStyle === 'none' ? 0 : borderWidth;
+      const dash = borderStyle === 'dashed' ? [Math.max(strokeWidth, 1) * 3, Math.max(strokeWidth, 1) * 2] : undefined;
+
+      // Invert the Y axis since PDFs use a bottom-left coordinate system
+      let shapeX = fieldX;
+      let shapeY = pageHeight - fieldY - fieldHeight;
+
+      if (pageRotationInDegrees !== 0) {
+        const adjustedPosition = adjustPositionForRotation(
+          pageWidth,
+          pageHeight,
+          shapeX,
+          shapeY,
+          pageRotationInDegrees,
+        );
+
+        shapeX = adjustedPosition.xPos;
+        shapeY = adjustedPosition.yPos;
+      }
+
+      if (shape === 'ellipse') {
+        page.drawEllipse({
+          x: shapeX + fieldWidth / 2,
+          y: shapeY + fieldHeight / 2,
+          xScale: Math.max(fieldWidth / 2, 0),
+          yScale: Math.max(fieldHeight / 2, 0),
+          color: fill?.color,
+          borderColor: border?.color,
+          borderWidth: strokeWidth,
+          borderDashArray: dash,
+          opacity: fill?.opacity,
+          rotate: degrees(pageRotationInDegrees),
+        });
+
+        return;
+      }
+
+      if (shape === 'triangle') {
+        const topX = shapeX + fieldWidth / 2;
+        const topY = shapeY + fieldHeight;
+        const bottomLeft = { x: shapeX, y: shapeY };
+        const bottomRight = { x: shapeX + fieldWidth, y: shapeY };
+
+        page.drawLine({
+          start: { x: topX, y: topY },
+          end: bottomLeft,
+          thickness: Math.max(strokeWidth, 1),
+          color: border?.color,
+        });
+        page.drawLine({
+          start: bottomLeft,
+          end: bottomRight,
+          thickness: Math.max(strokeWidth, 1),
+          color: border?.color,
+        });
+        page.drawLine({
+          start: bottomRight,
+          end: { x: topX, y: topY },
+          thickness: Math.max(strokeWidth, 1),
+          color: border?.color,
+        });
+
+        return;
+      }
+
+      if (shape === 'line' || shape === 'arrow') {
+        let startX = shapeX;
+        let startY = shapeY + fieldHeight / 2;
+        let endX = shapeX + fieldWidth;
+        let endY = shapeY + fieldHeight / 2;
+
+        if (pageRotationInDegrees !== 0) {
+          const adjustedStart = adjustPositionForRotation(pageWidth, pageHeight, startX, startY, pageRotationInDegrees);
+          const adjustedEnd = adjustPositionForRotation(pageWidth, pageHeight, endX, endY, pageRotationInDegrees);
+
+          startX = adjustedStart.xPos;
+          startY = adjustedStart.yPos;
+          endX = adjustedEnd.xPos;
+          endY = adjustedEnd.yPos;
+        }
+
+        page.drawLine({
+          start: { x: startX, y: startY },
+          end: { x: endX, y: endY },
+          thickness: Math.max(strokeWidth, 1),
+          color: border?.color,
+          dashArray: dash,
+        });
+
+        if (shape === 'arrow') {
+          const headLength = Math.min(fieldWidth / 4, 24);
+          const headWidth = 12;
+          const baseX = endX - headLength;
+
+          page.drawLine({
+            start: { x: endX, y: endY },
+            end: { x: baseX, y: endY + headWidth / 2 },
+            thickness: Math.max(strokeWidth, 1),
+            color: border?.color,
+          });
+          page.drawLine({
+            start: { x: endX, y: endY },
+            end: { x: baseX, y: endY - headWidth / 2 },
+            thickness: Math.max(strokeWidth, 1),
+            color: border?.color,
+          });
+        }
+
+        return;
+      }
+
+      page.drawRectangle({
+        x: shapeX,
+        y: shapeY,
+        width: fieldWidth,
+        height: fieldHeight,
+        rx: Math.max(0, Math.min(cornerRadius, fieldWidth / 2, fieldHeight / 2)),
+        ry: Math.max(0, Math.min(cornerRadius, fieldWidth / 2, fieldHeight / 2)),
+        color: fill?.color,
+        borderColor: border?.color,
+        borderWidth: strokeWidth,
+        borderDashArray: dash,
+        opacity: fill?.opacity,
+        rotate: degrees(pageRotationInDegrees),
+      });
+    })
     .otherwise((field) => {
       const fieldMetaParsers = {
         [FieldType.TEXT]: ZTextFieldMeta,
@@ -483,6 +632,30 @@ export const insertFieldInPDFV1 = async (pdf: PDFDocument, field: FieldWithSigna
     });
 
   return pdf;
+};
+
+/**
+ * Parse a shape fill/border color (`#RRGGBB`) into a pdf-lib color plus
+ * opacity. `null` (no fill) yields undefined so callers omit the option.
+ * Opacity applies to the fill only, never the border.
+ */
+const parseShapePdfColor = (value: string | null | undefined, opacity = 1) => {
+  if (!value) {
+    return undefined;
+  }
+
+  const parsed = colord(value);
+
+  if (!parsed.isValid()) {
+    return undefined;
+  }
+
+  const { r, g, b } = parsed.toRgb();
+
+  return {
+    color: rgb(r / 255, g / 255, b / 255),
+    opacity: Math.max(0, Math.min(opacity, 1)),
+  };
 };
 
 const adjustPositionForRotation = (

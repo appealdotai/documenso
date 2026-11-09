@@ -21,11 +21,12 @@ import type { DropResult } from '@hello-pangea/dnd';
 import { DragDropContext, Draggable, Droppable } from '@hello-pangea/dnd';
 import { msg, plural } from '@lingui/core/macro';
 import { Trans, useLingui } from '@lingui/react/macro';
-import { FileWarningIcon, GripVerticalIcon, Loader2Icon, PencilIcon, XIcon } from 'lucide-react';
+import { FileStackIcon, FileWarningIcon, GripVerticalIcon, Loader2Icon, PencilIcon, XIcon } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ErrorCode as DropzoneErrorCode, type FileRejection, useDropzone } from 'react-dropzone';
 
 import { EnvelopeItemDeleteDialog } from '~/components/dialogs/envelope-item-delete-dialog';
+import { EnvelopeItemPageManagerDialog } from '~/components/dialogs/envelope-item-page-manager-dialog';
 import { useCspNonce } from '~/utils/nonce';
 
 import { EnvelopeEditorInvalidDirectTemplateAlert } from './envelope-editor-invalid-direct-template-alert';
@@ -599,6 +600,38 @@ export const EnvelopeEditorUploadPage = () => {
                                     )}
                                   </Button>
                                 )}
+
+                              {!isEmbedded &&
+                                localFile.envelopeItemId &&
+                                envelopeItemPermissions.canFileBeChanged &&
+                                uploadConfig?.allowReplace &&
+                                (() => {
+                                  const envelopeItem = envelope.envelopeItems.find(
+                                    (item) => item.id === localFile.envelopeItemId,
+                                  );
+
+                                  if (!envelopeItem || !envelopeItem.documentDataId) {
+                                    return null;
+                                  }
+
+                                  return (
+                                    <EnvelopeItemPageManagerDialog
+                                      envelopeItem={envelopeItem}
+                                      trigger={
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="sm"
+                                          title={t`Manage pages`}
+                                          data-testid={`envelope-item-page-manager-button-${localFile.id}`}
+                                          disabled={localFile.isReplacing || localFile.isUploading}
+                                        >
+                                          <FileStackIcon className="h-4 w-4" />
+                                        </Button>
+                                      }
+                                    />
+                                  );
+                                })()}
 
                               {localFile.envelopeItemId &&
                                 uploadConfig?.allowDelete &&

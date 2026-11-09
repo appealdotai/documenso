@@ -100,7 +100,7 @@ export const EnvelopeEditor = () => {
     hasUnsavedChanges,
   } = useCurrentEnvelopeEditor();
 
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
 
   const {
     general: { minimizeLeftSidebar, allowUploadAndRecipientStep, allowAddFieldsStep, allowPreviewStep },

@@ -1,4 +1,5 @@
 import type { TCssVarsSchema } from '@documenso/lib/types/css-vars';
+import { getFieldMetaReadOnly, isFieldBackgroundVisible } from '@documenso/lib/types/field-meta';
 import { isRequiredField } from '@documenso/lib/utils/advanced-fields-helpers';
 import {
   getSigningFieldHighlightCacheKey,
@@ -9,6 +10,7 @@ import {
   FIELD_ROOT_CONTAINER_PROBE_CLASS_NAME,
 } from '@documenso/ui/lib/field-root-container-classes';
 import type { Field } from '@prisma/client';
+import { FieldType } from '@prisma/client';
 import { colord } from 'colord';
 import type { FieldCanvasStyle, FieldRenderMode, FieldToRender } from './field-renderer';
 
@@ -17,9 +19,24 @@ export type FieldCanvasStyleCache = Map<string, FieldCanvasStyle | undefined>;
 export const createFieldCanvasStyleCache = (): FieldCanvasStyleCache => new Map();
 
 export const getFieldCanvasStyleCacheKey = (field: FieldToRender) => {
-  const isRequired = !field.fieldMeta?.readOnly && isRequiredField(field as unknown as Field);
+  const isRequired = !getFieldMetaReadOnly(field.fieldMeta) && isRequiredField(field as unknown as Field);
+  const shapeMeta =
+    field.type === FieldType.SHAPE
+      ? (field.fieldMeta as {
+          shape?: string;
+          fillColor?: string | null;
+          fillOpacity?: number;
+          borderColor?: string;
+          borderWidth?: number;
+          borderStyle?: string;
+          cornerRadius?: number;
+        } | null)
+      : null;
+  const shapeKey = shapeMeta
+    ? `:${shapeMeta.shape ?? ''}:${shapeMeta.fillColor ?? ''}:${shapeMeta.fillOpacity ?? ''}:${shapeMeta.borderColor ?? ''}:${shapeMeta.borderWidth ?? ''}:${shapeMeta.borderStyle ?? ''}:${shapeMeta.cornerRadius ?? ''}`
+    : '';
 
-  return `${field.type}:${field.inserted}:${field.fieldMeta?.readOnly ?? false}:${field.isValidating ?? false}:${field.isEditing ?? false}:${isRequired ? 'required' : 'optional'}`;
+  return `${field.type}:${field.inserted}:${field.fieldMeta?.readOnly ?? false}:${field.isValidating ?? false}:${field.isEditing ?? false}:${isRequired ? 'required' : 'optional'}:${isFieldBackgroundVisible(field.fieldMeta) ? 'bg' : 'nobg'}${shapeKey}`;
 };
 
 export const getPixelValue = (value: string) => {
@@ -92,10 +109,10 @@ const createFieldProbeElement = (field: FieldToRender): HTMLElement => {
   $probe.dataset.fieldType = field.type;
   $probe.dataset.inserted = field.inserted ? 'true' : 'false';
   $probe.dataset.validate = field.isValidating ? 'true' : 'false';
-  $probe.dataset.readonly = field.fieldMeta?.readOnly ? 'true' : 'false';
+  $probe.dataset.readonly = getFieldMetaReadOnly(field.fieldMeta) ? 'true' : 'false';
   $probe.dataset.editing = field.isEditing ? 'true' : 'false';
   $probe.dataset.fieldRequired =
-    !field.fieldMeta?.readOnly && isRequiredField(field as unknown as Field) ? 'true' : 'false';
+    !getFieldMetaReadOnly(field.fieldMeta) && isRequiredField(field as unknown as Field) ? 'true' : 'false';
 
   Object.assign($probe.style, {
     position: 'absolute',
@@ -156,6 +173,10 @@ const resolveFieldCanvasStyleFromCssVars = (field: FieldToRender): FieldCanvasSt
     getPixelValue(
       getComputedStyle($styleSource).getPropertyValue('--field-optional-filled-card-border-width').trim() || '2px',
     ) ?? 2;
+  const readOnlyFilledBorderWidth =
+    getPixelValue(
+      getComputedStyle($styleSource).getPropertyValue('--field-read-only-filled-card-border-width').trim() || '2px',
+    ) ?? 2;
   const requiredBorderColor = getRenderableColor(getCssVarHslColor($styleSource, '--field-required-card-border'));
   const requiredBorderHoverColor = getRenderableColor(
     getCssVarHslColor($styleSource, '--field-required-card-border-hover'),
@@ -176,13 +197,15 @@ const resolveFieldCanvasStyleFromCssVars = (field: FieldToRender): FieldCanvasSt
   const optionalFilledBorderHoverColor = getRenderableColor(
     getCssVarHslColor($styleSource, '--field-optional-filled-card-border-hover'),
   );
+  const readOnlyFilledBorderColor = getRenderableColor(
+    getCssVarHslColor($styleSource, '--field-read-only-filled-card-border'),
+  );
   const optionalSideHoverColor = getRenderableColor(
     getCssVarHslColor($styleSource, '--field-optional-card-border-hover', OPTIONAL_FIELD_SIDE_BORDER_OPACITY),
   );
   const optionalFilledSideHoverColor = getRenderableColor(
     getCssVarHslColor($styleSource, '--field-optional-filled-card-border-hover', OPTIONAL_FIELD_SIDE_BORDER_OPACITY),
   );
-  const readOnlyBackground = 'rgba(255, 255, 255, 0.9)';
   const optionalHoverSideStyle = {
     borderTopWidth: 1,
     borderRightWidth: 1,
@@ -196,11 +219,11 @@ const resolveFieldCanvasStyleFromCssVars = (field: FieldToRender): FieldCanvasSt
     borderHoverColor: optionalBorderHoverColor,
   };
 
-  if (field.fieldMeta?.readOnly) {
+  if (getFieldMetaReadOnly(field.fieldMeta)) {
     return {
-      backgroundColor: readOnlyBackground,
-      borderColor: 'rgb(176, 176, 176)',
-      borderWidth: 2,
+      backgroundColor: getRenderableColor(getCssVarHslColor($styleSource, '--field-read-only-filled-card')),
+      borderColor: readOnlyFilledBorderColor,
+      borderWidth: readOnlyFilledBorderWidth,
       borderRadius: 2,
     };
   }
@@ -439,7 +462,14 @@ export const resolveFieldCanvasStyle = (
   const brandingStyle = resolveFieldCanvasStyleFromBrandingColors(field, brandingColors);
   const probeStyle = computeFieldCanvasStyleFromProbe(field);
   const cssVarStyle = resolveFieldCanvasStyleFromCssVars(field);
-  const style = mergeFieldCanvasStyles(brandingStyle, mergeFieldCanvasStyles(probeStyle, cssVarStyle));
+  const mergedStyle = mergeFieldCanvasStyles(brandingStyle, mergeFieldCanvasStyles(probeStyle, cssVarStyle));
+
+  // An author-hidden background stays hidden in signing too; borders and
+  // hover behavior are unaffected.
+  const style =
+    mergedStyle && !isFieldBackgroundVisible(field.fieldMeta)
+      ? { ...mergedStyle, backgroundColor: TRANSPARENT_COLOR }
+      : mergedStyle;
 
   cache?.set(cacheKey, style);
 

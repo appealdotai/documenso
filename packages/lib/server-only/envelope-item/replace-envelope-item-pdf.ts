@@ -3,6 +3,7 @@ import { DOCUMENT_AUDIT_LOG_TYPE } from '@documenso/lib/types/document-audit-log
 import type { ApiRequestMetadata } from '@documenso/lib/universal/extract-request-metadata';
 import { putPdfFileServerSide } from '@documenso/lib/universal/upload/put-file.server';
 import { createDocumentAuditLogData } from '@documenso/lib/utils/document-audit-logs';
+import { getFieldInsertedStatus } from '@documenso/lib/utils/fields';
 import { prisma } from '@documenso/prisma';
 import type { Envelope, Field, Recipient } from '@prisma/client';
 
@@ -173,7 +174,7 @@ export const UNSAFE_replaceEnvelopeItemPdf = async ({
             width: field.width,
             height: field.height,
             customText: '',
-            inserted: false,
+            inserted: getFieldInsertedStatus(field.type),
             fieldMeta: field.fieldMeta || undefined,
           })),
         });

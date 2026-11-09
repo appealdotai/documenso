@@ -11,12 +11,17 @@ import { useEffect } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import type { z } from 'zod';
 
-import { EditorGenericFontSizeField, EditorGenericTextAlignField } from './editor-field-generic-field-forms';
+import {
+  EditorGenericBackgroundField,
+  EditorGenericFontSizeField,
+  EditorGenericTextAlignField,
+} from './editor-field-generic-field-forms';
 
 const ZEmailFieldFormSchema = ZEmailFieldMeta.pick({
   fontSize: true,
   textAlign: true,
   overflow: true,
+  backgroundVisible: true,
 });
 
 type TEmailFieldFormSchema = z.infer<typeof ZEmailFieldFormSchema>;
@@ -39,6 +44,7 @@ export const EditorFieldEmailForm = ({
       fontSize: value.fontSize || DEFAULT_FIELD_FONT_SIZE,
       textAlign: value.textAlign ?? FIELD_DEFAULT_GENERIC_ALIGN,
       overflow: value.overflow || FIELD_EMAIL_META_DEFAULT_VALUES.overflow,
+      backgroundVisible: value.backgroundVisible ?? true,
     },
   });
 
@@ -67,6 +73,8 @@ export const EditorFieldEmailForm = ({
           <EditorGenericFontSizeField formControl={form.control} />
 
           <EditorGenericTextAlignField formControl={form.control} />
+
+          <EditorGenericBackgroundField formControl={form.control} />
         </fieldset>
       </form>
     </Form>

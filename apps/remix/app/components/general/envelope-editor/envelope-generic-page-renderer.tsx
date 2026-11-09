@@ -6,7 +6,7 @@ import {
 } from '@documenso/lib/client-only/providers/envelope-render-provider';
 import type { TEnvelope } from '@documenso/lib/types/envelope';
 import { renderField } from '@documenso/lib/universal/field-renderer/render-field';
-import { getClientSideFieldTranslations } from '@documenso/lib/utils/fields';
+import { getClientSideFieldTranslations, isShapeField, sortFieldsByStackOrder } from '@documenso/lib/utils/fields';
 import { EnvelopeRecipientFieldTooltip } from '@documenso/ui/components/document/envelope-recipient-field-tooltip';
 import { useLingui } from '@lingui/react/macro';
 import { DocumentStatus, type Recipient, SigningStatus } from '@prisma/client';
@@ -47,28 +47,31 @@ export const EnvelopeGenericPageRenderer = ({ pageData }: { pageData: PageRender
       return [];
     }
 
-    return fields
-      .filter((field) => field.page === pageNumber && field.envelopeItemId === currentEnvelopeItem?.id)
-      .map((field) => {
-        const recipient = recipients.find((recipient) => recipient.id === field.recipientId);
+    return sortFieldsByStackOrder(
+      fields
+        .filter((field) => field.page === pageNumber && field.envelopeItemId === currentEnvelopeItem?.id)
+        .map((field) => {
+          const recipient = recipients.find((recipient) => recipient.id === field.recipientId);
 
-        if (!recipient) {
-          throw new Error(`Recipient not found for field ${field.id}`);
-        }
+          if (!recipient) {
+            throw new Error(`Recipient not found for field ${field.id}`);
+          }
 
-        const isInserted = recipient.signingStatus === SigningStatus.SIGNED && field.inserted;
+          const isInserted = recipient.signingStatus === SigningStatus.SIGNED && field.inserted;
 
-        return {
-          ...field,
-          inserted: isInserted,
-          customText: isInserted ? field.customText : '',
-          recipient,
-        };
-      })
-      .filter(
-        ({ inserted, fieldMeta, recipient }) =>
-          (recipient.signingStatus === SigningStatus.SIGNED ? inserted : true) || fieldMeta?.readOnly,
-      );
+          return {
+            ...field,
+            inserted: isInserted,
+            customText: isInserted ? field.customText : '',
+            recipient,
+          };
+        })
+        .filter(
+          (field) =>
+            (field.recipient.signingStatus === SigningStatus.SIGNED ? field.inserted || isShapeField(field) : true) ||
+            field.fieldMeta?.readOnly,
+        ),
+    );
   }, [fields, pageNumber, currentEnvelopeItem?.id, recipients, envelopeStatus]);
 
   const unsafeRenderFieldOnLayer = (field: GenericLocalField) => {
@@ -158,6 +161,14 @@ export const EnvelopeGenericPageRenderer = ({ pageData }: { pageData: PageRender
     localPageFields.forEach((field) => {
       renderFieldOnLayer(field);
     });
+
+    for (const field of localPageFields) {
+      const fieldGroup = pageLayer.current.findOne(`#${field.id}`);
+
+      if (fieldGroup?.name() === 'field-group') {
+        fieldGroup.moveToTop();
+      }
+    }
 
     pageLayer.current.batchDraw();
   }, [localPageFields, signaturesByFieldId]);

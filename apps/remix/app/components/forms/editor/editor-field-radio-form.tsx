@@ -16,6 +16,7 @@ import { useForm, useWatch } from 'react-hook-form';
 import type { z } from 'zod';
 
 import {
+  EditorGenericBackgroundField,
   EditorGenericFontSizeField,
   EditorGenericReadOnlyField,
   EditorGenericRequiredField,
@@ -27,6 +28,7 @@ const ZRadioFieldFormSchema = ZRadioFieldMeta.pick({
   values: true,
   required: true,
   readOnly: true,
+  backgroundVisible: true,
   fontSize: true,
 }).refine(
   (data) => {
@@ -67,6 +69,7 @@ export const EditorFieldRadioForm = ({
       values: value.values || [{ id: 1, checked: false, value: t`Default value` }],
       required: value.required || false,
       readOnly: value.readOnly || false,
+      backgroundVisible: value.backgroundVisible ?? true,
       direction: value.direction || 'vertical',
       fontSize: value.fontSize || DEFAULT_FIELD_FONT_SIZE,
     },
@@ -148,6 +151,8 @@ export const EditorFieldRadioForm = ({
           <EditorGenericRequiredField formControl={form.control} />
 
           <EditorGenericReadOnlyField formControl={form.control} />
+
+          <EditorGenericBackgroundField formControl={form.control} />
 
           <section className="space-y-2">
             <div className="-mx-4 mt-2 mb-4">

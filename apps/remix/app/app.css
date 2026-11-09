@@ -18,6 +18,24 @@
   font-display: swap;
 }
 
+/* Montserrat Variable Fonts */
+@font-face {
+  font-family: "Montserrat";
+  src: url("/fonts/montserrat-variablefont_wght.ttf") format("truetype-variations");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Montserrat Italic Variable Fonts */
+@font-face {
+  font-family: "Montserrat";
+  src: url("/fonts/montserrat-italic-variablefont_wght.ttf") format("truetype-variations");
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: swap;
+}
+
 /* Caveat Variable Font */
 @font-face {
   font-family: "Caveat";

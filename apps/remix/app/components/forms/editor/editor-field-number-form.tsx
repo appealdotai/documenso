@@ -19,6 +19,7 @@ import { useForm, useWatch } from 'react-hook-form';
 import type { z } from 'zod';
 
 import {
+  EditorGenericBackgroundField,
   EditorGenericFontSizeField,
   EditorGenericLabelField,
   EditorGenericLetterSpacingField,
@@ -41,6 +42,7 @@ const ZNumberFieldFormSchema = ZNumberFieldMeta.pick({
   verticalAlign: true,
   required: true,
   readOnly: true,
+  backgroundVisible: true,
   minValue: true,
   maxValue: true,
 })
@@ -62,12 +64,42 @@ const ZNumberFieldFormSchema = ZNumberFieldMeta.pick({
       // A read-only field must have a value greater than 0
       if (data.readOnly && data.value !== undefined && data.value !== '') {
         const numberValue = parseFloat(data.value);
-        return !isNaN(numberValue) && numberValue > 0;
+        return !Number.isNaN(numberValue) && numberValue > 0;
       }
       return !data.readOnly || (data.value !== undefined && data.value !== '');
     },
     {
       message: 'A read-only field must have a value greater than 0',
+      path: ['value'],
+    },
+  )
+  .refine(
+    (data) => {
+      // Value must only contain valid numeric characters
+      if (!data.value || data.value.trim() === '') {
+        return true;
+      }
+      return /^[0-9,.]+$/.test(data.value.trim());
+    },
+    {
+      message: 'Value must be a valid number (digits, commas, and periods only)',
+      path: ['value'],
+    },
+  )
+  .refine(
+    (data) => {
+      // Value must match the selected number format pattern
+      if (!data.numberFormat || !data.value || data.value.trim() === '') {
+        return true;
+      }
+      const foundFormat = numberFormatValues.find((item) => item.value === data.numberFormat);
+      if (!foundFormat?.regex) {
+        return true;
+      }
+      return foundFormat.regex.test(data.value);
+    },
+    {
+      message: 'Value does not match the selected number format',
       path: ['value'],
     },
   );
@@ -102,6 +134,7 @@ export const EditorFieldNumberForm = ({
       verticalAlign: value.verticalAlign ?? FIELD_DEFAULT_GENERIC_VERTICAL_ALIGN,
       required: value.required || false,
       readOnly: value.readOnly || false,
+      backgroundVisible: value.backgroundVisible ?? true,
       minValue: value.minValue,
       maxValue: value.maxValue,
     },
@@ -167,15 +200,28 @@ export const EditorFieldNumberForm = ({
           <FormField
             control={form.control}
             name="value"
-            render={({ field }) => (
+            render={({ field, fieldState }) => (
               <FormItem>
                 <FormLabel>
                   <Trans>Value</Trans>
                 </FormLabel>
                 <FormControl>
-                  <Input data-testid="field-form-value" className="bg-background" placeholder={t`Value`} {...field} />
+                  <Input
+                    data-testid="field-form-value"
+                    className={
+                      fieldState.error ? 'border-destructive bg-background ring-1 ring-destructive' : 'bg-background'
+                    }
+                    placeholder={t`Value`}
+                    aria-invalid={Boolean(fieldState.error)}
+                    {...field}
+                  />
                 </FormControl>
                 <FormMessage />
+                {!fieldState.error && (
+                  <p className="text-[11px] text-muted-foreground">
+                    <Trans>Numbers, commas, and periods only.</Trans>
+                  </p>
+                )}
               </FormItem>
             )}
           />
@@ -228,6 +274,8 @@ export const EditorFieldNumberForm = ({
           </div>
 
           <EditorGenericReadOnlyField formControl={form.control} />
+
+          <EditorGenericBackgroundField formControl={form.control} />
 
           {/* Validation section */}
           <section className="space-y-2">

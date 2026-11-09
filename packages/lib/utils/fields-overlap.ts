@@ -6,9 +6,14 @@
  * signing (fields can sit on top of one another depending on their state), so we warn
  * the user when a significant overlap is detected.
  *
+ * Decorative shapes are exempt: they sit outside the signing workflow and may
+ * intentionally overlap signer fields (or sit behind/in front of them) now that
+ * authors control the stacking order, so pairs involving a shape never warn.
+ *
  * All positional values are expected as percentages (0-100) of the page dimensions,
  * matching how fields are stored in the editor and database.
  */
+import { FieldType } from '@prisma/client';
 
 /**
  * The minimum proportion (0-1) of the smaller field's area that must be covered by
@@ -31,6 +36,11 @@ type OverlapFieldInput = {
   positionY: number;
   width: number;
   height: number;
+  /**
+   * The field type, when known. Pairs involving a `SHAPE` are always skipped
+   * because decorative shapes sit outside the signing workflow.
+   */
+  type?: FieldType;
 };
 
 export type TFieldOverlapPair<T extends OverlapFieldInput> = {
@@ -85,6 +95,12 @@ export const getOverlappingFieldPairs = <T extends OverlapFieldInput>(
       const fieldB = fields[j];
 
       if (fieldA.envelopeItemId !== fieldB.envelopeItemId || fieldA.page !== fieldB.page) {
+        continue;
+      }
+
+      // Decorative shapes intentionally overlap signer fields in either
+      // direction now that authors control the stacking order.
+      if (fieldA.type === FieldType.SHAPE || fieldB.type === FieldType.SHAPE) {
         continue;
       }
 

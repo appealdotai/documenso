@@ -48,3 +48,33 @@ export const getKonvaTransformerNodeCountForPage = async (page: Page, pageNumber
     { pageNumber },
   );
 };
+
+export type TKonvaFieldGroup = {
+  id: string;
+  listening: boolean;
+  visible: boolean;
+};
+
+export const getKonvaFieldGroupsForPage = async (page: Page, pageNumber: number): Promise<TKonvaFieldGroup[]> => {
+  await page.locator('.konva-container canvas').first().waitFor({ state: 'visible' });
+
+  return await page.evaluate(
+    ({ pageNumber }) => {
+      // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+      const konva: typeof Konva = (window as unknown as { Konva: typeof Konva }).Konva;
+
+      const stage = konva.stages.find((stage) => stage.attrs.id === `page-${pageNumber}`);
+
+      if (!stage) {
+        return [];
+      }
+
+      return stage.find('.field-group').map((group) => ({
+        id: group.id(),
+        listening: group.listening(),
+        visible: group.visible(),
+      }));
+    },
+    { pageNumber },
+  );
+};

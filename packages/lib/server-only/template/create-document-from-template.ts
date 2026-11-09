@@ -47,6 +47,7 @@ import {
 } from '../../utils/document-auth';
 import type { EnvelopeIdOptions } from '../../utils/envelope';
 import { mapSecondaryIdToTemplateId } from '../../utils/envelope';
+import { getFieldInsertedStatus } from '../../utils/fields';
 import { buildTeamWhereQuery } from '../../utils/teams';
 import { getEnvelopeWhereInput } from '../envelope/get-envelope-by-id';
 import { incrementDocumentId } from '../envelope/increment-id';
@@ -700,8 +701,9 @@ export const createDocumentFromTemplate = async ({
             positionY: field.positionY,
             width: field.width,
             height: field.height,
+            order: field.order,
             customText: '',
-            inserted: false,
+            inserted: getFieldInsertedStatus(field.type),
             fieldMeta: field.fieldMeta,
           };
 

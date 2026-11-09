@@ -24,6 +24,7 @@ import { useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 
 import {
+  EditorGenericBackgroundField,
   EditorGenericFontSizeField,
   EditorGenericLabelField,
   EditorGenericReadOnlyField,
@@ -38,6 +39,7 @@ const ZCheckboxFieldFormSchema = ZCheckboxFieldMeta.pick({
   required: true,
   values: true,
   readOnly: true,
+  backgroundVisible: true,
   fontSize: true,
 })
   .extend({
@@ -85,6 +87,7 @@ export const EditorFieldCheckboxForm = ({
       values: value.values || [{ id: 1, checked: false, value: '' }],
       required: value.required || false,
       readOnly: value.readOnly || false,
+      backgroundVisible: value.backgroundVisible ?? true,
       fontSize: value.fontSize || DEFAULT_FIELD_FONT_SIZE,
     },
   });
@@ -274,6 +277,8 @@ export const EditorFieldCheckboxForm = ({
           </div>
 
           <EditorGenericReadOnlyField formControl={form.control} />
+
+          <EditorGenericBackgroundField formControl={form.control} />
 
           <section className="space-y-2">
             <div className="-mx-4 mt-2 mb-4">

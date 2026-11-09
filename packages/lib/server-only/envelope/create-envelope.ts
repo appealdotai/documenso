@@ -35,6 +35,7 @@ import { getFileServerSide } from '../../universal/upload/get-file.server';
 import { putPdfFileServerSide } from '../../universal/upload/put-file.server';
 import { extractDerivedDocumentMeta } from '../../utils/document';
 import { createDocumentAuthOptions, createRecipientAuthOptions } from '../../utils/document-auth';
+import { getFieldInsertedStatus } from '../../utils/fields';
 import { buildTeamWhereQuery } from '../../utils/teams';
 import { incrementDocumentId, incrementTemplateId } from '../envelope/increment-id';
 import { assertOrganisationRatesAndLimits } from '../rate-limit/assert-organisation-rates-and-limits';
@@ -456,7 +457,7 @@ export const createEnvelope = async ({
             width: field.width,
             height: field.height,
             customText: '',
-            inserted: false,
+            inserted: getFieldInsertedStatus(field.type),
             fieldMeta: field.fieldMeta || undefined,
           };
         });
@@ -583,7 +584,7 @@ export const createEnvelope = async ({
               width: field.width,
               height: field.height,
               customText: '',
-              inserted: false,
+              inserted: getFieldInsertedStatus(field.type),
               fieldMeta: field.fieldMeta || undefined,
             })),
           });

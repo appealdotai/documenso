@@ -72,7 +72,8 @@ export const renderRecipientOverlay = async ({
   const overlayBytes = await insertFieldInPDFV2({
     pageWidth: page.width,
     pageHeight: page.height,
-    fields,
+    // Paint order follows the persisted stacking order (higher = on top).
+    fields: [...fields].sort((a, b) => a.order - b.order || a.id - b.id),
   });
 
   const overlayDoc = await PDF.load(overlayBytes);

@@ -28,6 +28,7 @@ import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
 | `positionY`      | string         | Y coordinate as percentage (0-100), a decimal serialized as a string |
 | `width`          | string         | Width as percentage of page (0-100), a decimal serialized as a string |
 | `height`         | string         | Height as percentage of page (0-100), a decimal serialized as a string |
+| `order`          | number         | Stacking order for overlapping fields. Higher values paint on top in the editor, signing view, and sealed PDF |
 | `customText`     | string         | Value entered by the recipient               |
 | `inserted`       | boolean        | Whether the field has been completed         |
 | `fieldMeta`      | object \| null | Type-specific configuration options          |
@@ -74,6 +75,7 @@ import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
 | `RADIO`          | Single selection from options             | No          |
 | `CHECKBOX`       | Multiple selections from options          | No          |
 | `DROPDOWN`       | Single selection from a dropdown menu     | No          |
+| `SHAPE`          | Decorative rectangle, ellipse, triangle, line, or arrow with fill and border styling. Sealed as-is; requires no recipient interaction | No          |
 
 ---
 
